@@ -7,12 +7,20 @@ import "js/restService.js" as Rest
 import "js/appController.js" as AppCtrl
 
 
-Cs.Window {
+Window {
     id: root
-    width: 400
-    height: 500
-    minimumWidth: 200
-    minimumHeight: 200
+    flags: Qt.FramelessWindowHint
+    color: "transparent"
+
+    width: Model.size.windowWidth
+    height: Model.size.windowHeight
+    minimumWidth: Model.size.windowMinimumWidth
+    minimumHeight: Model.size.windowMinimumHeight
+
+    FontLoader {
+        id: mainFont
+        source: "font/OpenSans-Semibold.ttf"
+    }
 
     /*
      * Quit Animation
@@ -24,7 +32,7 @@ Cs.Window {
         running: false
 
         NumberAnimation {
-            target: root
+            target: container
             property: "height"
             to: header.height
             duration: 400
@@ -47,114 +55,126 @@ Cs.Window {
      * Start Animation
      *
     */
-    SequentialAnimation {
+    ParallelAnimation {
         id: startAnimation
         running: false
 
         NumberAnimation {
-            target: root
-            property: "height"
+            target: container
+            property: "opacity"
             from: 0
+            to: 1
+            duration: 500
+            easing.type: Easing.OutQuint
+        }
+
+        NumberAnimation {
+            target: container
+            property: "height"
+            from: root.height / 2
             to: root.height
+            duration: 1000
+            easing.type: Easing.OutQuint
         }
     }
 
-    Cs.Header {
-        id: header
-        z: 1  // Keep above all other items
-
-        /*
-         * Main header, used for moving the application
-         * along with closing, minimizing and logo display.
-        */
-        Image {
-            id: headerImage
-            source: "img/logo-white.png"
-            anchors.verticalCenter: parent.verticalCenter
-            x: 4
-        }
-
-        Row {
-            anchors {
-                right: parent.right
-                top: parent.top
-                bottom: parent.bottom
-                margins: Model.margins.main
-            }
-
-            spacing: Model.margins.alt
-
-            Cs.Button {
-                id: closeButton
-                source: "../img/button-close.png"
-                width: 30
-                height: 30
-
-                onClicked: {
-                    root.minimumHeight = header.height
-                    quitAnimation.stopped.connect(Qt.quit);
-                    quitAnimation.start();
-                }
-            }
-        }
-    }
 
     Cs.Rectangle {
-        id: canvas
-        outwards: false
-        clip: true
+        id: container
+        width: parent.width
+        height: 0
+        color: Model.color.background
 
-        anchors {
-            top: header.bottom
-            bottom: footer.top
-            left: parent.left
-            right: parent.right
+        Cs.Header {
+            id: header
+            z: 1  // Keep above all other items
 
-            margins: Model.margins.main
+            // MouseArea {
+            //     anchors.fill: parent
+
+
+            // }
+
         }
 
-        Component {
-            id: itemDelegateComponent
-            Cs.ItemDelegate {
-                width: ListView.view.width
-            }
-        }
+        Cs.Rectangle {
+            id: canvas
+            outwards: false
+            clip: true
 
-        ListView {
-            id: canvasList
-            anchors.fill: parent
-            anchors.margins: 3
-
-            model: ListModel {
-                id: canvasModel
-            }
-            spacing: 1
-            delegate: itemDelegateComponent
-        }
-    }
-
-    Item {
-        id: footer
-        anchors {
-            left: parent.left
-            right: parent.right
-            bottom: parent.bottom
-        }
-
-        height: Model.size.footerHeight
-
-        Cs.Button {
-            id: publishButton
-            width: 30
-            height: 30
             anchors {
+                top: header.bottom
+                bottom: footer.top
+                left: parent.left
                 right: parent.right
+
                 margins: Model.margins.main
+            }
+
+            Component {
+                id: itemDelegateComponent
+                Cs.ItemDelegate {
+                    width: ListView.view.width
+                }
+            }
+
+            Component {
+                id: sectionDelegateComponent
+                Cs.SectionDelegate {
+                    width: ListView.view.width
+                }
+            }
+
+            Component {
+                id: highlightComponentDelegate
+                Cs.HighlightComponent {
+                    // width: ListView.view.width
+                }
+            }
+
+            ListView {
+                id: canvasList
+                focus: true
+                anchors.fill: parent
+                anchors.margins: 3
+
+                model: ListModel { id: canvasModel }
+                section.property: "family"
+                section.delegate: sectionDelegateComponent
+                spacing: 1
+                delegate: itemDelegateComponent
+                highlight: highlightComponentDelegate
+            }
+        }
+
+        Item {
+            id: footer
+            anchors {
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+            }
+
+            height: Model.size.footerHeight
+
+            Cs.Button {
+                id: publishButton
+                width: 30
+                height: 30
+                anchors {
+                    right: parent.right
+                    margins: Model.margins.main
+                }
+
+                onClicked: AppCtrl.publish()
             }
         }
     }
 
     Component.onCompleted: {
+        root.x = (Screen.width - root.width) / 2;
+        root.y = (Screen.height - root.height) / 2;
+        startAnimation.start();
         AppCtrl.init();
     }
 }

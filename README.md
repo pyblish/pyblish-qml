@@ -1,4 +1,2 @@
-pyblish-qml
-===========
+### Pyblish QML Frontend
 
-Pyblish QML frontend

@@ -29,4 +29,40 @@ Cs.Rectangle {
         onMouseXChanged: root.x += (mouseX - lastMouseX)
         onMouseYChanged: root.y += (mouseY - lastMouseY)
     }
+
+    /*
+     * Main header, used for moving the application
+     * along with closing, minimizing and logo display.
+    */
+    Image {
+        id: headerImage
+        source: "../img/logo-white.png"
+        anchors.verticalCenter: parent.verticalCenter
+        x: 4
+    }
+
+    Row {
+        anchors {
+            right: parent.right
+            top: parent.top
+            bottom: parent.bottom
+            margins: Model.margins.main
+        }
+
+        spacing: Model.margins.alt
+
+        Cs.Button {
+            id: closeButton
+            source: "../img/button-close.png"
+            width: 30
+            height: 30
+
+            onClicked: {
+                root.minimumHeight = header.height
+                startAnimation.stop();
+                quitAnimation.stopped.connect(Qt.quit);
+                quitAnimation.start();
+            }
+        }
+    }
 }
