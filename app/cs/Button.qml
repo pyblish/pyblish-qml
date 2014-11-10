@@ -1,7 +1,7 @@
 import QtQuick 2.3
 
-import "../js/modelService.js" as Model
 import "../cs" as Cs
+import "../js/modelService.js" as Model
 
 
 Cs.Rectangle {

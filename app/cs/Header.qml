@@ -1,6 +1,8 @@
 import QtQuick 2.3
 
 import "../js/modelService.js" as Model
+// import "../js/appController.js" as AppCtrl
+import "../js/headerController.js" as HeaderCtrl
 import "../cs" as Cs
 
 /*
@@ -57,12 +59,7 @@ Cs.Rectangle {
             width: 30
             height: 30
 
-            onClicked: {
-                root.minimumHeight = header.height
-                startAnimation.stop();
-                quitAnimation.stopped.connect(Qt.quit);
-                quitAnimation.start();
-            }
+            onClicked: HeaderCtrl.closeClickedHandler();
         }
     }
 }

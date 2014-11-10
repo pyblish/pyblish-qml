@@ -5,11 +5,11 @@ import "../js/modelService.js" as Model
 
 Item {
     height: 20
-    // color: Qt.darker(Model.color.background, 1.5)
+    width: parent.width
 
     Item {
         anchors.fill: parent
-        anchors.margins: 5
+        // anchors.margins: 5
 
         Text {
             id: text

@@ -2,13 +2,19 @@ import QtQuick 2.3
 import QtQuick.Window 2.2
 
 import "cs" as Cs
+import "js/appController.js" as Ctrl
 import "js/modelService.js" as Model
-import "js/restService.js" as Rest
-import "js/appController.js" as AppCtrl
 
 
 Window {
     id: root
+
+    property alias header: header
+    property alias startAnimation: startAnimation
+    property alias quitAnimation: quitAnimation
+    property alias message: message
+    property bool closeOk: false
+
     flags: Qt.FramelessWindowHint
     color: "transparent"
 
@@ -88,13 +94,6 @@ Window {
         Cs.Header {
             id: header
             z: 1  // Keep above all other items
-
-            // MouseArea {
-            //     anchors.fill: parent
-
-
-            // }
-
         }
 
         Cs.Rectangle {
@@ -111,62 +110,46 @@ Window {
                 margins: Model.margins.main
             }
 
-            Component {
-                id: itemDelegateComponent
-                Cs.ItemDelegate {
-                    width: ListView.view.width
-                }
-            }
-
-            Component {
-                id: sectionDelegateComponent
-                Cs.SectionDelegate {
-                    width: ListView.view.width
-                }
-            }
-
-            Component {
-                id: highlightComponentDelegate
-                Cs.HighlightComponent {
-                    // width: ListView.view.width
-                }
-            }
-
             ListView {
                 id: canvasList
                 focus: true
                 anchors.fill: parent
-                anchors.margins: 3
+                anchors.margins: Model.margins.main
+                spacing: 1
 
                 model: ListModel { id: canvasModel }
+
+                delegate: Cs.ItemDelegate {}
+                highlight: Cs.HighlightComponent {}
                 section.property: "family"
-                section.delegate: sectionDelegateComponent
-                spacing: 1
-                delegate: itemDelegateComponent
-                highlight: highlightComponentDelegate
+                section.delegate: Cs.SectionDelegate {}
             }
         }
 
         Item {
             id: footer
+
             anchors {
                 left: parent.left
                 right: parent.right
                 bottom: parent.bottom
+                margins: Model.margins.main
             }
 
             height: Model.size.footerHeight
 
+            Cs.Message {
+                id: message
+            }
+
             Cs.Button {
                 id: publishButton
-                width: 30
-                height: 30
-                anchors {
-                    right: parent.right
-                    margins: Model.margins.main
-                }
+                width: parent.height
+                height: parent.height
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
 
-                onClicked: AppCtrl.publish()
+                onClicked: Ctrl.publish()
             }
         }
     }
@@ -175,6 +158,23 @@ Window {
         root.x = (Screen.width - root.width) / 2;
         root.y = (Screen.height - root.height) / 2;
         startAnimation.start();
-        AppCtrl.init();
+        Ctrl.init();
+    }
+
+    // Todo: This is duplicated in closeClickedHandler
+    onClosing: {
+        startAnimation.stop();
+        close.accepted = root.closeOk
+
+        quitAnimation.stopped.connect(function () {
+            root.closeOk = true;
+            Qt.quit();
+        });
+
+        if (!root.closeOk) {
+            quitAnimation.start()
+        };
+
+        console.log("Closing");
     }
 }

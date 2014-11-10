@@ -6,7 +6,6 @@ import "../js/modelService.js" as Model
  * A generic rectangle
  * Consider it a baseclass for every rectangle used
 */
-
 Rectangle {
     id: root
     property bool outwards: true

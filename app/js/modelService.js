@@ -20,18 +20,3 @@ var margins = {
     "main": 5,
     "alt": 3
 };
-
-// var instances = [
-//     {
-//         "instance": "Instance 1",
-//         "family": "napoleon.model"
-//     },
-//     {
-//         "instance": "Instance 2",
-//         "family": "napoleon.rig"
-//     },
-//     {
-//         "instance": "Instance 3",
-//         "family": "napoleon.rig"
-//     }
-// ];
