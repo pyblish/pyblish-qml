@@ -1,5 +1,5 @@
 /*global Qt, Model, XMLHttpRequest*/
-/*global root, canvasModel, canvasList*/
+/*global root, listModel, listList*/
 
 "use strict";
 
@@ -31,7 +31,7 @@ init = function () {
                 // Append data
                 item.selected = true;
 
-                canvasModel.append(item);
+                listModel.append(item);
             });
         }
     };
@@ -62,8 +62,8 @@ publish = function () {
         instances = [];
 
     // Get selected instances from model
-    for (i = canvasModel.count - 1; i >= 0; i--) {
-        item = canvasModel.get(i);
+    for (i = listModel.count - 1; i >= 0; i--) {
+        item = listModel.get(i);
 
         if (item.selected === true) {
             instances.push({

@@ -97,7 +97,7 @@ Window {
         }
 
         Cs.Rectangle {
-            id: canvas
+            id: list
             outwards: false
             clip: true
 
@@ -111,13 +111,13 @@ Window {
             }
 
             ListView {
-                id: canvasList
+                id: listList
                 focus: true
                 anchors.fill: parent
                 anchors.margins: Model.margins.main
                 spacing: 1
 
-                model: ListModel { id: canvasModel }
+                model: ListModel { id: listModel }
 
                 delegate: Cs.ItemDelegate {}
                 highlight: Cs.HighlightComponent {}
@@ -149,6 +149,7 @@ Window {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
 
+                source: "../img/button-expand.png"
                 onClicked: Ctrl.publish()
             }
         }

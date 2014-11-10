@@ -23,7 +23,13 @@ Item {
 
             Rectangle {
                 id: indicator
-                visible: selected ? true : false
+
+                Behavior on width {
+                    NumberAnimation {
+                        duration: 300
+                        easing.type: Easing.OutQuint
+                    }
+                }
 
                 anchors {
                     top: parent.top
@@ -31,7 +37,7 @@ Item {
                     left: parent.left
                 }
 
-                width: 1
+                width: selected ? 1 : 0
                 color: "yellow"
             }
 
@@ -39,8 +45,8 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 onClicked: Ctrl.itemIndicatorClickedHandler(index)
-                onEntered: indicatorContainer.color = "red"
-                onExited: indicatorContainer.color = "transparent"
+                onEntered: indicator.width = 5
+                onExited: indicator.width = selected ? 1 : 0
             }
         }
 

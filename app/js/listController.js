@@ -1,4 +1,4 @@
-/*global canvasModel, canvasList*/
+/*global listModel, listList*/
 
 "use strict";
 
@@ -10,7 +10,7 @@ var itemClickedHandler,
  *
 */
 itemIndicatorClickedHandler = function (index) {
-    var item = canvasModel.get(index);
+    var item = listModel.get(index);
     item.selected = item.selected ? false : true;
 };
 
@@ -20,6 +20,6 @@ itemIndicatorClickedHandler = function (index) {
  *
 */
 itemClickedHandler = function (index) {
-    canvasList.currentIndex = index;
+    listList.currentIndex = index;
     console.log("Expanding item");
 };
