@@ -5,15 +5,25 @@ import "cs" as Cs
 import "js/appController.js" as Ctrl
 import "js/modelService.js" as Model
 
-
+/*
+ * Main window
+ *
+ * Properties:
+ *      header (alias): Main header
+ *      startAnimation (alias): Initial animation
+ *      endAnimation (alias): Animation upon quitting
+ *      message (alias): Message at the lower left
+ *      _closeOk (bool): Used internally
+ *
+*/
 Window {
-    id: root
-
     property alias header: header
     property alias startAnimation: startAnimation
     property alias quitAnimation: quitAnimation
     property alias message: message
-    property bool closeOk: false
+    property bool _closeOk: false
+
+    id: root
 
     flags: Qt.FramelessWindowHint
     color: "transparent"
@@ -28,68 +38,26 @@ Window {
         source: "font/OpenSans-Semibold.ttf"
     }
 
-    /*
-     * Quit Animation
-     * This sequence is activated when the
-     * user hits the close button.
-    */
-    SequentialAnimation {
+    Cs.QuitAnimation {
         id: quitAnimation
-        running: false
-
-        NumberAnimation {
-            target: container
-            property: "height"
-            to: header.height
-            duration: 400
-            easing.type: Easing.OutCubic
-        }
-
-        PauseAnimation {
-            duration: 50
-        }
-
-        NumberAnimation {
-            target: root
-            property: "opacity"
-            to: 0
-            duration: 200
-        }
+        height: header.height
+        heightTarget: container
+        opacityTarget: root
     }
 
-    /*
-     * Start Animation
-     *
-    */
-    ParallelAnimation {
+    Cs.StartAnimation {
         id: startAnimation
-        running: false
-
-        NumberAnimation {
-            target: container
-            property: "opacity"
-            from: 0
-            to: 1
-            duration: 500
-            easing.type: Easing.OutQuint
-        }
-
-        NumberAnimation {
-            target: container
-            property: "height"
-            from: root.height / 2
-            to: root.height
-            duration: 1000
-            easing.type: Easing.OutQuint
-        }
+        height: header.height
+        heightTarget: container
+        opacityTarget: root
     }
 
 
     Cs.Rectangle {
         id: container
         width: parent.width
-        height: 0
         color: Model.color.background
+        height: 0  // Modified with animation
 
         Cs.Header {
             id: header
@@ -158,21 +126,23 @@ Window {
     Component.onCompleted: {
         root.x = (Screen.width - root.width) / 2;
         root.y = (Screen.height - root.height) / 2;
+
         startAnimation.start();
+
         Ctrl.init();
     }
 
     // Todo: This is duplicated in closeClickedHandler
     onClosing: {
         startAnimation.stop();
-        close.accepted = root.closeOk
+        close.accepted = root._closeOk
 
         quitAnimation.stopped.connect(function () {
-            root.closeOk = true;
+            root._closeOk = true;
             Qt.quit();
         });
 
-        if (!root.closeOk) {
+        if (!root._closeOk) {
             quitAnimation.start()
         };
 
