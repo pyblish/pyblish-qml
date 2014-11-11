@@ -25,7 +25,7 @@ Window {
 
     id: root
 
-    flags: Qt.FramelessWindowHint
+    flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
 
     width: Model.size.windowWidth
@@ -51,7 +51,6 @@ Window {
         heightTarget: container
         opacityTarget: root
     }
-
 
     Cs.Rectangle {
         id: container
@@ -134,18 +133,19 @@ Window {
 
     // Todo: This is duplicated in closeClickedHandler
     onClosing: {
-        startAnimation.stop();
-        close.accepted = root._closeOk
+        Ctrl.quit(close);
+        // startAnimation.stop();
+        // close.accepted = root._closeOk
 
-        quitAnimation.stopped.connect(function () {
-            root._closeOk = true;
-            Qt.quit();
-        });
+        // quitAnimation.stopped.connect(function () {
+        //     root._closeOk = true;
+        //     Qt.quit();
+        // });
 
-        if (!root._closeOk) {
-            quitAnimation.start()
-        };
+        // if (!root._closeOk) {
+        //     quitAnimation.start()
+        // };
 
-        console.log("Closing");
+        // console.log("Closing");
     }
 }

@@ -5,7 +5,9 @@
 
 var init,
     publish,
-    setMessage;
+    setMessage,
+    published,
+    quit;
 
 /*
  * Init
@@ -87,7 +89,7 @@ publish = function () {
 
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
-            console.log("Done!");
+            published(JSON.parse(xhr.responseText))
         }
     };
 
@@ -95,4 +97,31 @@ publish = function () {
         "action": "publish",
         "instances": instances
     }));
+};
+
+
+published = function (status) {
+    setMessage("Published successfully!", status);
+    quit(null, 1000);
+};
+
+
+quit = function (event, delay) {
+    startAnimation.stop();
+    
+    if (event !== null) {
+        event.accepted = root._closeOk
+    }
+
+    root.quitAnimation.delay = delay || 0
+    root.quitAnimation.stopped.connect(function () {
+        root._closeOk = true;
+        Qt.quit();
+    });
+
+    if (!root._closeOk) {
+        root.quitAnimation.start()
+    };
+
+    console.log("Closing");
 };

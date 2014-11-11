@@ -10,8 +10,13 @@ SequentialAnimation {
     running: false
 
     property int height: 50
+    property int delay: 0
     property alias heightTarget: heightAnimation.target
     property alias opacityTarget: opacityAnimation.target
+
+    PauseAnimation {
+        duration: root.delay
+    }
 
     NumberAnimation {
         id: heightAnimation

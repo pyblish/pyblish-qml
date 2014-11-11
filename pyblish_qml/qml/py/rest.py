@@ -68,27 +68,3 @@ class Publish(flask.ext.restful.Resource):
             "message": "success",
             "status": 200
         }
-
-# class Api(flask.ext.restful.Resource):
-#     def post(self):
-#         data_str = flask.request.stream.read()
-#         data_json = loads(data_str)
-
-#         command = data_json.get("command") or None
-#         if command is None:
-#             return {"message": "Must provide a command"}
-
-#         try:
-#             module, attribute = command.split(".")
-#         except ValueError:
-#             module, attribute = "cmds", command
-
-#         args = data_json.get("args") or list()
-#         kwargs = data_json.get("kwargs") or dict()
-
-#         try:
-#             _mod = getattr(wrapper, module)
-#             getattr(_mod, attribute)(*args, **kwargs)
-#             return {"message": True}
-#         except Exception as e:
-#             return {"message": str(e)}
