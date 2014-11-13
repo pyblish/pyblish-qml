@@ -59,6 +59,7 @@ At this point, Pyblish QML:
 - Does NOT provide any feedback; except a completion message.
 - Does NOT support partial publishing; although the GUI suggests it.
 - Takes 2 seconds to start.
+- Launches in a separate window; detached from host
 
 
 #### Integrations
