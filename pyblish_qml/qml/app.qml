@@ -15,6 +15,8 @@ import "js/modelService.js" as Model
  *      message (alias): Message at the lower left
  *      _closeOk (bool): Used internally
  *
+ * Mediators:
+ *      connection {port: int}
 */
 Window {
     property alias header: header
@@ -128,24 +130,15 @@ Window {
 
         startAnimation.start();
 
-        Ctrl.init();
+        if (typeof connection === "undefined") {
+            // Connection is defined via Python
+            var msg = "Application must be started through app.py";
+            console.log(msg);
+            Ctrl.setMessage(msg);
+        } else {
+            Ctrl.init();
+        }
     }
 
-    // Todo: This is duplicated in closeClickedHandler
-    onClosing: {
-        Ctrl.quit(close);
-        // startAnimation.stop();
-        // close.accepted = root._closeOk
-
-        // quitAnimation.stopped.connect(function () {
-        //     root._closeOk = true;
-        //     Qt.quit();
-        // });
-
-        // if (!root._closeOk) {
-        //     quitAnimation.start()
-        // };
-
-        // console.log("Closing");
-    }
+    onClosing: Ctrl.quit(close);
 }

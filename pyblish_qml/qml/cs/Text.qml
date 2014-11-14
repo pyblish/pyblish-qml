@@ -1,5 +1,8 @@
 import QtQuick 2.3
 
+import "../js/modelService.js" as Model
+
+
 Text {
 
     FontLoader {
@@ -7,7 +10,7 @@ Text {
         source: "../font/OpenSans-Semibold.ttf"
     }
 
-    color: "white"
+    color: Model.color.text
     renderType: Text.QtRendering
     font.family: mainFont.name
 

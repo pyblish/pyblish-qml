@@ -1,5 +1,5 @@
 /*global Qt, Model, XMLHttpRequest*/
-/*global root, listModel, listList*/
+/*global root, listModel, listList, connection*/
 
 "use strict";
 
@@ -7,18 +7,17 @@ var init,
     publish,
     setMessage,
     published,
+    get,
+    req,
     quit;
 
-/*
- * Init
- *      Retrieve initial data from host
- *
-*/
-init = function () {
-    var xhr = new XMLHttpRequest();
 
-    xhr.open("GET",
-             "http://127.0.0.1:6000/instance",
+req = function (type, address, callback, payload) {
+    var xhr = new XMLHttpRequest(),
+        endpoint = "http://127.0.0.1:" + connection.port;
+
+    xhr.open(type,
+             endpoint + address,
              true); // Asynchronous
 
     xhr.onreadystatechange = function () {
@@ -28,24 +27,40 @@ init = function () {
                 return;
             }
 
-            JSON.parse(xhr.responseText).forEach(function (item) {
+            console.log("Running callback");
+            callback(JSON.parse(xhr.responseText));
 
-                // Append data
-                item.selected = true;
-
-                listModel.append(item);
-            });
         }
     };
 
-    xhr.send();
+    xhr.send(payload || null);
+}
+
+/*
+ * Init
+ *      Retrieve initial data from host
+ *
+*/
+init = function () {
+    console.log("Initialising..");
+
+    req("GET", "/instance", function (res) {
+        res.forEach(function (item) {
+
+            // Append data
+            item.selected = true;
+
+            console.log("Appending: ", item);
+            listModel.append(item);
+        });
+    });
 };
 
 setMessage = function (message) {
     root.message.text = message;
     root.message.animation.restart();
     root.message.animation.start();
-    console.log("Could not communicate with host");
+    console.log(message);
 };
 
 /*
@@ -81,27 +96,16 @@ publish = function () {
     }
 
     // Transmit request
-    xhr = new XMLHttpRequest();
-
-    xhr.open("POST",
-             "http://127.0.0.1:6000/publish",
-             true); // Asynchronous
-
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4) {
-            published(JSON.parse(xhr.responseText))
-        }
-    };
-
-    xhr.send(JSON.stringify({
-        "action": "publish",
-        "instances": instances
+    req("POST", "/publish", function (res) {
+        published(res);}, JSON.stringify({
+            "action": "publish",
+            "instances": instances
     }));
 };
 
 
 published = function (status) {
-    setMessage("Published successfully!", status);
+    setMessage("Published successfully: " + status);
     quit(null, 1000);
 };
 
