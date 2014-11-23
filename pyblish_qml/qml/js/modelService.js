@@ -1,5 +1,5 @@
 "use strict";
-/*global Qt*/
+/*global Qt, connection*/
 
 
 var color = {
@@ -20,15 +20,17 @@ var size = {
 var image = {
     "logo": "../img/logo-white.png",
     "communication": "../img/communication.png"
-}
+};
 
 var margins = {
     "main": 5,
     "alt": 3
 };
 
-// Handshake attributes
+var closeOk = false;
+
+
 var host = "None",
-    port = "0",
+    port = 0,
     pyblishVersion = "0.0.0",
     endpointVersion = "0.0.0";

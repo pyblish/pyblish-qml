@@ -2,8 +2,9 @@ import QtQuick 2.3
 import QtQuick.Window 2.2
 
 import "cs" as Cs
-import "js/appController.js" as Ctrl
 import "js/modelService.js" as Model
+import "js/appController.js" as Ctrl
+import "js/hostService.js" as Host
 
 /*
  * Main window
@@ -15,15 +16,12 @@ import "js/modelService.js" as Model
  *      message (alias): Message at the lower left
  *      _closeOk (bool): Used internally
  *
- * Mediators:
- *      connection {port: int}
 */
 Window {
     property alias header: header
-    property alias startAnimation: startAnimation
-    property alias quitAnimation: quitAnimation
     property alias message: message
-    property bool _closeOk: false
+    property alias quitAnimation: quitAnimation
+    property alias startAnimation: startAnimation
 
     id: root
 
@@ -65,34 +63,23 @@ Window {
             z: 1  // Keep above all other items
         }
 
-        Cs.Rectangle {
-            id: list
-            outwards: false
-            clip: true
+        Cs.Text {
+            id: connectionText
+            text: "No connection"
+            anchors.centerIn: parent
+        }
 
-            anchors {
-                top: header.bottom
-                bottom: footer.top
-                left: parent.left
-                right: parent.right
+        ListModel { id: instancesModel }
 
-                margins: Model.margins.main
-            }
-
-            ListView {
-                id: listList
-                focus: true
-                anchors.fill: parent
-                anchors.margins: Model.margins.main
-                spacing: 1
-
-                model: ListModel { id: listModel }
-
-                delegate: Cs.ItemDelegate {}
-                highlight: Cs.HighlightComponent {}
-                section.property: "family"
-                section.delegate: Cs.SectionDelegate {}
-            }
+        Cs.InstancesItem {
+            id: instancesItem
+            model: instancesModel
+            anchors.top: header.bottom
+            anchors.bottom: footer.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: Model.margins.main
+            visible: false
         }
 
         Item {
@@ -129,15 +116,8 @@ Window {
         root.y = (Screen.height - root.height) / 2;
 
         startAnimation.start();
+        Ctrl.init();
 
-        if (typeof connection === "undefined") {
-            // Connection is defined via Python
-            var msg = "Application must be started through app.py";
-            console.log(msg);
-            Ctrl.setMessage(msg);
-        } else {
-            Ctrl.init();
-        }
     }
 
     onClosing: Ctrl.quit(close);

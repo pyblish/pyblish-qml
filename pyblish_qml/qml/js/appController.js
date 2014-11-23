@@ -1,67 +1,44 @@
 /*global Qt, Model, XMLHttpRequest*/
-/*global root, listModel, listList, connection*/
+/*global root, instancesModel, listList, Host*/
+/*global print, quit, connection*/
 
 "use strict";
 
-var init,
-    publish,
-    setMessage,
-    published,
-    get,
-    req,
-    quit;
 
-
-req = function (type, address, callback, payload) {
-    var xhr = new XMLHttpRequest(),
-        endpoint = "http://127.0.0.1:" + connection.port;
-
-    xhr.open(type,
-             endpoint + address,
-             true); // Asynchronous
-
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4) {
-            if (xhr.status !== 200) {
-                setMessage("Could not communicate with host");
-                return;
-            }
-
-            console.log("Running callback");
-            callback(JSON.parse(xhr.responseText));
-
-        }
-    };
-
-    xhr.send(payload || null);
+function setMessage(message) {
+    root.message.text = message;
+    root.message.animation.restart();
+    root.message.animation.start();
+    print(message);
 }
+
 
 /*
  * Init
  *      Retrieve initial data from host
  *
 */
-init = function () {
-    console.log("Initialising..");
+function init() {
+    if (typeof connection !== "undefined") {
+        Model.port = connection.port;
+    }
 
-    req("GET", "/instance", function (res) {
-        res.forEach(function (item) {
+    Host.onReady(function () {
+        print("Populating Model");
 
-            // Append data
-            item.selected = true;
+        Host.get_instances(function (resp) {
+            print(resp);
+            resp.forEach(function (item) {
 
-            console.log("Appending: ", item);
-            listModel.append(item);
+                // Append data
+                item.selected = true;
+
+                print("Appending: ", item);
+                instancesModel.append(item);
+            });
         });
     });
-};
-
-setMessage = function (message) {
-    root.message.text = message;
-    root.message.animation.restart();
-    root.message.animation.start();
-    console.log(message);
-};
+}
 
 /*
  * Publish
@@ -72,60 +49,33 @@ setMessage = function (message) {
  *       instances: list of instances}
  *
 */
-publish = function () {
-    var i,
-        xhr,
-        item,
-        instances = [];
-
-    // Get selected instances from model
-    for (i = listModel.count - 1; i >= 0; i--) {
-        item = listModel.get(i);
-
-        if (item.selected === true) {
-            instances.push({
-                name: item.instance,
-                plugins: ["plugin1", "plugin2"]
-            });
-        }
-    }
-
-    if (instances.length === 0) {
-        setMessage("No instances selected..");
-        return;
-    }
-
-    // Transmit request
-    req("POST", "/publish", function (res) {
-        published(res);}, JSON.stringify({
-            "action": "publish",
-            "instances": instances
-    }));
-};
+function publish() {
+    print("Publishing!");
+}
 
 
-published = function (status) {
+function published(status) {
     setMessage("Published successfully: " + status);
     quit(null, 1000);
-};
+}
 
 
-quit = function (event, delay) {
-    startAnimation.stop();
-    
+function quit(event, delay) {
+    root.startAnimation.stop();
+
     if (event !== null) {
-        event.accepted = root._closeOk
+        event.accepted = Model.closeOk;
     }
 
-    root.quitAnimation.delay = delay || 0
+    root.quitAnimation.delay = delay || 0;
     root.quitAnimation.stopped.connect(function () {
-        root._closeOk = true;
+        Model.closeOk = true;
         Qt.quit();
     });
 
-    if (!root._closeOk) {
-        root.quitAnimation.start()
-    };
+    if (!Model.closeOk) {
+        root.quitAnimation.start();
+    }
 
-    console.log("Closing");
-};
+    print("Closing");
+}
