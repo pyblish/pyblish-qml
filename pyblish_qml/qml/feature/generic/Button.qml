@@ -1,10 +1,10 @@
 import QtQuick 2.3
 
-import "../cs" as Cs
-import "../js/modelService.js" as Model
+import "../generic" as Generic
+import "../service/model.js" as Model
 
 
-Cs.Rectangle {
+Generic.Rectangle {
     id: root
     signal clicked
 

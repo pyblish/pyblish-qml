@@ -10,7 +10,6 @@ also chosen via QML.
 import os
 import sys
 import json
-import time
 import logging
 import threading
 
@@ -91,7 +90,7 @@ def create_app(host):
     return engine
 
 
-def run(host, port=6000):
+def run_production_app(host, port=6000):
     engine = create_app(host)
 
     connection = Connection(host, port)
@@ -99,7 +98,7 @@ def run(host, port=6000):
     engine.load(QtCore.QUrl.fromLocalFile(APP_PATH))
 
 
-def run_mock():
+def run_debug_app():
     """Run app with mocked Flask client
 
     The client emulates a host using the MockService used
@@ -135,6 +134,6 @@ if __name__ == '__main__':
     kwargs = parser.parse_args()
 
     if kwargs.port == 0:
-        run_mock()
+        run_debug_app()
     else:
-        run(**kwargs.__dict__)
+        run_production_app(**kwargs.__dict__)

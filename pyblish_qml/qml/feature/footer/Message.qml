@@ -1,11 +1,11 @@
 import QtQuick 2.3
 
-import "../cs" as Cs
+import "../generic" as Generic
 
-Cs.Text {
+
+Generic.Text {
     id: root
     opacity: 0
-    anchors.verticalCenter: parent.verticalCenter
 
     property alias animation: messageAnimation
 

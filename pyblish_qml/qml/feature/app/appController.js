@@ -1,6 +1,6 @@
-/*global Qt, XMLHttpRequest, print, quit*/      // QML features
+/*global Qt, XMLHttpRequest, print*/            // QML features
 /*global Model, Host, Connection*/              // Registered types
-/*global root*/  // Id's
+/*global root*/                                 // Id's
 
 "use strict";
 
@@ -25,27 +25,37 @@ function init() {
 
     Host.onReady(function () {
         console.debug("Populating Model");
+
         Host.get_instances(function (resp) {
-            console.debug(resp);
             resp.forEach(function (item) {
 
                 // Append data
                 item.selected = true;
 
-                console.debug("Appending: ", item);
                 root.instancesModel.append(item);
             });
-
-            // Display list
-            root.body.visible = true;
         });
+
+        Host.get_plugins(function (resp) {
+            resp.forEach(function (item) {
+
+                // Append data
+                item.selected = true;
+
+                root.pluginsModel.append(item);
+            });
+        });
+
+        Host.get_application(function (resp) {
+            for (var key in resp) {
+                Model.debug[key] = resp[key];
+            }
+        });
+
+        // Display list
+        root.body.visible = true;
+
     });
-}
-
-
-function published(status) {
-    setMessage("Published successfully: " + status);
-    quit(null, 1000);
 }
 
 
@@ -67,4 +77,10 @@ function quit(event, delay) {
     }
 
     console.debug("Closing");
+}
+
+
+function published(status) {
+    setMessage("Published successfully: " + status);
+    quit(null, 1000);
 }

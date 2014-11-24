@@ -1,6 +1,6 @@
 import QtQuick 2.3
 
-import "../js/modelService.js" as Model
+import "../service/model.js" as Model
 
 /*
  * A generic rectangle
@@ -12,7 +12,7 @@ Rectangle {
 
     // An outwards rectangle is naturally lighter, whereas
     // an inwards rectangle is darker. This can be overridden.
-    color: Qt.darker(Model.color.background, outwards ? 0.9:1.2)
+    color: Qt.darker(Model.color.background, outwards ? 0.9 : 1.2)
 
     /*
      * Outer border

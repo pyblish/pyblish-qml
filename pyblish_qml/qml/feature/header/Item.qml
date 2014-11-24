@@ -1,8 +1,8 @@
 import QtQuick 2.3
 
-import "../cs" as Cs
-import "../js/modelService.js" as Model
-import "../js/headerController.js" as Ctrl
+import "../generic" as Generic
+import "../service/model.js" as Model
+import "headerController.js" as Ctrl
 
 /*
  * Header
@@ -11,7 +11,7 @@ import "../js/headerController.js" as Ctrl
  *      Main header, used for moving the application
  *      along with closing, minimizing and logo display.
 */
-Cs.Rectangle {
+Generic.Rectangle {
     property bool logoContainsMouse
     signal logoPressed
 
@@ -108,10 +108,10 @@ Cs.Rectangle {
             height: parent.height
             anchors.verticalCenter: parent.verticalCenter
 
-            Cs.Text {
+            Generic.Text {
                 id: debugVersion
                 anchors.centerIn: parent
-                text: Model.pyblishVersion
+                text: Model.debug.pyblishVersion ? Model.debug.pyblishVersion : "0.0.0"
             }
         }
 
@@ -133,10 +133,10 @@ Cs.Rectangle {
             height: parent.height
             anchors.verticalCenter: parent.verticalCenter
 
-            Cs.Text {
+            Generic.Text {
                 id: debugHost
                 anchors.centerIn: parent
-                text: Model.host
+                text: Model.debug.host ? Model.debug.host : "Python"
             }
         }
     }
@@ -158,7 +158,7 @@ Cs.Rectangle {
 
         spacing: Model.margins.alt
 
-        Cs.Button {
+        Generic.Button {
             id: closeButton
             source: Model.image.close
             width: 30

@@ -1,10 +1,11 @@
 import QtQuick 2.3
 
-import "../cs" as Cs
-import "../js/modelService.js" as Model
-import "../js/footerController.js" as Ctrl
+import "../generic" as Generic
+import "footerController.js" as Ctrl
+import "../service/model.js" as Model
 
-Cs.Rectangle {
+
+Generic.Rectangle {
     property alias message: message
 
     id: root
@@ -12,8 +13,9 @@ Cs.Rectangle {
     width: 200
     height: Model.size.footerHeight
 
-    Cs.Message {
+    Message {
         id: message
+        anchors.verticalCenter: parent.verticalCenter
     }
 
     Row {
@@ -28,7 +30,7 @@ Cs.Rectangle {
 
         spacing: Model.margins.alt
 
-         Cs.Button {
+         Generic.Button {
             id: publishButton
             source: Model.image.publish
             width: 30

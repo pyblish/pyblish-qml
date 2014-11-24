@@ -1,8 +1,8 @@
 import QtQuick 2.3
 
-import "../cs" as Cs
-import "../js/modelService.js" as Model
-import "../js/listController.js" as Ctrl
+import "../generic" as Generic
+import "../service/model.js" as Model
+import "../list/listController.js" as Ctrl
 
 
 /*
@@ -18,11 +18,11 @@ import "../js/listController.js" as Ctrl
  *
  *
 */
-Cs.Rectangle {
+Item {
     id: root
     width: 100
     height: 100
-    outwards: false
+    // outwards: false
     clip: true
 
     property alias view: listView
@@ -96,7 +96,7 @@ Cs.Rectangle {
                         onExited: indicator.width = selected ? 1 : 0
                 }}
 
-                Cs.Text {
+                Generic.Text {
                     id: text
                     text: name
                     anchors.left: indicatorContainer.right

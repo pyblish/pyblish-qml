@@ -2,6 +2,10 @@
 /*global Qt, connection*/
 
 
+function model(parent) {
+    return Qt.createQmlObject("import QtQuick 2.3; ListModel {}", parent);
+}
+
 var color = {
     "background": Qt.rgba(0.3, 0.3, 0.3),
     "foreground": Qt.rgba(0.6, 0.6, 0.6),
@@ -18,10 +22,10 @@ var size = {
 };
 
 var image = {
-    "logo": "../img/logo-white.png",
-    "communication": "../img/communication.png",
-    "publish": "../img/button-expand.png",
-    "close": "../img/button-close.png",
+    "logo": "../../img/logo-white.png",
+    "communication": "../../img/communication.png",
+    "publish": "../../img/button-expand.png",
+    "close": "../../img/button-close.png",
 };
 
 var margins = {
@@ -33,6 +37,4 @@ var closeOk = false;
 
 
 var host = "None",
-    port = 0,
-    pyblishVersion = "0.0.0",
-    endpointVersion = "0.0.0";
+    port = 0;

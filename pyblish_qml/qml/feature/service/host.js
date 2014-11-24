@@ -12,7 +12,7 @@ var BASE = "http://127.0.0.1:" + Model.port + "/pyblish/v1";
  *
 */
 function MockHTTPRequest() {
-    var component = Qt.createComponent("../cs/MockHTTPRequest.qml"),
+    var component = Qt.createComponent("../app/MockHTTPRequest.qml"),
         mhr;
 
     this.readyState = null;
@@ -21,6 +21,7 @@ function MockHTTPRequest() {
 
     if (component.status === Component.Error) {
         this.readyState = this.ERROR;
+        this.errorString = component.errorString;
     } else {
         mhr = component.createObject(root);
         console.assert(mhr !== "undefined", "This file should never fail");
@@ -67,6 +68,7 @@ function mock_request(verb, endpoint, obj, cb) {
     var mhr = new MockHTTPRequest();
 
     if (mhr.readyState === mhr.ERROR) {
+        // return print("Running standalone: " + mhr.errorString());
         return print("Running standalone");
     }
 
@@ -102,4 +104,8 @@ function get_plugins(cb) {
 
 function get_processes(cb) {
     request("GET", "/processes", null, cb);
+}
+
+function get_application(cb) {
+    request("GET", "/application", null, cb);
 }

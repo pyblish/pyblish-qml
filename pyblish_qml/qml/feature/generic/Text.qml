@@ -1,13 +1,13 @@
 import QtQuick 2.3
 
-import "../js/modelService.js" as Model
+import "../service/model.js" as Model
 
 
 Text {
 
     FontLoader {
         id: mainFont
-        source: "../font/OpenSans-Semibold.ttf"
+        source: "../../font/OpenSans-Semibold.ttf"
     }
 
     color: Model.color.text
