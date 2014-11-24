@@ -2,7 +2,7 @@ import QtQuick 2.3
 
 import "../generic" as Generic
 import "../service/model.js" as Model
-import "../list/listController.js" as Ctrl
+import "../list/controller.js" as Ctrl
 
 
 /*
@@ -18,15 +18,29 @@ import "../list/listController.js" as Ctrl
  *
  *
 */
-Item {
+Rectangle {
     id: root
-    width: 100
-    height: 100
-    // outwards: false
+    width: 200
+    height: 300
     clip: true
+    color: "transparent"
 
     property alias view: listView
     property alias model: listView.model
+
+
+    ListView {
+        id: listView
+        focus: true
+        anchors.fill: parent
+        anchors.margins: Model.margins.main
+        spacing: 1
+
+        delegate: itemDelegate
+        section.delegate: sectionDelegate
+        section.property: "family"
+    }
+
 
     /*
      * Item Delegate
@@ -44,6 +58,28 @@ Item {
         Item {
             height: 20
             width: parent.width
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.rightMargin: selected ? 0 : parent.width
+                anchors.leftMargin: indicatorContainer.width
+                color: "#3F7FAB"
+                opacity: selected ? 1 : 0
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 100
+                        easing.type: Easing.OutQuint
+                    }
+                }
+
+                Behavior on anchors.rightMargin {
+                    NumberAnimation {
+                        duration: 100
+                        easing.type: Easing.OutCubic
+                    }
+                }
+            }
 
             Item {
                 anchors.top: parent.top
@@ -84,7 +120,7 @@ Item {
                             left: parent.left
                         }
 
-                        width: selected ? 1 : 0
+                        width: toggled ? 1 : 0
                         color: "yellow"
                     }
 
@@ -93,7 +129,7 @@ Item {
                         hoverEnabled: true
                         onClicked: Ctrl.itemIndicatorClickedHandler(index)
                         onEntered: indicator.width = 5
-                        onExited: indicator.width = selected ? 1 : 0
+                        onExited: indicator.width = toggled ? 1 : 0
                 }}
 
                 Generic.Text {
@@ -103,26 +139,31 @@ Item {
                     anchors.leftMargin: 5
                     anchors.verticalCenter: parent.verticalCenter
 
-                    MouseArea {
-                        hoverEnabled: true
-                        anchors.fill: parent
-
-                        onClicked: Ctrl.itemClickedHandler(index)
-                        onEntered: hover.opacity = 0.05
-                        onExited: hover.opacity = 0
-            }}}
+                }}
 
             Rectangle {
                 id: hover
                 anchors.fill: parent
+                anchors.leftMargin: indicatorContainer.width
                 color: "white"
                 opacity: 0
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 200
+                        duration: 50
                         easing.type: Easing.OutCubic
-    }}}}}
+            }}}
+
+            MouseArea {
+                hoverEnabled: true
+                anchors.fill: parent
+                anchors.leftMargin: indicatorContainer.width
+
+                onClicked: Ctrl.itemClickedHandler(index)
+                onEntered: hover.opacity = 0.05
+                onExited: hover.opacity = 0
+            }
+    }}
 
     /*
      * Highlight Delegate
@@ -172,15 +213,24 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
     }}}}
 
-    ListView {
-        id: listView
-        focus: true
-        anchors.fill: parent
-        anchors.margins: Model.margins.main
-        spacing: 1
+    /*
+     * Running standalone
+     *
+    */
+    Component.onCompleted: {
+        if (!listView.model) {
+            root.color = Model.color.background;
+            listView.model = Qt.createQmlObject("import QtQuick 2.3; ListModel {}", root);;
 
-        delegate: itemDelegate
-        highlight: highlightDelegate
-        section.delegate: sectionDelegate
-        section.property: "family"
-}}
+
+            [{"name": "item1", "toggled": false, "selected": false},
+             {"name": "item2", "toggled": true, "selected": false},
+             {"name": "item2", "toggled": true, "selected": false},
+             {"name": "item2", "toggled": false, "selected": false},
+             {"name": "item3", "toggled": false, "selected": false},
+            ].forEach(function (item) {
+                listView.model.append(item)
+            });
+        }
+    }
+}

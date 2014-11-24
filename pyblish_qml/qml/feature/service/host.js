@@ -102,10 +102,20 @@ function get_plugins(cb) {
 }
 
 
+function get_application(cb) {
+    request("GET", "/application", null, cb);
+}
+
+
 function get_processes(cb) {
     request("GET", "/processes", null, cb);
 }
 
-function get_application(cb) {
-    request("GET", "/application", null, cb);
+function get_process(process_id, cb) {
+    request("GET", "/processes/" + process_id, null, cb);
+}
+
+function post_processes(instance, plugin, cb) {
+    request("POST", "/processes",
+            {"instance": instance, "plugin": plugin}, cb);
 }

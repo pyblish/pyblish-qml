@@ -10,17 +10,10 @@ import "feature/animation" as Animation
 import "feature/service/model.js" as Model
 import "feature/service/host.js" as Host
 
-import "feature/app/appController.js" as Ctrl
+import "feature/app/controller.js" as Ctrl
 
 /*
  * Main window
- *
- * Properties:
- *      header (alias): Main header
- *      startAnimation (alias): Initial animation
- *      endAnimation (alias): Animation upon quitting
- *      message (alias): Message at the lower left
- *      _closeOk (bool): Used internally
  *
 */
 Window {
@@ -60,6 +53,13 @@ Window {
             z: 1
             anchors.left: parent.left
             anchors.right: parent.right
+
+            onDrag: {
+                root.x += x
+                root.y += y
+            }
+
+            onCloseClicked: Ctrl.closeClickedHandler()
         }
         
         Generic.Rectangle {
@@ -93,6 +93,7 @@ Window {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
 
+            onPublish: Ctrl.publishHandler();
         }
 
         Generic.Text {

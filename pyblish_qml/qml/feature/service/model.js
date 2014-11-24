@@ -36,5 +36,4 @@ var margins = {
 var closeOk = false;
 
 
-var host = "None",
-    port = 0;
+var port = 0;

@@ -2,7 +2,7 @@ import QtQuick 2.3
 
 import "../generic" as Generic
 import "../service/model.js" as Model
-import "headerController.js" as Ctrl
+import "controller.js" as Ctrl
 
 /*
  * Header
@@ -12,11 +12,15 @@ import "headerController.js" as Ctrl
  *      along with closing, minimizing and logo display.
 */
 Generic.Rectangle {
+    id: root
+
     property alias pyblishVersion: debugVersion.text
     property alias host: debugHost.text
     property bool logoContainsMouse
     
     signal logoPressed
+    signal closeClicked
+    signal drag(real x, real y)
 
     width: 200
     height: Model.size.headerHeight
@@ -53,14 +57,16 @@ Generic.Rectangle {
 
         acceptedButtons: Qt.LeftButton
 
+        // Internal
         onPressed: {
             lastMouseX = mouseX
             lastMouseY = mouseY
         }
 
+        // Emit change for parents to pick up
         onPositionChanged: {
-            root.x += mouseX - lastMouseX
-            root.y += mouseY - lastMouseY
+            root.drag(mouseX - lastMouseX,
+                      mouseY - lastMouseY)
         }
     }
 
@@ -139,7 +145,7 @@ Generic.Rectangle {
             Generic.Text {
                 id: debugHost
                 anchors.centerIn: parent
-                text: "Python"
+                text: "QML"
             }
         }
     }
@@ -167,7 +173,7 @@ Generic.Rectangle {
             width: 30
             height: 30
 
-            onClicked: Ctrl.closeClickedHandler();
+            onClicked: root.closeClicked();
         }
     }
 }

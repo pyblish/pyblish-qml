@@ -26,6 +26,23 @@ APP_PATH = os.path.join(QML_DIR, "app.qml")
 
 log = logging.getLogger("qml")
 
+# Context properties
+pyqt = None
+connection = None
+
+
+class PyQt(QtCore.QObject):
+    """Expose common PyQt functionality"""
+
+    NoModifier = QtCore.pyqtProperty(int)(lambda self: QtCore.Qt.NoModifier)
+    ShiftModifier = QtCore.pyqtProperty(int)(lambda self: QtCore.Qt.ShiftModifier)
+    ControlModifier = QtCore.pyqtProperty(int)(lambda self: QtCore.Qt.ControlModifier)
+    AltModifier = QtCore.pyqtProperty(int)(lambda self: QtCore.Qt.AltModifier)
+
+    @QtCore.pyqtSlot(result=int)
+    def queryKeyboardModifiers(self):
+        return QtGui.QGuiApplication.queryKeyboardModifiers()
+
 
 class Connection(QtCore.QObject):
     """Manage endpoint connection"""
@@ -45,7 +62,6 @@ class MockHTTPRequest(QtCore.QObject):
 
     @QtCore.pyqtSlot(str, str, QtCore.QVariant)
     def request(self, verb, endpoint, data=None):
-        # print verb, endpoint, data
 
         def thread():
             response = self._request(verb, endpoint, data)
@@ -87,6 +103,10 @@ def create_app(host):
     engine = QtQml.QQmlApplicationEngine()
     engine.objectCreated.connect(finish_load)
 
+    global pyqt
+    pyqt = PyQt()
+    engine.rootContext().setContextProperty("PyQt", pyqt)
+
     return engine
 
 
@@ -94,6 +114,7 @@ def run_production_app(host, port=6000):
     engine = create_app(host)
 
     connection = Connection(host, port)
+
     engine.rootContext().setContextProperty("Connection", connection)
     engine.load(QtCore.QUrl.fromLocalFile(APP_PATH))
 

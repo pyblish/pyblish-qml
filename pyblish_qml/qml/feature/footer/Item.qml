@@ -1,14 +1,16 @@
 import QtQuick 2.3
 
+import "controller.js" as Ctrl
 import "../generic" as Generic
-import "footerController.js" as Ctrl
 import "../service/model.js" as Model
 
 
 Generic.Rectangle {
+    id: root
+
     property alias message: message
 
-    id: root
+    signal publish
 
     width: 200
     height: Model.size.footerHeight
@@ -36,7 +38,7 @@ Generic.Rectangle {
             width: 30
             height: 30
 
-            onClicked: Ctrl.publish();
+            onClicked: root.publish();
         }
     }
 }
