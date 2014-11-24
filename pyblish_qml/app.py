@@ -95,7 +95,7 @@ def run(host, port=6000):
     engine = create_app(host)
 
     connection = Connection(host, port)
-    engine.rootContext().setContextProperty("connection", connection)
+    engine.rootContext().setContextProperty("Connection", connection)
     engine.load(QtCore.QUrl.fromLocalFile(APP_PATH))
 
 
@@ -114,9 +114,9 @@ def run_mock():
     client = app.test_client()
     client.testing = True
 
-    service = pyblish_endpoint.service.MockService
-    service.PERFORMANCE = service.SLOW
-    pyblish_endpoint.service.register_service(service,
+    Service = pyblish_endpoint.service.MockService
+    Service.PERFORMANCE = Service.SLOW
+    pyblish_endpoint.service.register_service(Service,
                                               force=True)
 
     MockHTTPRequest.client = client

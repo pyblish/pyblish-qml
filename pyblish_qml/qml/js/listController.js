@@ -1,25 +1,23 @@
-/*global listModel, listList*/
+/*global root*/
 
 "use strict";
 
-var itemClickedHandler,
-    itemIndicatorClickedHandler;
 
 /*
  * Item Indicator Clicked Handler
  *
 */
-itemIndicatorClickedHandler = function (index) {
-    var item = listModel.get(index);
+function itemIndicatorClickedHandler(index) {
+    var item = root.model.get(index);
     item.selected = item.selected ? false : true;
-};
+}
 
 
 /*
  * Item Clicked Handler
  *
 */
-itemClickedHandler = function (index) {
-    listList.currentIndex = index;
+function itemClickedHandler(index) {
+    root.view.currentIndex = index;
     console.log("Expanding item");
-};
+}

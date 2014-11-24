@@ -15,9 +15,9 @@ Cs.Rectangle {
     property bool logoContainsMouse
     signal logoPressed
 
+    width: 200
     height: Model.size.headerHeight
-    anchors.left: parent.left
-    anchors.right: parent.right
+
 
     /*
      * Logo mouse area
@@ -160,7 +160,7 @@ Cs.Rectangle {
 
         Cs.Button {
             id: closeButton
-            source: "../img/button-close.png"
+            source: Model.image.close
             width: 30
             height: 30
 

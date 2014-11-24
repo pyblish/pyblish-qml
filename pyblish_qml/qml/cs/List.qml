@@ -2,7 +2,7 @@ import QtQuick 2.3
 
 import "../cs" as Cs
 import "../js/modelService.js" as Model
-import "../js/instancesController.js" as Ctrl
+import "../js/listController.js" as Ctrl
 
 
 /*

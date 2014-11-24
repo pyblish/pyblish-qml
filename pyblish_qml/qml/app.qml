@@ -19,9 +19,13 @@ import "js/hostService.js" as Host
 */
 Window {
     property alias header: header
-    property alias message: message
-    property alias quitAnimation: quitAnimation
-    property alias startAnimation: startAnimation
+    property alias body: body
+    property alias footer: footer
+    property alias instancesModel: instancesModel
+    property alias instancesList: instancesList
+    property alias quitAnimation: _quitAnimation
+    property alias startAnimation: _startAnimation
+    property bool isStatic: false
 
     id: root
 
@@ -33,89 +37,86 @@ Window {
     minimumWidth: Model.size.windowMinimumWidth
     minimumHeight: Model.size.windowMinimumHeight
 
+    Cs.Rectangle {
+        id: container
+        width: parent.width
+        color: Model.color.background
+        height: root.isStatic ? parent.height : 0  // Modified with animation
+
+        Cs.Header {
+            id: header
+            z: 1
+            anchors.left: parent.left
+            anchors.right: parent.right
+        }
+        
+        Item {
+            id: body
+            visible: false
+            width: parent.width
+            anchors.top: header.bottom
+            anchors.bottom: footer.top
+            anchors.margins: Model.margins.main
+
+            Cs.List {
+                id: instancesList
+                model: instancesModel
+                anchors.fill: parent
+
+            }
+
+            Cs.List {
+                id: pluginsList
+                model: pluginsModel
+        }}
+
+        Cs.Footer {
+            id: footer
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            // anchors.margins: Model.margins.main
+    }}
+
+
+    Cs.Text {
+        id: connectionText
+        text: "No connection"
+        anchors.centerIn: parent
+        visible: !body.visible
+    }
+
+    ListModel { id: instancesModel }
+    ListModel { id: pluginsModel }
+
+
     FontLoader {
         id: mainFont
         source: "font/OpenSans-Semibold.ttf"
     }
 
+
     Cs.QuitAnimation {
-        id: quitAnimation
+        id: _quitAnimation
         height: header.height
         heightTarget: container
         opacityTarget: root
     }
+
 
     Cs.StartAnimation {
-        id: startAnimation
+        id: _startAnimation
         height: header.height
         heightTarget: container
         opacityTarget: root
     }
 
-    Cs.Rectangle {
-        id: container
-        width: parent.width
-        color: Model.color.background
-        height: 0  // Modified with animation
-
-        Cs.Header {
-            id: header
-            z: 1  // Keep above all other items
-        }
-
-        Cs.Text {
-            id: connectionText
-            text: "No connection"
-            anchors.centerIn: parent
-        }
-
-        ListModel { id: instancesModel }
-
-        Cs.InstancesItem {
-            id: instancesItem
-            model: instancesModel
-            anchors.top: header.bottom
-            anchors.bottom: footer.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: Model.margins.main
-            visible: false
-        }
-
-        Item {
-            id: footer
-
-            anchors {
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-                margins: Model.margins.main
-            }
-
-            height: Model.size.footerHeight
-
-            Cs.Message {
-                id: message
-            }
-
-            Cs.Button {
-                id: publishButton
-                width: parent.height
-                height: parent.height
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-
-                source: "../img/button-expand.png"
-                onClicked: Ctrl.publish()
-            }
-        }
-    }
 
     Component.onCompleted: {
         root.x = (Screen.width - root.width) / 2;
         root.y = (Screen.height - root.height) / 2;
 
-        startAnimation.start();
+        root.startAnimation.start();
         Ctrl.init();
 
     }

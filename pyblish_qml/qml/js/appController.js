@@ -1,15 +1,15 @@
-/*global Qt, Model, XMLHttpRequest*/
-/*global root, instancesModel, listList, Host*/
-/*global print, quit, connection*/
+/*global Qt, XMLHttpRequest, print, quit*/      // QML features
+/*global Model, Host, Connection*/              // Registered types
+/*global root*/  // Id's
 
 "use strict";
 
 
 function setMessage(message) {
-    root.message.text = message;
-    root.message.animation.restart();
-    root.message.animation.start();
-    print(message);
+    root.footer.message.text = message;
+    root.footer.message.animation.restart();
+    root.footer.message.animation.start();
+    console.debug(message);
 }
 
 
@@ -19,38 +19,27 @@ function setMessage(message) {
  *
 */
 function init() {
-    if (typeof connection !== "undefined") {
-        Model.port = connection.port;
+    if (typeof Connection !== "undefined") {
+        Model.port = Connection.port;
     }
 
     Host.onReady(function () {
-        print("Populating Model");
-
+        console.debug("Populating Model");
         Host.get_instances(function (resp) {
-            print(resp);
+            console.debug(resp);
             resp.forEach(function (item) {
 
                 // Append data
                 item.selected = true;
 
-                print("Appending: ", item);
-                instancesModel.append(item);
+                console.debug("Appending: ", item);
+                root.instancesModel.append(item);
             });
+
+            // Display list
+            root.body.visible = true;
         });
     });
-}
-
-/*
- * Publish
- *      Instruct host to perform a publish
- * 
- * Data
- *      {action: actionType,
- *       instances: list of instances}
- *
-*/
-function publish() {
-    print("Publishing!");
 }
 
 
@@ -77,5 +66,5 @@ function quit(event, delay) {
         root.quitAnimation.start();
     }
 
-    print("Closing");
+    console.debug("Closing");
 }

@@ -14,12 +14,14 @@ var size = {
     "windowMinimumWidth": 200,
     "windowMinimumHeight": 200,
     "headerHeight": 40,
-    "footerHeight": 35
+    "footerHeight": 40
 };
 
 var image = {
     "logo": "../img/logo-white.png",
-    "communication": "../img/communication.png"
+    "communication": "../img/communication.png",
+    "publish": "../img/button-expand.png",
+    "close": "../img/button-close.png",
 };
 
 var margins = {

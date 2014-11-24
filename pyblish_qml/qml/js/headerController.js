@@ -2,16 +2,14 @@
 
 "use strict";
 
-var closeClickedHandler;
-
 
 /*
  * Close Clicked Handler
  *
 */
-closeClickedHandler = function () {
+function closeClickedHandler() {
     root.minimumHeight = root.header.height;
     root.startAnimation.stop();
     root.quitAnimation.stopped.connect(Qt.quit);
     root.quitAnimation.start();
-};
+}
