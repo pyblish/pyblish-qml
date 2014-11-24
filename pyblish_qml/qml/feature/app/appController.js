@@ -47,9 +47,8 @@ function init() {
         });
 
         Host.get_application(function (resp) {
-            for (var key in resp) {
-                Model.debug[key] = resp[key];
-            }
+            root.header.pyblishVersion = resp.pyblishVersion;
+            root.header.host = resp.host;
         });
 
         // Display list

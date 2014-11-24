@@ -12,7 +12,10 @@ import "headerController.js" as Ctrl
  *      along with closing, minimizing and logo display.
 */
 Generic.Rectangle {
+    property alias pyblishVersion: debugVersion.text
+    property alias host: debugHost.text
     property bool logoContainsMouse
+    
     signal logoPressed
 
     width: 200
@@ -111,7 +114,7 @@ Generic.Rectangle {
             Generic.Text {
                 id: debugVersion
                 anchors.centerIn: parent
-                text: Model.debug.pyblishVersion ? Model.debug.pyblishVersion : "0.0.0"
+                text: "0.0.0"
             }
         }
 
@@ -136,7 +139,7 @@ Generic.Rectangle {
             Generic.Text {
                 id: debugHost
                 anchors.centerIn: parent
-                text: Model.debug.host ? Model.debug.host : "Python"
+                text: "Python"
             }
         }
     }
