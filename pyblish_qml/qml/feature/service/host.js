@@ -3,8 +3,10 @@
 /*global mockHost, Qt, root, Component*/
 
 
-// Base is always located on the local machine
-var BASE = "http://127.0.0.1:" + Model.port + "/pyblish/v1";
+// Merge port from Python with current API prefix
+function get_base() {
+    return "http://127.0.0.1:" + Model.port + Model.urlPrefix;
+}
 
 /*
  * MockHTTPRequest communicates with a fake Flask
@@ -34,20 +36,19 @@ function MockHTTPRequest() {
 
 
 function real_request(verb, endpoint, obj, cb) {
-    print("Request: " + verb + " " + BASE + (endpoint || ""));
-
     var xhr = new XMLHttpRequest(),
         data;
 
     xhr.onreadystatechange = function () {
-        print("xhr: on ready state change: " + xhr.readyState);
+        // print("xhr: on ready state change: " + xhr.readyState);
         if (cb && xhr.readyState === xhr.DONE) {
             if (xhr.status >= 200 && xhr.status < 300) {
-                console.log("responseText: ", xhr.responseText.toString());
+                // console.log("responseText: ", xhr.responseText.toString());
                 var res = JSON.parse(xhr.responseText.toString());
                 cb(res);
             } else {
-                console.log("Status: ", xhr.statusText);
+                console.log("Status: ", xhr.status);
+                // console.log("Status: ", xhr.responseText.toString());
             }
         }
     };
@@ -56,7 +57,7 @@ function real_request(verb, endpoint, obj, cb) {
         print("Request timed out");
     };
 
-    xhr.open(verb, BASE + (endpoint || ""));
+    xhr.open(verb, get_base() + (endpoint || ""));
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Accept", "application/json");
     data = obj ? JSON.stringify(obj) : "";
@@ -68,20 +69,21 @@ function mock_request(verb, endpoint, obj, cb) {
     var mhr = new MockHTTPRequest();
 
     if (mhr.readyState === mhr.ERROR) {
-        // return print("Running standalone: " + mhr.errorString());
         return print("Running standalone");
     }
 
     mhr.requested.connect(cb);
-    mhr.request(verb, BASE + (endpoint || ""), obj);
+    mhr.request(verb, get_base() + (endpoint || ""), obj);
 }
 
 
 function request(verb, endpoint, obj, cb) {
+    console.debug("Request:", verb, get_base() + (endpoint || ""));
+
     if (Model.port === 0) {
         return mock_request(verb, endpoint, obj, cb);
     }
-
+    console.assert(Model.port !== 0);
     return real_request(verb, endpoint, obj, cb);
 }
 

@@ -2,10 +2,6 @@
 /*global Qt, connection*/
 
 
-function model(parent) {
-    return Qt.createQmlObject("import QtQuick 2.3; ListModel {}", parent);
-}
-
 var color = {
     "background": Qt.rgba(0.3, 0.3, 0.3),
     "foreground": Qt.rgba(0.6, 0.6, 0.6),
@@ -36,4 +32,5 @@ var margins = {
 var closeOk = false;
 
 
-var port = 0;
+var port = 0,
+    urlPrefix = "";

@@ -9,8 +9,7 @@
  *
 */
 function Timer() {
-    var component = Qt.createComponent("Timer.qml");
-    return component.createObject(root);
+    return Qt.createQmlObject("import QtQuick 2.3; Timer {}", root);
 }
 
 function set_message(message) {
@@ -23,14 +22,17 @@ function set_message(message) {
 
 /*
  * Init
- *      Retrieve initial data from host
+ *  Retrieve initial data from host
  *
 */
 function init() {
     if (typeof Connection !== "undefined") {
+        console.debug("Connection found, setting port to:", Connection.port);
         Model.port = Connection.port;
+        Model.urlPrefix = Connection.prefix;
     }
 
+    root.startAnimation.start();
 
     Host.onReady(function () {
         console.debug("Populating Model");
@@ -95,17 +97,36 @@ function publishHandler() {
 
 }
 
+/*
+ * Main Processing Loop
+ *  This is the function which performs processing, and
+ *  ultimately publishes the given items in the GUI.
+ *
+ *  It transmits the physical requests to a host and
+ *  updates the GUI with relevant information coming
+ *  back from it.
+ *
+*/
 function process(currentInstance, currentPlugin) {
     var instance = root.instancesModel.get(currentInstance),
         plugin = root.pluginsModel.get(currentPlugin),
         process_id,
         timer;
 
+    // Start by posting a process
     Host.post_processes(instance.name, plugin.name, function (resp) {
         process_id = resp.process_id;
 
         timer = new Timer();
+        timer.interval = 100;
+        timer.repeat = true;
         timer.triggered.connect(function () {
+
+            // The process will yield an ID; the ID is used
+            // upon querying the host for information about
+            // the submitted process; such as it's current
+            // state (either running or not) along with any
+            // log messages produced.
             Host.get_process(process_id, function (resp) {
 
                 // Process is still running
@@ -142,12 +163,6 @@ function process(currentInstance, currentPlugin) {
 
         timer.start();
     });
-
-
-    // Host.get_process(process_id, function (resp) {
-    //     if (resp.running !== true) {
-    //     }
-    // });
 }
 
 

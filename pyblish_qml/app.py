@@ -47,13 +47,23 @@ class PyQt(QtCore.QObject):
 class Connection(QtCore.QObject):
     """Manage endpoint connection"""
 
-    def __init__(self, host, port, parent=None):
+    def __init__(self, host, port, prefix, parent=None):
         super(Connection, self).__init__(parent)
         self._port = port
+        self._host = host
+        self._prefix = prefix
 
     @QtCore.pyqtProperty(int)
     def port(self):
         return self._port
+
+    @QtCore.pyqtProperty(str)
+    def host(self):
+        return self._host
+
+    @QtCore.pyqtProperty(str)
+    def prefix(self):
+        return self._prefix
 
 
 class MockHTTPRequest(QtCore.QObject):
@@ -90,7 +100,7 @@ class MockHTTPRequest(QtCore.QObject):
         return response_data
 
 
-def create_app(host):
+def create_app(host, port=6000):
     app = QtGui.QGuiApplication(sys.argv)
 
     def finish_load(obj, url):
@@ -104,18 +114,21 @@ def create_app(host):
     engine.objectCreated.connect(finish_load)
 
     global pyqt
+    global connection
+
     pyqt = PyQt()
+    connection = Connection(host, port, prefix="/pyblish/v1")
+
     engine.rootContext().setContextProperty("PyQt", pyqt)
+    engine.rootContext().setContextProperty("Connection", connection)
 
     return engine
 
 
-def run_production_app(host, port=6000):
-    engine = create_app(host)
+def run_production_app(host, port):
+    print "Running production app on port: %s" % port
+    engine = create_app(host, port)
 
-    connection = Connection(host, port)
-
-    engine.rootContext().setContextProperty("Connection", connection)
     engine.load(QtCore.QUrl.fromLocalFile(APP_PATH))
 
 
@@ -127,7 +140,7 @@ def run_debug_app():
 
     """
 
-    engine = create_app(host="Mock")
+    engine = create_app(host="Mock", port=0)
 
     app, api = pyblish_endpoint.server.create_app()
 

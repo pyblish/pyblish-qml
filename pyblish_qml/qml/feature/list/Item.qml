@@ -27,6 +27,7 @@ Rectangle {
 
     property alias view: listView
     property alias model: listView.model
+    property alias section: listView.section
 
 
     ListView {
@@ -38,7 +39,6 @@ Rectangle {
 
         delegate: itemDelegate
         section.delegate: sectionDelegate
-        section.property: "family"
     }
 
 
@@ -165,23 +165,6 @@ Rectangle {
             }
     }}
 
-    /*
-     * Highlight Delegate
-     *  Used for items with focus
-     *  ______________________
-     * |/ / / / / / / / / / / |
-     * | / / / / / / / / / / /|
-     * |                      |
-     * |______________________|
-     *
-    */
-    Component {
-        id: highlightDelegate
-
-        Rectangle {
-            color: "#3F7FAB"
-            opacity: 0.3
-    }}
 
     /*
      * Section Delegate
@@ -203,13 +186,11 @@ Rectangle {
             Item {
                 anchors.fill: parent
 
-                Text {
+                Generic.Text {
                     id: text
                     renderType: Text.QtRendering
                     text: section
-                    color: "white"
                     opacity: 0.5
-                    font.family: mainFont.name
                     anchors.verticalCenter: parent.verticalCenter
     }}}}
 
@@ -220,14 +201,14 @@ Rectangle {
     Component.onCompleted: {
         if (!listView.model) {
             root.color = Model.color.background;
-            listView.model = Qt.createQmlObject("import QtQuick 2.3; ListModel {}", root);;
+            listView.model = Qt.createQmlObject("import QtQuick 2.3; ListModel {}", root);
+            listView.section.property = "family";
 
-
-            [{"name": "item1", "toggled": false, "selected": false},
-             {"name": "item2", "toggled": true, "selected": false},
-             {"name": "item2", "toggled": true, "selected": false},
-             {"name": "item2", "toggled": false, "selected": false},
-             {"name": "item3", "toggled": false, "selected": false},
+            [{"name": "item1", "toggled": false, "selected": false, "family": "napoleon"},
+             {"name": "item2", "toggled": true, "selected": false, "family": "napoleon"},
+             {"name": "item2", "toggled": true, "selected": false, "family": "napoleon"},
+             {"name": "item2", "toggled": false, "selected": false, "family": "ape"},
+             {"name": "item3", "toggled": false, "selected": false, "family": "napoleon"},
             ].forEach(function (item) {
                 listView.model.append(item)
             });

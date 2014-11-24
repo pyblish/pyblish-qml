@@ -78,6 +78,7 @@ Window {
                 model: instancesModel
                 anchors.fill: parent
                 anchors.rightMargin: parent.width / 2
+                section.property: "family"
             }
 
             List.Item {
@@ -85,6 +86,7 @@ Window {
                 model: pluginsModel
                 anchors.fill: parent
                 anchors.leftMargin: parent.width / 2
+                section.property: "type"
         }}
 
         Footer.Item {
@@ -125,12 +127,11 @@ Window {
 
 
     Component.onCompleted: {
+        // Center window on screen (only relevant on Unix)
         root.x = (Screen.width - root.width) / 2;
         root.y = (Screen.height - root.height) / 2;
 
-        root.startAnimation.start();
         Ctrl.init();
-
     }
 
     onClosing: Ctrl.quit(close);
