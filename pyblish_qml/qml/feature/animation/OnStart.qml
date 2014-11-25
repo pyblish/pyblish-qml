@@ -7,6 +7,7 @@ import QtQuick 2.3
 ParallelAnimation {
     id: startAnimation
     running: false
+    alwaysRunToEnd: true
 
     property int height: 50
     property alias heightTarget: heightAnimation.target

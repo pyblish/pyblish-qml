@@ -6,7 +6,8 @@
 var color = {
     "background": Qt.rgba(0.3, 0.3, 0.3),
     "foreground": Qt.rgba(0.6, 0.6, 0.6),
-    "text": "white"
+    "text": "white",
+    "item": "#6896BB"
 };
 
 var size = {
@@ -21,7 +22,9 @@ var size = {
 var image = {
     "logo": "../../img/logo-white.png",
     "communication": "../../img/communication.png",
-    "publish": "../../img/button-expand.png",
+    "publish": "../../img/button-publish.png",
+    "pause": "../../img/button-pause.png",
+    "stop": "../../img/button-stop.png",
     "close": "../../img/button-close.png",
 };
 
@@ -35,3 +38,8 @@ var closeOk = false;
 
 var port = 0,
     urlPrefix = "";
+
+var publishPaused = false,
+    publishStopped = false,
+    publishPausedPlugin = 0,   // Current plugin at the time of pause
+    publishPausedInstance = 0; // Current instance ..

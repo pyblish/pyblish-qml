@@ -26,7 +26,7 @@ Window {
     property alias quitAnimation: _quitAnimation
     property alias startAnimation: _startAnimation
     property bool isStatic: false
-    property var log: new Ctrl.Log()
+    property var log: new Ctrl.MockLog()
 
     id: root
 
@@ -47,7 +47,7 @@ Window {
         id: container
         width: parent.width
         color: Model.color.background
-        height: root.isStatic ? parent.height : 0  // Modified with animation
+        height: root.isStatic ? parent.height : header.height  // Modified with animation
         clip: true
 
         Header.Item {
@@ -81,6 +81,11 @@ Window {
                 anchors.fill: parent
                 anchors.rightMargin: parent.width / 2
                 section.property: "family"
+
+                onItemSelected: {
+                    var instance = instancesModel.get(index)
+                    pluginsList.validate(instance.family);
+                }
             }
 
             List.Item {
@@ -96,8 +101,11 @@ Window {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
+            visible: body.visible
 
             onPublish: Ctrl.publishHandler();
+            onPause: Ctrl.pauseHandler();
+            onStop: Ctrl.stopHandler();
         }
 
         Generic.Text {
@@ -134,7 +142,7 @@ Window {
         root.y = (Screen.height - root.height) / 2;
 
         if (typeof Log !== "undefined") {
-            root.log = Log;
+            root.log = Ctrl.PythonLog();
         }
 
         Ctrl.init();

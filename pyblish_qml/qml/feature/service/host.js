@@ -44,8 +44,10 @@ function real_request(verb, endpoint, obj, cb) {
             if (xhr.status >= 200 && xhr.status < 300) {
                 var res = JSON.parse(xhr.responseText.toString());
                 cb(res);
+
             } else {
-                log.info("Status: " + xhr.status);
+                log.error("Error connecting to:", endpoint,
+                          "Status:", xhr.status);
             }
         }
     };
@@ -75,7 +77,7 @@ function mock_request(verb, endpoint, obj, cb) {
 
 
 function request(verb, endpoint, obj, cb) {
-    log.debug(["Request: ", verb, get_base(), (endpoint || "")]);
+    log.debug("Request:", verb, get_base() + (endpoint || ""));
 
     if (Model.port === 0) {
         return mock_request(verb, endpoint, obj, cb);

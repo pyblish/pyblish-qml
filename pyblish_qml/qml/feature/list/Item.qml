@@ -21,16 +21,20 @@ import "../list/controller.js" as Ctrl
 */
 Rectangle {
     id: root
+
+    property alias view: listView
+    property alias model: listView.model
+    property alias section: listView.section
+
+    signal itemSelected(real index)
+    signal validate(string family)
+
     width: 200
     height: 300
     clip: true
     color: "transparent"
 
-    property alias view: listView
-    property alias model: listView.model
-    property alias section: listView.section
-    property color itemColor: "#6896BB"
-
+    onValidate: Ctrl.validate(family)
 
     ListView {
         id: listView
@@ -66,10 +70,10 @@ Rectangle {
             */
             Rectangle {
                 anchors.fill: parent
-                anchors.rightMargin: selected ? 0 : parent.width
+                anchors.rightMargin: isSelected ? 0 : parent.width
                 anchors.leftMargin: indicatorContainer.width
-                color: itemColor
-                opacity: selected ? 0.2 : 0
+                color: Model.color.item
+                opacity: isSelected ? 0.2 : 0
 
                 Behavior on opacity {
                     NumberAnimation {
@@ -109,14 +113,14 @@ Rectangle {
             */
             Rectangle {
 
-                function calculate_progress(progress) {
-                    return (1 - progress) * (parent.width - indicatorContainer.width)
+                function calculate_progress(currentProgress) {
+                    return (1 - currentProgress) * (parent.width - indicatorContainer.width)
                 }
 
                 anchors.fill: parent
-                anchors.rightMargin: calculate_progress(progress)
+                anchors.rightMargin: calculate_progress(currentProgress)
                 anchors.leftMargin: indicatorContainer.width
-                color: itemColor
+                color: Model.color.item
                 opacity: 0.5
 
                 Behavior on anchors.rightMargin {
@@ -128,22 +132,22 @@ Rectangle {
             }
 
             /*
-             * Item processing
+             * Item isProcessing
              *
             */
             Rectangle {
                 id: processingRect
                 property int processingSpeed: 800
 
-                width: processing ? 10 : 0
+                width: isProcessing ? 10 : 0
                 height: parent.height
-                color: itemColor
+                color: Model.color.item
                 opacity: 1
 
                 SequentialAnimation {
                     id: _processingAnimation
                     loops: Animation.Infinite
-                    running: processing
+                    running: isProcessing
 
                     NumberAnimation {
                         target: processingRect
@@ -209,7 +213,7 @@ Rectangle {
                             left: parent.left
                         }
 
-                        width: toggled ? 1 : 0
+                        width: isToggled ? 1 : 0
                         color: "yellow"
                     }
 
@@ -218,7 +222,7 @@ Rectangle {
                         hoverEnabled: true
                         onClicked: Ctrl.itemIndicatorClickedHandler(index)
                         onEntered: indicator.width = 5
-                        onExited: indicator.width = toggled ? 1 : 0
+                        onExited: indicator.width = isToggled ? 1 : 0
                 }}
 
                 Generic.Text {
@@ -227,6 +231,13 @@ Rectangle {
                     anchors.left: indicatorContainer.right
                     anchors.leftMargin: 5
                     anchors.verticalCenter: parent.verticalCenter
+                    color: isCompatible ? "white" : "gray"
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 100
+                        }
+                    }
 
                 }}
 
@@ -235,7 +246,7 @@ Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: indicatorContainer.width
 
-                onClicked: Ctrl.itemClickedHandler(index)
+                onClicked: Ctrl.itemClickedHandler(index);
                 onEntered: hover.hovered = true
                 onExited: hover.hovered = false
             }
@@ -263,8 +274,6 @@ Rectangle {
                 anchors.fill: parent
 
                 Generic.Text {
-                    id: text
-                    renderType: Text.QtRendering
                     text: section
                     opacity: 0.5
                     anchors.verticalCenter: parent.verticalCenter
@@ -277,21 +286,18 @@ Rectangle {
     Component.onCompleted: {
         if (!listView.model) {
             root.color = Model.color.background;
+
             listView.model = Qt.createQmlObject("import QtQuick 2.3; ListModel {}", root);
             listView.section.property = "family";
 
-            var data = {
-                "toggled": false,
-                "selected": false,
-                "family": "napoleon",
-                "progress": 0.4,
-            };
-
             for (var i = 0; i < 10; i++) {
-                var clone = JSON.parse(JSON.stringify(data));
-                clone.name = "item " + (i + 1);
-                listView.model.append(clone)
-            }
-        }
-    }
-}
+                listView.model.append({
+                    "name": "item " + (i + 1),
+                    "isToggled": false,
+                    "isSelected": false,
+                    "family": "napoleon",
+                    "currentProgress": 0,
+                    "isProcessing": false,
+                    "isCompatible": true
+                })
+}}}}

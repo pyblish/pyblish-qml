@@ -10,6 +10,8 @@ Generic.Rectangle {
 
     property string source: ""
     
+    width: 30
+    height: 30
     clip: true
 
     MouseArea {

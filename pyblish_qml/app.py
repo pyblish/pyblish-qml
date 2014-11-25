@@ -21,8 +21,7 @@ import pyblish_endpoint.server
 import pyblish_endpoint.service
 
 QML_DIR = os.path.dirname(pyblish_qml.__file__)
-QML_DIR = os.path.join(QML_DIR, "qml")
-APP_PATH = os.path.join(QML_DIR, "app.qml")
+APP_PATH = os.path.join(QML_DIR, "qml", "app.qml")
 
 log = logging.getLogger("qml")
 
@@ -48,21 +47,21 @@ class Log(QtCore.QObject):
         self.log = logging.getLogger(name)
         self.log.propagate = True
 
-    @QtCore.pyqtSlot(str)
+    @QtCore.pyqtSlot("QStringList")
     def debug(self, msg):
-        self.log.debug(msg)
+        self.log.debug(" ".join(msg))
 
-    @QtCore.pyqtSlot(str)
+    @QtCore.pyqtSlot("QStringList")
     def info(self, msg):
-        self.log.info(msg)
+        self.log.info(" ".join(msg))
 
-    @QtCore.pyqtSlot(str)
+    @QtCore.pyqtSlot("QStringList")
     def warning(self, msg):
-        self.log.warning(msg)
+        self.log.warning(" ".join(msg))
 
-    @QtCore.pyqtSlot(str)
+    @QtCore.pyqtSlot("QStringList")
     def error(self, msg):
-        self.log.error(msg)
+        self.log.error(" ".join(msg))
 
 
 class Connection(QtCore.QObject):
@@ -149,6 +148,16 @@ class Application(object):
         self.set_context_property("PyQt", pyqt)
         self.set_context_property("Connection", connection)
 
+        self.setup_log()
+
+    def setup_log(self):
+        formatter = logging.Formatter("%(levelname)s %(message)s")
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        log.addHandler(handler)
+        log.setLevel(logging.INFO)
+        # log.setLevel(logging.DEBUG)
+
     def load(self, path):
         qurl = QtCore.QUrl.fromLocalFile(APP_PATH)
         self.engine.load(qurl)
@@ -183,12 +192,6 @@ def run_debug_app():
     in Endpoint tests.
 
     """
-
-    formatter = logging.Formatter("%(levelname)s %(message)s")
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    log.addHandler(handler)
-    log.setLevel(logging.INFO)
 
     app = Application(host="Mock", port=0, prefix="/pyblish/v1")
 

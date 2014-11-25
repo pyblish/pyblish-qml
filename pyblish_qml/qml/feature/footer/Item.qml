@@ -9,9 +9,14 @@ Generic.Rectangle {
     id: root
 
     property alias message: _message
-    property alias publishButton: _publishButton
+    
+    // 0 = Default; 1 = Publishing
+    property int mode: 0
+    property bool paused: false
 
     signal publish
+    signal pause
+    signal stop
 
     width: 200
     height: Model.size.footerHeight
@@ -31,13 +36,36 @@ Generic.Rectangle {
 
         spacing: Model.margins.alt
 
-         Generic.Button {
-            id: _publishButton
-            source: Model.image.publish
-            width: 30
-            height: 30
 
-            onClicked: root.publish();
+        Generic.Button {
+            source: Model.image.stop
+            visible: mode === 1 ? true : false
+            onClicked: root.stop()
         }
-    }
-}
+
+        Generic.Button {
+            source: Model.image.pause
+            visible: mode === 1 ? true : false
+            onClicked: root.pause()
+        }
+
+        Generic.Button {
+            source: Model.image.publish
+
+            onClicked: root.publish()
+
+            /*
+             * Disable publish-button
+            */
+            Rectangle {
+                anchors.fill: parent
+                color: "gray"
+                opacity: 0.5
+                visible: mode === 0 || paused ? false : true
+
+                MouseArea {
+                    // Steal focus from default button
+                    anchors.fill: parent
+        }}}
+
+}}

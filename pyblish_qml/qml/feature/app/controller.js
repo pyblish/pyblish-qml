@@ -1,6 +1,6 @@
 /*global Qt, XMLHttpRequest, print, Component*/ // QML features
 /*global Model, Host, Connection*/              // Registered types
-/*global root, log */                           // Id's
+/*global root, Log, log*/                       // Id's
 
 "use strict";
 
@@ -12,17 +12,18 @@ function Timer() {
     return Qt.createQmlObject("import QtQuick 2.3; Timer {}", root);
 }
 
+
 /*
- * Mock log, replaced via Python
+ * Mock log, replaced if Python is present
  *
 */
-function Log() {
-    function std(msg) {
-        return console.log(msg);
+function MockLog() {
+    function std() {
+        return console.log(arguments);
     }
 
-    function debug(msg) {
-        return console.log(msg);
+    function debug() {
+        return console.log(arguments);
     }
 
     return {
@@ -34,17 +35,51 @@ function Log() {
     };
 }
 
-function set_message(message) {
-    root.footer.message.text = message;
-    root.footer.message.animation.restart();
-    root.footer.message.animation.start();
-    log.debug(message);
+
+/*
+ * Mimic the console.log argument signature
+ * and produce a QStringList which will be passed
+ * to Python's logging module.
+ *
+*/
+function PythonLog() {
+    function get_args(a) {
+        var args = [],
+            i;
+        for (i = 0; i < a.length; i++) {
+            args.push(a[i]);
+        };
+        return args;
+    }
+
+    function debug() { return Log.debug(get_args(arguments)); }
+    function info() { return Log.info(get_args(arguments)); }
+    function warning() { return Log.warning(get_args(arguments)); }
+    function error() { return Log.error(get_args(arguments)); }
+
+    return {
+        debug: debug,
+        info: info,
+        warning: warning,
+        error: error,
+    };
 }
 
 
 /*
- * Init
- *  Retrieve initial data from host
+ * Display a graphical message in the UI
+ *
+*/
+function setMessage(message) {
+    root.footer.message.text = message;
+    root.footer.message.animation.restart();
+    root.footer.message.animation.start();
+    log.info(message);
+}
+
+
+/*
+ * Retrieve initial data from host
  *
 */
 function init() {
@@ -53,6 +88,11 @@ function init() {
         Model.port = Connection.port;
         Model.urlPrefix = Connection.prefix;
     }
+
+    // Make window re-sizable once animation is complete.
+    root.startAnimation.stopped.connect(function () {
+        root.isStatic = true;
+    });
 
     root.startAnimation.start();
 
@@ -63,25 +103,51 @@ function init() {
             resp.forEach(function (item) {
 
                 // Append data
-                item.toggled = true;
-                item.selected = false;
-                item.progress = 0;
-                item.processing = false;
+                var obj = {
+                    name: item.name,
+                    family: item.family,
+                    isToggled: true,
+                    isSelected: false,
+                    currentProgress: 0,
+                    isProcessing: false,
+                    isCompatible: true
+                };
 
-                root.instancesModel.append(item);
+                root.instancesModel.append(obj);
             });
         });
 
         Host.get_plugins(function (resp) {
+
+            // Sort plug-ins by their native order
+            resp.sort(function (a, b) {return a.order - b.order});
+
             resp.forEach(function (item) {
 
-                // Append data
-                item.toggled = true;
-                item.selected = false;
-                item.progress = 0;
-                item.processing = false;
+                if (item.type === "Selector") {
+                    return;
+                }
 
-                root.pluginsModel.append(item);
+                // Append data
+                var obj = {
+                    name: item.name,
+                    type: item.type,
+                    order: item.order,
+                    families: [],
+                    isToggled: true,
+                    isSelected: false,
+                    currentProgress: 0,
+                    isProcessing: false,
+                    isCompatible: true,
+                };
+
+                if (item.hasOwnProperty("families")) {
+                    item.families.forEach(function (family) {
+                        obj.families.push({"name": family});
+                    });
+                }
+
+                root.pluginsModel.append(obj);
             });
         });
 
@@ -97,6 +163,10 @@ function init() {
 }
 
 
+/* 
+ * Quit the application, with animation and (optional) delay
+ *
+*/
 function quit(event, delay) {
     root.startAnimation.stop();
 
@@ -119,37 +189,72 @@ function quit(event, delay) {
 
 
 function activatePublishingMode() {
-    // Disable publish button
-    // Display stop/pause buttons
-    root.footer.publishButton
     log.info("Activating publishing mode");
-}
-
-function deactivatePublishingMode() {
-    // Activate publish button
-    // Hide stop/pause buttons
-    log.info("Deactivating publishing mode");
-}
-
-function publishHandler() {
-
-    activatePublishingMode();
 
     // Reset progressbars
     var i;
     [root.instancesModel, root.pluginsModel].forEach(function (model) {
         for (i = 0; i < model.count; ++i) {
-            model.get(i).progress = 0;
+            model.get(i).isProcessing = false;
+            model.get(i).currentProgress = 0;
         }
     });
 
-    process(0, 0);
+    root.footer.mode = 1;
+}
 
+function deactivatePublishingMode() {
+    log.info("Deactivating publishing mode");
+    root.footer.mode = 0;
+    root.footer.paused = false;
+    Model.publishStopped = false;
+    Model.publishPaused = false;
+
+    var i;
+    [root.instancesModel, root.pluginsModel].forEach(function (model) {
+        for (i = 0; i < model.count; ++i) {
+            model.get(i).isProcessing = false;
+            model.get(i).currentProgress = 0;
+        }
+    });
+}
+
+function publishHandler() {
+    // If publishing was paused, pick up from where it left off.
+    if (Model.publishPaused) {
+        Model.publishPaused = false;
+        process(Model.publishPausedInstance, Model.publishPausedPlugin)
+
+    // Otherwise, start from scratch.
+    } else {
+        activatePublishingMode();
+        process(0, 0);
+    }
+
+
+}
+
+function pauseHandler() {
+    Model.publishPaused = true;
+    root.footer.paused = true;
+    setMessage("Pausing..");
+}
+
+
+function stopHandler() {
+    Model.publishStopped = true;
+
+    if (Model.publishPaused) {
+        Model.publishPaused = false;
+        deactivatePublishingMode();
+    } else {
+        setMessage("Stopping..");
+    }
 }
 
 /*
  * Main Processing Loop
- *  This is the function which performs processing, and
+ *  This is the function which performs isProcessing, and
  *  ultimately publishes the given items in the GUI.
  *
  *  It transmits the physical requests to a host and
@@ -158,6 +263,20 @@ function publishHandler() {
  *
 */
 function process(currentInstance, currentPlugin) {
+    if (Model.publishStopped) {
+        deactivatePublishingMode();
+        setMessage("Stopped");
+        return;
+    }
+
+    // Remember where we were upon pausing
+    if (Model.publishPaused) {
+        Model.publishPausedPlugin = currentPlugin;
+        Model.publishPausedInstance = currentInstance;
+        setMessage("Paused");
+        return;
+    }
+
     var instance = root.instancesModel.get(currentInstance),
         plugin = root.pluginsModel.get(currentPlugin),
         process_id,
@@ -168,9 +287,9 @@ function process(currentInstance, currentPlugin) {
     Host.post_processes(instance.name, plugin.name, function (resp) {
         process_id = resp.process_id;
 
-        plugin.processing = true;
-        instance.processing = true;
-        instance.progress += incrementSize;
+        plugin.isProcessing = true;
+        instance.isProcessing = true;
+        instance.currentProgress += incrementSize;
 
         timer = new Timer();
         timer.interval = 100;
@@ -189,25 +308,25 @@ function process(currentInstance, currentPlugin) {
                 // - Get log
                 // - Present log to user
                 if (resp.running === true) {
-                    log.info("Running: " + process_id);
+                    log.debug("Running: " + process_id);
 
                 // Process is complete
                 // 
                 // - Update progress bars
                 // - Initiate next process
                 } else {
-                    log.info(process_id + " Complete!");
+                    log.info(plugin.name + " Complete!");
                     timer.stop();
 
-                    instance.processing = false;
+                    instance.isProcessing = false;
                     currentInstance += 1;
 
                     if (currentInstance + 1 > root.instancesModel.count) {
                         currentInstance = 0;
                         currentPlugin += 1;
 
-                        plugin.processing = false;
-                        plugin.progress = 1.0;
+                        plugin.isProcessing = false;
+                        plugin.currentProgress = 1.0;
 
                     }
 
@@ -216,7 +335,7 @@ function process(currentInstance, currentPlugin) {
                         return print("All plug-ins processed!");
                     }
 
-                    log.info("Next instance: " + currentInstance);
+                    log.debug("Next instance: " + currentInstance);
                     process(currentInstance, currentPlugin);
                 }
             });
@@ -228,7 +347,7 @@ function process(currentInstance, currentPlugin) {
 
 
 function published(status) {
-    set_message("Published successfully: " + status);
+    setMessage("Published successfully: " + status);
     quit(null, 1000);
 }
 

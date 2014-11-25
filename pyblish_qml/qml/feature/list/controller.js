@@ -1,4 +1,4 @@
-/*global root, print, PyQt, log*/
+/*global root, print, PyQt*/
 
 "use strict";
 
@@ -9,7 +9,7 @@
 */
 function itemIndicatorClickedHandler(index) {
     var item = root.model.get(index);
-    item.toggled = item.toggled ? false : true;
+    item.isToggled = item.isToggled ? false : true;
 }
 
 
@@ -18,21 +18,49 @@ function itemIndicatorClickedHandler(index) {
  *
 */
 function itemClickedHandler(index) {
-    var item, ii;
+    var item,
+        i;
+
+    item = root.model.get(index);
+
+    if (!item.isSelected) {
+        root.itemSelected(index);
+    }
 
     // Control-click behavior
     if (typeof PyQt !== "undefined") {
         if (PyQt.queryKeyboardModifiers() !== PyQt.ControlModifier) {
-            for (ii = 0; ii < root.model.count; ++ii) {
-                root.model.get(ii).selected = false;
+            for (i = 0; i < root.model.count; ++i) {
+                root.model.get(i).isSelected = false;
             }
         }
 
         // Shift-click behaviour (todo)
     }
 
-    item = root.model.get(index);
-    item.selected = item.selected ? false : true;
-    root.view.currentIndex = index;
-    log.debug("Expanding item");
+    item.isSelected = item.isSelected ? false : true;
+
+}
+
+
+function validate(family) {
+    function contains(a, obj) {
+        var i;
+        for (i = 0; i < a.count; ++i) {
+            if (a.get(i).name === obj) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    var i, plugin;
+    for (i = 0; i < root.model.count; ++i) {
+        plugin = root.model.get(i);
+        plugin.isCompatible = true;
+
+        if (!contains(plugin.families, family)) {
+            plugin.isCompatible = false;
+        }
+    }
 }
