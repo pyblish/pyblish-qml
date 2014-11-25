@@ -1,4 +1,5 @@
 import QtQuick 2.3
+import QtGraphicalEffects 1.0
 
 import "../generic" as Generic
 import "../service/model.js" as Model
@@ -117,6 +118,56 @@ Rectangle {
                 anchors.leftMargin: indicatorContainer.width
                 color: itemColor
                 opacity: 0.5
+
+                Behavior on anchors.rightMargin {
+                    NumberAnimation {
+                        duration: 300
+                        easing.type: Easing.OutCubic
+                    }
+                }
+            }
+
+            /*
+             * Item processing
+             *
+            */
+            Rectangle {
+                id: processingRect
+                property int processingSpeed: 800
+
+                width: processing ? 10 : 0
+                height: parent.height
+                color: itemColor
+                opacity: 1
+
+                SequentialAnimation {
+                    id: _processingAnimation
+                    loops: Animation.Infinite
+                    running: processing
+
+                    NumberAnimation {
+                        target: processingRect
+                        property: "x"
+                        from: indicatorContainer.width
+                        to: parent.width - processingRect.width
+                        duration: processingRect.processingSpeed
+                    }
+
+                    NumberAnimation {
+                        target: processingRect
+                        property: "x"
+                        from: parent.width - processingRect.width
+                        to: indicatorContainer.width
+                        duration: processingRect.processingSpeed
+                    }
+                }
+
+                Behavior on width {
+                    NumberAnimation {
+                        duration: 100
+                        easing.type: Easing.OutCubic
+                    }
+                }
             }
 
             Item {

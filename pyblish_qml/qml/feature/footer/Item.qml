@@ -8,7 +8,8 @@ import "../service/model.js" as Model
 Generic.Rectangle {
     id: root
 
-    property alias message: message
+    property alias message: _message
+    property alias publishButton: _publishButton
 
     signal publish
 
@@ -16,13 +17,11 @@ Generic.Rectangle {
     height: Model.size.footerHeight
 
     Message {
-        id: message
+        id: _message
         anchors.verticalCenter: parent.verticalCenter
     }
 
     Row {
-        id: headerButtons
-
         anchors {
             right: parent.right
             top: parent.top
@@ -33,7 +32,7 @@ Generic.Rectangle {
         spacing: Model.margins.alt
 
          Generic.Button {
-            id: publishButton
+            id: _publishButton
             source: Model.image.publish
             width: 30
             height: 30

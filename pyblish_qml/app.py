@@ -188,7 +188,7 @@ def run_debug_app():
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     log.addHandler(handler)
-    log.setLevel(logging.DEBUG)
+    log.setLevel(logging.INFO)
 
     app = Application(host="Mock", port=0, prefix="/pyblish/v1")
 
@@ -197,7 +197,7 @@ def run_debug_app():
     client.testing = True
 
     Service = pyblish_endpoint.service.MockService
-    Service.PERFORMANCE = Service.SLOW
+    Service.PERFORMANCE = Service.MODERATE
     pyblish_endpoint.service.register_service(Service,
                                               force=True)
 

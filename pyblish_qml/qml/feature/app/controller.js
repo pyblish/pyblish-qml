@@ -66,6 +66,7 @@ function init() {
                 item.toggled = true;
                 item.selected = false;
                 item.progress = 0;
+                item.processing = false;
 
                 root.instancesModel.append(item);
             });
@@ -78,6 +79,7 @@ function init() {
                 item.toggled = true;
                 item.selected = false;
                 item.progress = 0;
+                item.processing = false;
 
                 root.pluginsModel.append(item);
             });
@@ -116,7 +118,31 @@ function quit(event, delay) {
 }
 
 
+function activatePublishingMode() {
+    // Disable publish button
+    // Display stop/pause buttons
+    root.footer.publishButton
+    log.info("Activating publishing mode");
+}
+
+function deactivatePublishingMode() {
+    // Activate publish button
+    // Hide stop/pause buttons
+    log.info("Deactivating publishing mode");
+}
+
 function publishHandler() {
+
+    activatePublishingMode();
+
+    // Reset progressbars
+    var i;
+    [root.instancesModel, root.pluginsModel].forEach(function (model) {
+        for (i = 0; i < model.count; ++i) {
+            model.get(i).progress = 0;
+        }
+    });
+
     process(0, 0);
 
 }
@@ -135,11 +161,16 @@ function process(currentInstance, currentPlugin) {
     var instance = root.instancesModel.get(currentInstance),
         plugin = root.pluginsModel.get(currentPlugin),
         process_id,
-        timer;
+        timer,
+        incrementSize = 1 / root.pluginsModel.count;
 
     // Start by posting a process
     Host.post_processes(instance.name, plugin.name, function (resp) {
         process_id = resp.process_id;
+
+        plugin.processing = true;
+        instance.processing = true;
+        instance.progress += incrementSize;
 
         timer = new Timer();
         timer.interval = 100;
@@ -168,18 +199,24 @@ function process(currentInstance, currentPlugin) {
                     log.info(process_id + " Complete!");
                     timer.stop();
 
-                    currentPlugin += 1;
-
-                    if (currentPlugin + 1 > root.pluginsModel.count) {
-                        currentPlugin = 0;
-                        currentInstance += 1;
-                    }
+                    instance.processing = false;
+                    currentInstance += 1;
 
                     if (currentInstance + 1 > root.instancesModel.count) {
-                        return print("All instances processed!");
+                        currentInstance = 0;
+                        currentPlugin += 1;
+
+                        plugin.processing = false;
+                        plugin.progress = 1.0;
+
                     }
 
-                    log.info("Next plugin: " + currentPlugin);
+                    if (currentPlugin + 1 > root.pluginsModel.count) {
+                        deactivatePublishingMode();
+                        return print("All plug-ins processed!");
+                    }
+
+                    log.info("Next instance: " + currentInstance);
                     process(currentInstance, currentPlugin);
                 }
             });

@@ -1,3 +1,4 @@
+.pragma library
 "use strict";
 /*global Qt, connection*/
 

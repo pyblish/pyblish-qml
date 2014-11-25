@@ -75,7 +75,7 @@ function mock_request(verb, endpoint, obj, cb) {
 
 
 function request(verb, endpoint, obj, cb) {
-    log.debug("Request: " + verb + " " + get_base() + (endpoint || ""));
+    log.debug(["Request: ", verb, get_base(), (endpoint || "")]);
 
     if (Model.port === 0) {
         return mock_request(verb, endpoint, obj, cb);
