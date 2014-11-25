@@ -1,6 +1,6 @@
 "use strict";
 /*global Model, listModel, print, XMLHttpRequest*/
-/*global mockHost, Qt, root, Component*/
+/*global mockHost, Qt, root, Component, log*/
 
 
 // Merge port from Python with current API prefix
@@ -40,15 +40,12 @@ function real_request(verb, endpoint, obj, cb) {
         data;
 
     xhr.onreadystatechange = function () {
-        // print("xhr: on ready state change: " + xhr.readyState);
         if (cb && xhr.readyState === xhr.DONE) {
             if (xhr.status >= 200 && xhr.status < 300) {
-                // console.log("responseText: ", xhr.responseText.toString());
                 var res = JSON.parse(xhr.responseText.toString());
                 cb(res);
             } else {
-                console.log("Status: ", xhr.status);
-                // console.log("Status: ", xhr.responseText.toString());
+                log.info("Status: " + xhr.status);
             }
         }
     };
@@ -78,7 +75,7 @@ function mock_request(verb, endpoint, obj, cb) {
 
 
 function request(verb, endpoint, obj, cb) {
-    console.debug("Request:", verb, get_base() + (endpoint || ""));
+    log.debug("Request: " + verb + " " + get_base() + (endpoint || ""));
 
     if (Model.port === 0) {
         return mock_request(verb, endpoint, obj, cb);

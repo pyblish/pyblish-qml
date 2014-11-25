@@ -26,10 +26,6 @@ APP_PATH = os.path.join(QML_DIR, "app.qml")
 
 log = logging.getLogger("qml")
 
-# Context properties
-pyqt = None
-connection = None
-
 
 class PyQt(QtCore.QObject):
     """Expose common PyQt functionality"""
@@ -42,6 +38,31 @@ class PyQt(QtCore.QObject):
     @QtCore.pyqtSlot(result=int)
     def queryKeyboardModifiers(self):
         return QtGui.QGuiApplication.queryKeyboardModifiers()
+
+
+class Log(QtCore.QObject):
+    """Expose Python's logging mechanism to QML"""
+
+    def __init__(self, name="qml", parent=None):
+        super(Log, self).__init__(parent)
+        self.log = logging.getLogger(name)
+        self.log.propagate = True
+
+    @QtCore.pyqtSlot(str)
+    def debug(self, msg):
+        self.log.debug(msg)
+
+    @QtCore.pyqtSlot(str)
+    def info(self, msg):
+        self.log.info(msg)
+
+    @QtCore.pyqtSlot(str)
+    def warning(self, msg):
+        self.log.warning(msg)
+
+    @QtCore.pyqtSlot(str)
+    def error(self, msg):
+        self.log.error(msg)
 
 
 class Connection(QtCore.QObject):
@@ -100,36 +121,59 @@ class MockHTTPRequest(QtCore.QObject):
         return response_data
 
 
-def create_app(host, port=6000):
-    app = QtGui.QGuiApplication(sys.argv)
+class Application(object):
+    """Main Application
 
-    def finish_load(obj, url):
+    This object wraps common QML functionality in order to
+    prevent, mainly context properties, from getting garbage
+    collected after having been set.
+
+    """
+
+    def __init__(self, host, port, prefix):
+        app = QtGui.QGuiApplication(sys.argv)
+
+        engine = QtQml.QQmlApplicationEngine()
+        engine.objectCreated.connect(self.load_finished_handler)
+
+        self.app = app
+        self.engine = engine
+        self.context_properties = []
+        self.registered_types = []
+
+        log = Log()
+        pyqt = PyQt()
+        connection = Connection(host, port, prefix)
+
+        self.set_context_property("Log", log)
+        self.set_context_property("PyQt", pyqt)
+        self.set_context_property("Connection", connection)
+
+    def load(self, path):
+        qurl = QtCore.QUrl.fromLocalFile(APP_PATH)
+        self.engine.load(qurl)
+
+    def load_finished_handler(self, obj, url):
         if obj is not None:
             obj.show()
-            app.exec_()
+            self.app.exec_()
         else:
             sys.exit()
 
-    engine = QtQml.QQmlApplicationEngine()
-    engine.objectCreated.connect(finish_load)
+    def register_type(self, obj, uri, version_major, version_minor, qml_name):
+        QtQml.qmlRegisterType(obj, uri, version_major, version_minor, qml_name)
+        self.registered_types.append(obj)
 
-    global pyqt
-    global connection
-
-    pyqt = PyQt()
-    connection = Connection(host, port, prefix="/pyblish/v1")
-
-    engine.rootContext().setContextProperty("PyQt", pyqt)
-    engine.rootContext().setContextProperty("Connection", connection)
-
-    return engine
+    def set_context_property(self, name, value):
+        context = self.engine.rootContext()
+        context.setContextProperty(name, value)
+        self.context_properties.append(value)
 
 
 def run_production_app(host, port):
     print "Running production app on port: %s" % port
-    engine = create_app(host, port)
-
-    engine.load(QtCore.QUrl.fromLocalFile(APP_PATH))
+    app = Application(host, port, prefix="/pyblish/v1")
+    app.load(APP_PATH)
 
 
 def run_debug_app():
@@ -140,11 +184,16 @@ def run_debug_app():
 
     """
 
-    engine = create_app(host="Mock", port=0)
+    formatter = logging.Formatter("%(levelname)s %(message)s")
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    log.addHandler(handler)
+    log.setLevel(logging.DEBUG)
 
-    app, api = pyblish_endpoint.server.create_app()
+    app = Application(host="Mock", port=0, prefix="/pyblish/v1")
 
-    client = app.test_client()
+    flask_app, _ = pyblish_endpoint.server.create_app()
+    client = flask_app.test_client()
     client.testing = True
 
     Service = pyblish_endpoint.service.MockService
@@ -153,9 +202,8 @@ def run_debug_app():
                                               force=True)
 
     MockHTTPRequest.client = client
-
-    QtQml.qmlRegisterType(MockHTTPRequest, 'Python', 1, 0, 'MockHTTPRequest')
-    engine.load(QtCore.QUrl.fromLocalFile(APP_PATH))
+    app.register_type(MockHTTPRequest, 'Python', 1, 0, 'MockHTTPRequest')
+    app.load(APP_PATH)
 
 
 if __name__ == '__main__':

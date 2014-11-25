@@ -28,6 +28,7 @@ Rectangle {
     property alias view: listView
     property alias model: listView.model
     property alias section: listView.section
+    property color itemColor: "#6896BB"
 
 
     ListView {
@@ -59,12 +60,15 @@ Rectangle {
             height: 20
             width: parent.width
 
+            /*
+             * Item selected
+            */
             Rectangle {
                 anchors.fill: parent
                 anchors.rightMargin: selected ? 0 : parent.width
                 anchors.leftMargin: indicatorContainer.width
-                color: "#3F7FAB"
-                opacity: selected ? 1 : 0
+                color: itemColor
+                opacity: selected ? 0.2 : 0
 
                 Behavior on opacity {
                     NumberAnimation {
@@ -79,6 +83,40 @@ Rectangle {
                         easing.type: Easing.OutCubic
                     }
                 }
+            }
+
+            /*
+             * Item Hover
+             *
+            */
+            Rectangle {
+                id: hover
+                property bool hovered: false
+
+                anchors.fill: parent
+                anchors.leftMargin: indicatorContainer.width
+                color: "transparent"
+                opacity: hovered ? 0.1 : 0
+                border.width: 1
+                border.color: "white"
+            }
+
+
+            /*
+             * Item progress
+             *
+            */
+            Rectangle {
+
+                function calculate_progress(progress) {
+                    return (1 - progress) * (parent.width - indicatorContainer.width)
+                }
+
+                anchors.fill: parent
+                anchors.rightMargin: calculate_progress(progress)
+                anchors.leftMargin: indicatorContainer.width
+                color: itemColor
+                opacity: 0.5
             }
 
             Item {
@@ -141,27 +179,14 @@ Rectangle {
 
                 }}
 
-            Rectangle {
-                id: hover
-                anchors.fill: parent
-                anchors.leftMargin: indicatorContainer.width
-                color: "white"
-                opacity: 0
-
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: 50
-                        easing.type: Easing.OutCubic
-            }}}
-
             MouseArea {
                 hoverEnabled: true
                 anchors.fill: parent
                 anchors.leftMargin: indicatorContainer.width
 
                 onClicked: Ctrl.itemClickedHandler(index)
-                onEntered: hover.opacity = 0.05
-                onExited: hover.opacity = 0
+                onEntered: hover.hovered = true
+                onExited: hover.hovered = false
             }
     }}
 
@@ -204,14 +229,18 @@ Rectangle {
             listView.model = Qt.createQmlObject("import QtQuick 2.3; ListModel {}", root);
             listView.section.property = "family";
 
-            [{"name": "item1", "toggled": false, "selected": false, "family": "napoleon"},
-             {"name": "item2", "toggled": true, "selected": false, "family": "napoleon"},
-             {"name": "item2", "toggled": true, "selected": false, "family": "napoleon"},
-             {"name": "item2", "toggled": false, "selected": false, "family": "ape"},
-             {"name": "item3", "toggled": false, "selected": false, "family": "napoleon"},
-            ].forEach(function (item) {
-                listView.model.append(item)
-            });
+            var data = {
+                "toggled": false,
+                "selected": false,
+                "family": "napoleon",
+                "progress": 0.4,
+            };
+
+            for (var i = 0; i < 10; i++) {
+                var clone = JSON.parse(JSON.stringify(data));
+                clone.name = "item " + (i + 1);
+                listView.model.append(clone)
+            }
         }
     }
 }

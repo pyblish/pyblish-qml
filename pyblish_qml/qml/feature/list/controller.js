@@ -1,4 +1,4 @@
-/*global root, print, PyQt*/
+/*global root, print, PyQt, log*/
 
 "use strict";
 
@@ -34,5 +34,5 @@ function itemClickedHandler(index) {
     item = root.model.get(index);
     item.selected = item.selected ? false : true;
     root.view.currentIndex = index;
-    console.log("Expanding item");
+    log.debug("Expanding item");
 }

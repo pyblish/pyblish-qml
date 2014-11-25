@@ -12,6 +12,7 @@ import "feature/service/host.js" as Host
 
 import "feature/app/controller.js" as Ctrl
 
+
 /*
  * Main window
  *
@@ -25,6 +26,7 @@ Window {
     property alias quitAnimation: _quitAnimation
     property alias startAnimation: _startAnimation
     property bool isStatic: false
+    property var log: new Ctrl.Log()
 
     id: root
 
@@ -130,6 +132,10 @@ Window {
         // Center window on screen (only relevant on Unix)
         root.x = (Screen.width - root.width) / 2;
         root.y = (Screen.height - root.height) / 2;
+
+        if (typeof Log !== "undefined") {
+            root.log = Log;
+        }
 
         Ctrl.init();
     }

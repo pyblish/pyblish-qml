@@ -1,6 +1,6 @@
 /*global Qt, XMLHttpRequest, print, Component*/ // QML features
 /*global Model, Host, Connection*/              // Registered types
-/*global root*/                                 // Id's
+/*global root, log */                           // Id's
 
 "use strict";
 
@@ -12,11 +12,33 @@ function Timer() {
     return Qt.createQmlObject("import QtQuick 2.3; Timer {}", root);
 }
 
+/*
+ * Mock log, replaced via Python
+ *
+*/
+function Log() {
+    function std(msg) {
+        return console.log(msg);
+    }
+
+    function debug(msg) {
+        return console.log(msg);
+    }
+
+    return {
+        debug: debug,
+        info: std,
+        warning: std,
+        error: std,
+        critical: std,
+    };
+}
+
 function set_message(message) {
     root.footer.message.text = message;
     root.footer.message.animation.restart();
     root.footer.message.animation.start();
-    console.debug(message);
+    log.debug(message);
 }
 
 
@@ -27,7 +49,7 @@ function set_message(message) {
 */
 function init() {
     if (typeof Connection !== "undefined") {
-        console.debug("Connection found, setting port to:", Connection.port);
+        log.debug("Connection found, setting port to: " + Connection.port);
         Model.port = Connection.port;
         Model.urlPrefix = Connection.prefix;
     }
@@ -35,7 +57,7 @@ function init() {
     root.startAnimation.start();
 
     Host.onReady(function () {
-        console.debug("Populating Model");
+        log.debug("Populating Model");
 
         Host.get_instances(function (resp) {
             resp.forEach(function (item) {
@@ -43,6 +65,7 @@ function init() {
                 // Append data
                 item.toggled = true;
                 item.selected = false;
+                item.progress = 0;
 
                 root.instancesModel.append(item);
             });
@@ -54,6 +77,7 @@ function init() {
                 // Append data
                 item.toggled = true;
                 item.selected = false;
+                item.progress = 0;
 
                 root.pluginsModel.append(item);
             });
@@ -88,7 +112,7 @@ function quit(event, delay) {
         root.quitAnimation.start();
     }
 
-    console.debug("Closing");
+    log.debug("Closing");
 }
 
 
@@ -134,14 +158,14 @@ function process(currentInstance, currentPlugin) {
                 // - Get log
                 // - Present log to user
                 if (resp.running === true) {
-                    console.debug("Running:", process_id);
+                    log.info("Running: " + process_id);
 
                 // Process is complete
                 // 
                 // - Update progress bars
                 // - Initiate next process
                 } else {
-                    console.debug(process_id, "Complete!");
+                    log.info(process_id + " Complete!");
                     timer.stop();
 
                     currentPlugin += 1;
@@ -155,7 +179,7 @@ function process(currentInstance, currentPlugin) {
                         return print("All instances processed!");
                     }
 
-                    console.debug("Next plugin:", currentPlugin);
+                    log.info("Next plugin: " + currentPlugin);
                     process(currentInstance, currentPlugin);
                 }
             });

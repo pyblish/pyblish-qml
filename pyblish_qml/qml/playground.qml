@@ -1,13 +1,16 @@
-import QtQuick 2.3
-import QtQuick.Controls 1.2
+import QtQuick 2.0
+import QtQuick.Controls 1.0
+import "model.js" as Model
+
 
 Button {
-    id: myButton
-    text: "default text"
+    id: button
+    text: Model.text
 
-    Component.onCompleted: {
-        if (modelText !== "undefined") {
-            myButton.text = modelText;
-        }
+    onClicked: {
+        Model.text = "World";
+        print("Model.text is:", Model.text)
+        print("button.text is:", button.text)
+        // Prints Model.text is "World" and button.text is "Hello"
     }
 }
