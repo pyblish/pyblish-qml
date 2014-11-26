@@ -9,25 +9,16 @@ ParallelAnimation {
     running: false
     alwaysRunToEnd: true
 
-    property int height: 50
+    property int heightFrom: 50
+    property int heightTo: 50
     property alias heightTarget: heightAnimation.target
-    property alias opacityTarget: opacityAnimation.target
-
-    NumberAnimation {
-        id: opacityAnimation
-        property: "opacity"
-        from: 0
-        to: 1
-        duration: 500
-        easing.type: Easing.OutQuint
-    }
 
     NumberAnimation {
         id: heightAnimation
         property: "height"
-        from: root.height / 2
-        to: root.height
+        from: heightFrom
+        to: heightTo
         duration: 1000
-        easing.type: Easing.OutQuint
+        easing.type: Easing.InOutQuint
     }
 }

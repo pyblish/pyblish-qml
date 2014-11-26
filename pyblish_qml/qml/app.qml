@@ -5,6 +5,8 @@ import "feature/generic" as Generic
 import "feature/header" as Header
 import "feature/footer" as Footer
 import "feature/list" as List
+import "feature/instances" as Instances
+import "feature/plugins" as Plugins
 import "feature/animation" as Animation
 
 import "feature/service/model.js" as Model
@@ -36,7 +38,7 @@ Window {
     width: Model.size.windowWidth
     height: Model.size.windowHeight
     minimumWidth: Model.size.windowMinimumWidth
-    minimumHeight: Model.size.windowMinimumHeight
+    minimumHeight: root.isStatic ? Model.size.windowMinimumHeight : 0
 
     /*
      * Container
@@ -47,7 +49,7 @@ Window {
         id: container
         width: parent.width
         color: Model.color.background
-        height: root.isStatic ? parent.height : header.height  // Modified with animation
+        height: root.isStatic ? parent.height : header.height + footer.height - 1  // Modified with animation
         clip: true
 
         Header.Item {
@@ -75,20 +77,25 @@ Window {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.margins: Model.margins.main
 
-            List.Item {
+            Instances.List {
                 id: instancesList
                 model: instancesModel
                 anchors.fill: parent
                 anchors.rightMargin: parent.width / 2
                 section.property: "family"
+                hoverDirection: "left"
 
-                onItemSelected: {
-                    var instance = instancesModel.get(index)
-                    pluginsList.validate(instance.family);
+                onItemHovered: {
+                    if (index === -1) {
+                        pluginsList.validate("");
+                    } else {
+                        var instance = instancesModel.get(index)
+                        pluginsList.validate(instance.family);
+                    }
                 }
             }
 
-            List.Item {
+            Plugins.List {
                 id: pluginsList
                 model: pluginsModel
                 anchors.fill: parent
@@ -101,7 +108,7 @@ Window {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            visible: body.visible
+            z: 1
 
             onPublish: Ctrl.publishHandler();
             onPause: Ctrl.pauseHandler();
@@ -122,7 +129,8 @@ Window {
 
     Animation.OnQuit {
         id: _quitAnimation
-        height: header.height
+        heightTo: header.height + footer.height - 1
+        heightFrom: root.height
         heightTarget: container
         opacityTarget: root
     }
@@ -130,9 +138,9 @@ Window {
 
     Animation.OnStart {
         id: _startAnimation
-        height: header.height
+        heightFrom: header.height + footer.height - 1
+        heightTo: root.height
         heightTarget: container
-        opacityTarget: root
     }
 
 
@@ -145,7 +153,7 @@ Window {
             root.log = Ctrl.PythonLog();
         }
 
-        Ctrl.init();
+        Ctrl.initDeferred();
     }
 
     onClosing: Ctrl.quit(close);

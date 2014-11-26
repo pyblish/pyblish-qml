@@ -39,6 +39,8 @@ function real_request(verb, endpoint, obj, cb) {
     var xhr = new XMLHttpRequest(),
         data;
 
+    endpoint = get_base() + (endpoint || "");
+
     xhr.onreadystatechange = function () {
         if (cb && xhr.readyState === xhr.DONE) {
             if (xhr.status >= 200 && xhr.status < 300) {
@@ -56,7 +58,7 @@ function real_request(verb, endpoint, obj, cb) {
         print("Request timed out");
     };
 
-    xhr.open(verb, get_base() + (endpoint || ""));
+    xhr.open(verb, endpoint);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Accept", "application/json");
     data = obj ? JSON.stringify(obj) : "";

@@ -1,6 +1,7 @@
 /*global Qt, XMLHttpRequest, print, Component*/ // QML features
 /*global Model, Host, Connection*/              // Registered types
 /*global root, Log, log*/                       // Id's
+/*jslint plusplus: true*/
 
 "use strict";
 
@@ -46,9 +47,9 @@ function PythonLog() {
     function get_args(a) {
         var args = [],
             i;
-        for (i = 0; i < a.length; i++) {
+        for (i = 0; i < a.length; ++i) {
             args.push(a[i]);
-        };
+        }
         return args;
     }
 
@@ -89,28 +90,33 @@ function init() {
         Model.urlPrefix = Connection.prefix;
     }
 
-    // Make window re-sizable once animation is complete.
-    root.startAnimation.stopped.connect(function () {
-        root.isStatic = true;
-    });
-
-    root.startAnimation.start();
-
     Host.onReady(function () {
-        log.debug("Populating Model");
+        log.debug("Populating model");
 
         Host.get_instances(function (resp) {
+            var isToggled = false;
+
             resp.forEach(function (item) {
+                if (typeof item.publish !== "undefined") {
+                    isToggled = item.publish;
+                }
 
                 // Append data
                 var obj = {
                     name: item.name,
                     family: item.family,
-                    isToggled: true,
-                    isSelected: false,
+                    isToggled: isToggled,
                     currentProgress: 0,
+                    isSelected: false,
                     isProcessing: false,
-                    isCompatible: true
+                    isCompatible: true,
+                    hasError: false,
+                    hasWarning: false,
+                    hasMessage: false,
+                    optional: true,
+                    errors: [],
+                    warnings: [],
+                    messages: [],
                 };
 
                 root.instancesModel.append(obj);
@@ -120,26 +126,40 @@ function init() {
         Host.get_plugins(function (resp) {
 
             // Sort plug-ins by their native order
-            resp.sort(function (a, b) {return a.order - b.order});
-
+            resp.sort(function (a, b) { return a.order - b.order; });
             resp.forEach(function (item) {
 
+                // Do not include selectors
                 if (item.type === "Selector") {
                     return;
                 }
+
+                // print(item.name, "is optional", item.optional);
 
                 // Append data
                 var obj = {
                     name: item.name,
                     type: item.type,
                     order: item.order,
+                    active: item.active,
+                    optional: item.optional,
                     families: [],
                     isToggled: true,
                     isSelected: false,
-                    currentProgress: 0,
                     isProcessing: false,
                     isCompatible: true,
+                    currentProgress: 0,
+                    hasError: false,
+                    hasWarning: false,
+                    hasMessage: false,
+                    errors: [],
+                    warnings: [],
+                    messages: [],
                 };
+
+                if (!obj.active) {
+                    obj.isToggled = false;
+                }
 
                 if (item.hasOwnProperty("families")) {
                     item.families.forEach(function (family) {
@@ -160,7 +180,26 @@ function init() {
         root.body.visible = true;
 
     });
+
+    // Make window re-sizable once animation is complete.
+    root.startAnimation.stopped.connect(function () {
+        root.isStatic = true;
+    });
+
+    root.startAnimation.start();
+
 }
+
+function initDeferred() {
+    var timer = new Timer();
+    timer.interval = 0;
+    timer.repeat = false;
+    timer.triggered.connect(function () {
+        init();
+    });
+    timer.start();
+}
+
 
 
 /* 
@@ -219,20 +258,6 @@ function deactivatePublishingMode() {
     });
 }
 
-function publishHandler() {
-    // If publishing was paused, pick up from where it left off.
-    if (Model.publishPaused) {
-        Model.publishPaused = false;
-        process(Model.publishPausedInstance, Model.publishPausedPlugin)
-
-    // Otherwise, start from scratch.
-    } else {
-        activatePublishingMode();
-        process(0, 0);
-    }
-
-
-}
 
 function pauseHandler() {
     Model.publishPaused = true;
@@ -252,6 +277,88 @@ function stopHandler() {
     }
 }
 
+
+/*
+ * Find next toggled item in a model
+ *
+ *
+*/
+function getNextToggledIndex(index, model) {
+    var item;
+    for (index; index < model.count; index++) {
+        item = model.get(index);
+        if (item && item.isToggled) {
+            return index;
+        }
+    }
+    return null;
+}
+
+
+/*
+ * Trigger next process
+ *  Based on the given status, determine whether or
+ *  not processing should continue.
+ *
+*/
+function nextProcess(status) {
+    var instanceIndex,
+        pluginIndex,
+        nextInstanceIndex,
+        nextPluginIndex;
+
+    instanceIndex = status.instanceIndex;
+    pluginIndex = status.pluginIndex;
+    nextInstanceIndex = getNextToggledIndex(instanceIndex, root.instancesModel);
+    nextPluginIndex = getNextToggledIndex(pluginIndex, root.pluginsModel);
+
+    // If there is no next, we're done
+    if (nextInstanceIndex === null || nextPluginIndex === null) {
+        return deactivatePublishingMode();
+    }
+
+    // If there's been an error, visualise it.
+    if (status.errors.length) {
+        Model.publishErrors[status.instance.name] = [];
+
+        status.errors.forEach(function (error) {
+            status.instance.hasError = true;
+
+            // Store errors globally
+            Model.publishErrors[status.instance.name].push(error);
+        });
+    }
+
+    // Has there been any errors at all?
+    if (Object.keys(Model.publishErrors).length) {
+
+        // If next plug-in is an extractor,
+        // that means all validators have completed.
+        if (root.pluginsModel.get(nextPluginIndex).type === "Extractor") {
+            deactivatePublishingMode();
+            setMessage("Validation failed");
+            return;
+        }
+    }
+
+    // Publishing stopped.
+    if (Model.publishStopped) {
+        deactivatePublishingMode();
+        setMessage("Stopped");
+        return;
+    }
+
+    // Publishing paused, remember where we were.
+    if (Model.publishPaused) {
+        Model.publishPausedPlugin = pluginIndex;
+        Model.publishPausedInstance = instanceIndex;
+        setMessage("Paused");
+        return;
+    }
+
+    process(nextInstanceIndex, nextPluginIndex);
+}
+
 /*
  * Main Processing Loop
  *  This is the function which performs isProcessing, and
@@ -262,23 +369,9 @@ function stopHandler() {
  *  back from it.
  *
 */
-function process(currentInstance, currentPlugin) {
-    if (Model.publishStopped) {
-        deactivatePublishingMode();
-        setMessage("Stopped");
-        return;
-    }
-
-    // Remember where we were upon pausing
-    if (Model.publishPaused) {
-        Model.publishPausedPlugin = currentPlugin;
-        Model.publishPausedInstance = currentInstance;
-        setMessage("Paused");
-        return;
-    }
-
-    var instance = root.instancesModel.get(currentInstance),
-        plugin = root.pluginsModel.get(currentPlugin),
+function process(instanceIndex, pluginIndex) {
+    var instance = root.instancesModel.get(instanceIndex),
+        plugin = root.pluginsModel.get(pluginIndex),
         process_id,
         timer,
         incrementSize = 1 / root.pluginsModel.count;
@@ -301,7 +394,7 @@ function process(currentInstance, currentPlugin) {
             // the submitted process; such as it's current
             // state (either running or not) along with any
             // log messages produced.
-            Host.get_process(process_id, function (resp) {
+            Host.get_process(process_id + "?index=" + Model.lastIndex, function (resp) {
 
                 // Process is still running
                 // 
@@ -309,6 +402,7 @@ function process(currentInstance, currentPlugin) {
                 // - Present log to user
                 if (resp.running === true) {
                     log.debug("Running: " + process_id);
+                    Model.lastIndex = resp.lastIndex;
 
                 // Process is complete
                 // 
@@ -319,24 +413,32 @@ function process(currentInstance, currentPlugin) {
                     timer.stop();
 
                     instance.isProcessing = false;
-                    currentInstance += 1;
+                    instanceIndex += 1;
 
-                    if (currentInstance + 1 > root.instancesModel.count) {
-                        currentInstance = 0;
-                        currentPlugin += 1;
+                    if (instanceIndex + 1 > root.instancesModel.count) {
+                        instanceIndex = 0;
+                        pluginIndex += 1;
 
                         plugin.isProcessing = false;
                         plugin.currentProgress = 1.0;
 
                     }
 
-                    if (currentPlugin + 1 > root.pluginsModel.count) {
+                    if (pluginIndex + 1 > root.pluginsModel.count) {
                         deactivatePublishingMode();
-                        return print("All plug-ins processed!");
+                        return;
                     }
 
-                    log.debug("Next instance: " + currentInstance);
-                    process(currentInstance, currentPlugin);
+                    log.debug("Next instance: " + instanceIndex);
+
+                    nextProcess({
+                        "instanceIndex": instanceIndex,
+                        "pluginIndex": pluginIndex,
+                        "instance": instance,
+                        "plugin": plugin,
+                        "errors": resp.errors,
+                        "messages": resp.messages,
+                    });
                 }
             });
         });
@@ -346,10 +448,39 @@ function process(currentInstance, currentPlugin) {
 }
 
 
-function published(status) {
-    setMessage("Published successfully: " + status);
-    quit(null, 1000);
+function publishHandler() {
+    // If publishing was paused, pick up from where it left off.
+    Model.publishErrors = {};
+
+    var i,
+        instance;
+    for (i = 0; i < root.instancesModel.count; i++) {
+        instance = root.instancesModel.get(i);
+        instance.hasError = false;
+    }
+
+    if (Model.publishPaused) {
+        Model.publishPaused = false;
+        process(Model.publishPausedInstance,
+                Model.publishPausedPlugin);
+
+    // Otherwise, start from scratch.
+    } else {
+        activatePublishingMode();
+        nextProcess({
+            "instanceIndex": 0,
+            "pluginIndex": 0,
+            "errors": [],
+            "messages": [],
+        });
+    }
 }
+
+
+// function published(status) {
+//     setMessage("Published successfully: " + status);
+//     quit(null, 1000);
+// }
 
 
 function closeClickedHandler() {

@@ -9,7 +9,8 @@ SequentialAnimation {
     id: root
     running: false
 
-    property int height: 50
+    property int heightFrom: 50
+    property int heightTo: 50
     property int delay: 0
     property alias heightTarget: heightAnimation.target
     property alias opacityTarget: opacityAnimation.target
@@ -21,7 +22,8 @@ SequentialAnimation {
     NumberAnimation {
         id: heightAnimation
         property: "height"
-        to: root.height
+        from: heightFrom
+        to: heightTo
         duration: 400
         easing.type: Easing.OutCubic
     }

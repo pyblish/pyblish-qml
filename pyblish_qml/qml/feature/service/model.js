@@ -7,7 +7,9 @@ var color = {
     "background": Qt.rgba(0.3, 0.3, 0.3),
     "foreground": Qt.rgba(0.6, 0.6, 0.6),
     "text": "white",
-    "item": "#6896BB"
+    "item": "#6896BB",
+    "itemProcessing": "#597221",
+    "error": Qt.rgba(1.0, 0.2, 0.2),
 };
 
 var size = {
@@ -26,6 +28,8 @@ var image = {
     "pause": "../../img/button-pause.png",
     "stop": "../../img/button-stop.png",
     "close": "../../img/button-close.png",
+    "processing": "../../img/processing-small.png",
+    "processingError": "../../img/processing-error.png",
 };
 
 var margins = {
@@ -42,4 +46,6 @@ var port = 0,
 var publishPaused = false,
     publishStopped = false,
     publishPausedPlugin = 0,   // Current plugin at the time of pause
-    publishPausedInstance = 0; // Current instance ..
+    publishPausedInstance = 0, // Current instance ..
+    lastIndex = 0,
+    publishErrors = {};

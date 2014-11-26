@@ -195,16 +195,16 @@ def run_debug_app():
 
     app = Application(host="Mock", port=0, prefix="/pyblish/v1")
 
-    flask_app, _ = pyblish_endpoint.server.create_app()
-    client = flask_app.test_client()
-    client.testing = True
+    endpoint_app, _ = pyblish_endpoint.server.create_app()
+    endpoint_app.config["TESTING"] = True
+    endpoint_client = endpoint_app.test_client()
+    endpoint_client.testing = True
 
     Service = pyblish_endpoint.service.MockService
     Service.PERFORMANCE = Service.MODERATE
     pyblish_endpoint.service.register_service(Service,
                                               force=True)
-
-    MockHTTPRequest.client = client
+    MockHTTPRequest.client = endpoint_client
     app.register_type(MockHTTPRequest, 'Python', 1, 0, 'MockHTTPRequest')
     app.load(APP_PATH)
 
