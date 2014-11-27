@@ -35,7 +35,7 @@ Generic.Rectangle {
             PropertyChanges { target: tab3Id; state: ""}
         },
         State {
-            name: "logTab"
+            name: "terminalTab"
             PropertyChanges { target: tab1Id; state: ""}
             PropertyChanges { target: tab2Id; state: ""}
             PropertyChanges { target: tab3Id; state: "active"}
@@ -98,8 +98,8 @@ Generic.Rectangle {
         Generic.Tab {
             id: tab3Id
             height: parent.height
-            text: "Log"
-            onClicked: root.state = "logTab"
+            text: "Terminal"
+            onClicked: root.state = "terminalTab"
         }
     }
 

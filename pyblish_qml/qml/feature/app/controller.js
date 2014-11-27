@@ -44,19 +44,19 @@ function MockLog() {
  *
 */
 function PythonLog() {
-    function get_args(a) {
-        var args = [],
+    function get_string(a) {
+        var string = "",
             i;
         for (i = 0; i < a.length; ++i) {
-            args.push(a[i]);
+            string += a[i];
         }
-        return args;
+        return string;
     }
 
-    function debug() { return Log.debug(get_args(arguments)); }
-    function info() { return Log.info(get_args(arguments)); }
-    function warning() { return Log.warning(get_args(arguments)); }
-    function error() { return Log.error(get_args(arguments)); }
+    function debug() { return Log.debug(get_string(arguments)); }
+    function info() { return Log.info(get_string(arguments)); }
+    function warning() { return Log.warning(get_string(arguments)); }
+    function error() { return Log.error(get_string(arguments)); }
 
     return {
         debug: debug,
@@ -106,6 +106,7 @@ function init() {
                     name: item.name,
                     family: item.family,
                     isToggled: isToggled,
+                    active: item.publish,
                     currentProgress: 0,
                     isSelected: false,
                     isProcessing: false,
@@ -172,7 +173,8 @@ function init() {
         });
 
         // Display list
-        root.state = "overviewTab";
+        root.body.state = "overviewTab";
+        root.body.visible = true;
 
     });
 
@@ -185,15 +187,15 @@ function init() {
 
 }
 
-function initDeferred() {
-    var timer = new Timer();
-    timer.interval = 0;
-    timer.repeat = false;
-    timer.triggered.connect(function () {
-        init();
-    });
-    timer.start();
-}
+// function initDeferred() {
+//     var timer = new Timer();
+//     timer.interval = 0;
+//     timer.repeat = false;
+//     timer.triggered.connect(function () {
+//         init();
+//     });
+//     timer.start();
+// }
 
 
 
@@ -280,14 +282,31 @@ function stopHandler() {
 */
 function getNextToggledIndex(index, model) {
     var item;
-    for (index; index < model.count; index++) {
+    while (index < model.count) {
         item = model.get(index);
         if (item && item.isToggled) {
             return index;
         }
+
+        index++;
     }
     return null;
 }
+
+/*
+ * Is plug-in compatible with family?
+ *
+*/
+// function isCompatible(plugin, family) {
+//     var i, pluginFamily;
+//     for (i = 0; i < plugin.families.count; i++) {
+//         pluginFamily = plugin.families.get(i);
+//         if (pluginFamily === "*" || pluginFamily === family) {
+//             return true;
+//         }
+//     }
+//     return false;
+// }
 
 
 /*
@@ -304,12 +323,21 @@ function nextProcess(status) {
 
     instanceIndex = status.instanceIndex;
     pluginIndex = status.pluginIndex;
-    nextInstanceIndex = getNextToggledIndex(instanceIndex, root.instancesModel);
-    nextPluginIndex = getNextToggledIndex(pluginIndex, root.pluginsModel);
 
-    // If there is no next, we're done
-    if (nextInstanceIndex === null || nextPluginIndex === null) {
-        return deactivatePublishingMode();
+    // Always increment the instance, but only increment
+    // the plug-in if there are no more instances left.
+    nextPluginIndex = pluginIndex;
+    nextInstanceIndex = getNextToggledIndex(instanceIndex + 1, root.instancesModel);
+
+    if (nextInstanceIndex === null) {
+        nextInstanceIndex = getNextToggledIndex(0, root.instancesModel);
+        nextPluginIndex = getNextToggledIndex(nextPluginIndex + 1, root.pluginsModel);
+    }
+
+    if (nextPluginIndex === null) {
+        log.debug("All plug-ins processed");
+        deactivatePublishingMode();
+        return;
     }
 
     // If there's been an error, visualise it.
@@ -320,8 +348,7 @@ function nextProcess(status) {
             status.instance.hasError = true;
 
             // Store errors globally
-            Constant.publishErrors[status.instance.name].push(error);
-            root.logArea.append(JSON.stringify(error, undefined, 2));
+            root.terminal.append2(JSON.stringify(error, undefined, 2));
         });
     }
 
@@ -355,6 +382,12 @@ function nextProcess(status) {
     process(nextInstanceIndex, nextPluginIndex);
 }
 
+function utcToLocalDate(seconds) {
+    var d = new Date(0);
+    d.setUTCSeconds(seconds);
+    return d;
+}
+
 /*
  * Main Processing Loop
  *  This is the function which performs isProcessing, and
@@ -370,6 +403,7 @@ function process(instanceIndex, pluginIndex) {
         plugin = root.pluginsModel.get(pluginIndex),
         process_id,
         timer,
+        date,
         incrementSize = 1 / root.pluginsModel.count;
 
     // Start by posting a process
@@ -409,27 +443,17 @@ function process(instanceIndex, pluginIndex) {
                     log.info(plugin.name + " Complete!");
 
                     resp.messages.forEach(function (message) {
-                        // root.logArea.append(JSON.stringify(message, undefined, 2));
-                        root.logArea.append(message.message);
+                        date = utcToLocalDate(message.created);
+                        root.terminal.append2(
+                            date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds()
+                                + ": "
+                                + message.message
+                        );
                     });
 
                     instance.isProcessing = false;
-                    instanceIndex += 1;
-
-                    if (instanceIndex + 1 > root.instancesModel.count) {
-                        instanceIndex = 0;
-                        pluginIndex += 1;
-
-                        plugin.isProcessing = false;
-                        plugin.currentProgress = 1.0;
-                    }
-
-                    if (pluginIndex + 1 > root.pluginsModel.count) {
-                        deactivatePublishingMode();
-                        return;
-                    }
-
-                    log.debug("Next instance: " + instanceIndex);
+                    plugin.isProcessing = false;
+                    plugin.currentProgress = 1.0;
 
                     nextProcess({
                         "instanceIndex": instanceIndex,
@@ -449,11 +473,11 @@ function process(instanceIndex, pluginIndex) {
 
 
 function publishHandler() {
-    // If publishing was paused, pick up from where it left off.
-    Constant.publishErrors = {};
-
     var i,
-        instance;
+        instance,
+        startInstance,
+        startPlugin;
+
     for (i = 0; i < root.instancesModel.count; i++) {
         instance = root.instancesModel.get(i);
         instance.hasError = false;
@@ -466,13 +490,16 @@ function publishHandler() {
 
     // Otherwise, start from scratch.
     } else {
+        startInstance = getNextToggledIndex(0, root.instancesModel);
+        startPlugin = getNextToggledIndex(0, root.pluginsModel);
+
+        if (startInstance === null || startPlugin === null) {
+            setMessage("Select at least one instance and compatible plug-in to start");
+            return;
+        }
+
         activatePublishingMode();
-        nextProcess({
-            "instanceIndex": 0,
-            "pluginIndex": 0,
-            "errors": [],
-            "messages": [],
-        });
+        process(startInstance, startPlugin);
     }
 }
 
@@ -484,6 +511,7 @@ function publishHandler() {
 
 
 function closeClickedHandler() {
+    root.state = "closing";
     root.minimumHeight = root.header.height;
     root.startAnimation.stop();
     root.quitAnimation.stopped.connect(Qt.quit);

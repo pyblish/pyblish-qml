@@ -47,21 +47,21 @@ class Log(QtCore.QObject):
         self.log = logging.getLogger(name)
         self.log.propagate = True
 
-    @QtCore.pyqtSlot("QStringList")
+    @QtCore.pyqtSlot(str)
     def debug(self, msg):
-        self.log.debug(" ".join(msg))
+        self.log.debug(msg)
 
-    @QtCore.pyqtSlot("QStringList")
+    @QtCore.pyqtSlot(str)
     def info(self, msg):
-        self.log.info(" ".join(msg))
+        self.log.info(msg)
 
-    @QtCore.pyqtSlot("QStringList")
+    @QtCore.pyqtSlot(str)
     def warning(self, msg):
-        self.log.warning(" ".join(msg))
+        self.log.warning(msg)
 
-    @QtCore.pyqtSlot("QStringList")
+    @QtCore.pyqtSlot(str)
     def error(self, msg):
-        self.log.error(" ".join(msg))
+        self.log.error(msg)
 
 
 class Connection(QtCore.QObject):

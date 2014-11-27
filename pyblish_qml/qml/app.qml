@@ -24,21 +24,21 @@ Window {
     property alias body: bodyId
     property alias footer: footerId
 
-    property alias logArea: logId
+    property alias terminal: terminalId
     property alias instancesModel: instancesModelId
     property alias pluginsModel: pluginsModelId
 
     property alias quitAnimation: quitAnimationId
     property alias startAnimation: startAnimationId
     
-    property alias state: bodyId.state
+    property alias state: containerId.state
 
     property bool isStatic: false
     property var log: new Ctrl.MockLog()
 
     id: root
 
-    flags: Qt.FramelessWindowHint | Qt.Window
+    flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
     color: "transparent"
 
     width: Constant.size.windowWidth
@@ -63,6 +63,10 @@ Window {
                 name: "static"
                 when: root.isStatic
                 PropertyChanges { target: containerId; height: parent.height}
+            },
+            State {
+                name: "closing"
+                PropertyChanges { target: connectionText; visible: false }
             }
         ]
 
@@ -88,6 +92,7 @@ Window {
             id: bodyId
 
             outwards: false
+            visible: false
             clip: true
             anchors.top: headerId.bottom
             anchors.bottom: footerId.top
@@ -109,8 +114,8 @@ Window {
                     PropertyChanges { target: overviewTabId; opacity: 1.0 }
                 },
                 State {
-                    name: "logTab"
-                    PropertyChanges { target: logTabId; visible: true }
+                    name: "terminalTab"
+                    PropertyChanges { target: terminalTabId; visible: true }
                     PropertyChanges { target: bodyId; color: "black" }
                 }
             ]
@@ -165,58 +170,58 @@ Window {
 
 
             Item {
-                id: logTabId
+                id: terminalTabId
                 visible: false
                 anchors.fill: parent
                 anchors.margins: Constant.margins.main
 
                 Flickable {
-                    id: flickId
+                    id: terminalFlickId
                     anchors.fill: parent
-                    contentWidth: logId.paintedWidth
-                    contentHeight: logId.paintedHeight
-                    boundsBehavior: Flickable.StopAtBounds
+                    contentWidth: terminalId.paintedWidth
+                    contentHeight: terminalId.paintedHeight
+                    boundsBehavior: Flickable.DragOverBounds
                     clip: true
 
-                    // function ensureVisible(r) {
-                    //     if (contentX >= r.x)
-                    //         contentX = r.x;
-                    //     else if (contentX+width <= r.x+r.width)
-                    //         contentX = r.x+r.width-width;
-                    //     if (contentY >= r.y)
-                    //         contentY = r.y;
-                    //     else if (contentY+height <= r.y+r.height)
-                    //         contentY = r.y+r.height-height;
-                    // }
-
-                    function append(line) {
-                        logId.insert(
-                            logId.text.length,
-                            "\n" + line);
-                    }
 
                     TextEdit {
-                        id: logId
-                        width: flickId.width
-                        height: flickId.height
+                        id: terminalId
+
+                        function append2(line) {
+                            // log.warning("WHHO");
+                            print("Setting y to " + terminalFlickId.contentHeight);
+                            terminalFlickId.contentY = terminalFlickId.contentHeight
+                            terminalId.append(line);
+                        }
+
+                        width: terminalFlickId.width
+                        height: terminalFlickId.height
                         color: "white"
                         focus: true
                         text: "Logging started " + Date();
                         font.family: "Consolas"
                         readOnly: true
                         wrapMode: TextEdit.Wrap
-                    }
-                }
-            }
+                        renderType: Text.NativeRendering
+        }}}}
 
+        Generic.Text {
+            id: connectionText
+            text: "No connection"
+            anchors.centerIn: parent
+            visible: !bodyId.visible
+            opacity: 0
 
-            Generic.Text {
-                id: connectionText
-                text: "No connection"
-                anchors.centerIn: parent
-                visible: bodyId.state === ""
-            }
-        }
+            // Slowly fade in
+            SequentialAnimation {
+                running: true
+                PauseAnimation { duration: 1000 }
+                NumberAnimation {
+                    target: connectionText
+                    property: "opacity"
+                    duration: 500
+                    to: 1.0
+        }}}
 
         Footer.Item {
             id: footerId
@@ -228,8 +233,7 @@ Window {
             onPublish: Ctrl.publishHandler();
             onPause: Ctrl.pauseHandler();
             onStop: Ctrl.stopHandler();
-        }
-    }
+    }}
 
 
     ListModel { id: instancesModelId }
@@ -268,7 +272,7 @@ Window {
             root.log = Ctrl.PythonLog();
         }
 
-        Ctrl.initDeferred();
+        Ctrl.init();
     }
 
     onClosing: Ctrl.quit(close);

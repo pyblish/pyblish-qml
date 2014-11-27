@@ -22,7 +22,7 @@ function validate(family) {
         plugin.isCompatible = true;
 
         if (family) {
-            if (!contains(plugin.families, family)) {
+            if (!contains(plugin.families, family) && !contains(plugin.families, "*")) {
                 plugin.isCompatible = false;
             }
         }
