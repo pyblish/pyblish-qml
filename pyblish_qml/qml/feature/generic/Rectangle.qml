@@ -1,6 +1,6 @@
 import QtQuick 2.3
 
-import "../service/model.js" as Model
+import "../service/constant.js" as Constant
 
 /*
  * A generic rectangle
@@ -15,7 +15,7 @@ Rectangle {
 
     // An outwards rectangle is naturally lighter, whereas
     // an inwards rectangle is darker. This can be overridden.
-    color: Qt.darker(Model.color.background, outwards ? 0.9 : 1.2)
+    color: Qt.darker(Constant.color.background, outwards ? 0.9 : 1.2)
 
     /*
      * Outer border
@@ -26,7 +26,7 @@ Rectangle {
         anchors.margins: root.outwards ? 0:1
         border {
              width: 1
-             color: Qt.darker(Model.color.background, 2)
+             color: Qt.darker(Constant.color.background, 2)
         }
     }
 
@@ -39,7 +39,7 @@ Rectangle {
         anchors.margins: root.outwards ? 1:0
         border {
              width: 1
-             color: Qt.lighter(Model.color.background, 1.2)
+             color: Qt.lighter(Constant.color.background, 1.2)
         }
     }
 }

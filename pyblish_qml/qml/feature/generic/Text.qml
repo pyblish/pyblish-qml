@@ -1,17 +1,10 @@
 import QtQuick 2.3
 
-import "../service/model.js" as Model
+import "../service/constant.js" as Constant
 
 
 Text {
-
-    FontLoader {
-        id: mainFont
-        source: "../../font/OpenSans-Semibold.ttf"
-    }
-
-    color: Model.color.text
+    color: Constant.color.text
     renderType: Text.QtRendering
-    font.family: mainFont.name
-
+    font.family: "Open Sans Semibold"
 }

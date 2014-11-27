@@ -1,7 +1,7 @@
 import QtQuick 2.3
 
 import "../generic" as Generic
-import "../service/model.js" as Model
+import "../service/constant.js" as Constant
 import "../list" as Superclass
 import "controller.js" as Ctrl
 

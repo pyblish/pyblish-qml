@@ -1,11 +1,11 @@
 "use strict";
-/*global Model, listModel, print, XMLHttpRequest*/
+/*global Constant, listConstant, print, XMLHttpRequest*/
 /*global mockHost, Qt, root, Component, log*/
 
 
 // Merge port from Python with current API prefix
 function get_base() {
-    return "http://127.0.0.1:" + Model.port + Model.urlPrefix;
+    return "http://127.0.0.1:" + Constant.port + Constant.urlPrefix;
 }
 
 /*
@@ -81,10 +81,10 @@ function mock_request(verb, endpoint, obj, cb) {
 function request(verb, endpoint, obj, cb) {
     log.debug("Request:", verb, get_base() + (endpoint || ""));
 
-    if (Model.port === 0) {
+    if (Constant.port === 0) {
         return mock_request(verb, endpoint, obj, cb);
     }
-    console.assert(Model.port !== 0);
+    console.assert(Constant.port !== 0);
     return real_request(verb, endpoint, obj, cb);
 }
 

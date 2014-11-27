@@ -1,7 +1,7 @@
 import QtQuick 2.3
 
 import "../generic" as Generic
-import "../service/model.js" as Model
+import "../service/constant.js" as Constant
 import "controller.js" as Ctrl
 
 
@@ -39,12 +39,11 @@ Rectangle {
         focus: true
         spacing: 1
         anchors.fill: parent
-        anchors.margins: Model.margins.main
+        anchors.margins: Constant.margins.main
         boundsBehavior: Flickable.StopAtBounds
 
         delegate: itemDelegate
         section.delegate: sectionDelegate
-
     }
 
 
@@ -72,7 +71,7 @@ Rectangle {
                 anchors.fill: parent
                 anchors.rightMargin: isSelected ? 0 : parent.width
                 anchors.leftMargin: indicatorContainerId.width
-                color: Model.color.item
+                color: Constant.color.item
                 opacity: isSelected ? 0.2 : 0
 
                 Behavior on opacity {
@@ -146,7 +145,7 @@ Rectangle {
                 anchors.fill: parent
                 anchors.rightMargin: calculate_progress(currentProgress)
                 anchors.leftMargin: indicatorContainerId.width
-                color: Model.color.item
+                color: Constant.color.item
                 opacity: 0.5
 
                 Behavior on anchors.rightMargin {
@@ -188,8 +187,8 @@ Rectangle {
                     State {
                         name: "active"
                         when: active
-                        PropertyChanges { target: indicatorMouseArea; visible: optional }
                         PropertyChanges { target: hoverId; visible: true }
+                        PropertyChanges { target: indicatorMouseArea; visible: optional }
                         PropertyChanges { target: indicatorContainerId; opacity: optional ? 1.0 : 0.5 }
                     }
                 ]
@@ -212,6 +211,7 @@ Rectangle {
                     width: 10
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
+                    // opacity
 
                     // Outer border
                     Rectangle {
@@ -244,7 +244,7 @@ Rectangle {
                     Image {
                         id: indicatorProcessingId
                         anchors.verticalCenter: parent.verticalCenter
-                        source: Model.image.processing
+                        source: Constant.image.processing
                         visible: false
                         width: 7
                         height: 7
@@ -265,7 +265,7 @@ Rectangle {
                     Rectangle {
                         id: indicatorErroredId
                         anchors.verticalCenter: parent.verticalCenter
-                        color: Model.color.error
+                        color: Constant.color.error
                         width: 7
                         height: 7
                         visible: false
@@ -343,7 +343,7 @@ Rectangle {
     */
     Component.onCompleted: {
         if (!_listView.model) {
-            root.color = Model.color.background;
+            root.color = Constant.color.background;
 
             _listView.model = Qt.createQmlObject("import QtQuick 2.3; ListModel {}", root);
             _listView.section.property = "family";

@@ -9,7 +9,7 @@ import "feature/instances" as Instances
 import "feature/plugins" as Plugins
 import "feature/animation" as Animation
 
-import "feature/service/model.js" as Model
+import "feature/service/constant.js" as Constant
 import "feature/service/host.js" as Host
 
 import "feature/app/controller.js" as Ctrl
@@ -20,13 +20,19 @@ import "feature/app/controller.js" as Ctrl
  *
 */
 Window {
-    property alias header: header
-    property alias body: body
-    property alias footer: footer
-    property alias instancesModel: instancesModel
-    property alias pluginsModel: pluginsModel
-    property alias quitAnimation: _quitAnimation
-    property alias startAnimation: _startAnimation
+    property alias header: headerId
+    property alias body: bodyId
+    property alias footer: footerId
+
+    property alias logArea: logId
+    property alias instancesModel: instancesModelId
+    property alias pluginsModel: pluginsModelId
+
+    property alias quitAnimation: quitAnimationId
+    property alias startAnimation: startAnimationId
+    
+    property alias state: bodyId.state
+
     property bool isStatic: false
     property var log: new Ctrl.MockLog()
 
@@ -35,10 +41,10 @@ Window {
     flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
 
-    width: Model.size.windowWidth
-    height: Model.size.windowHeight
-    minimumWidth: Model.size.windowMinimumWidth
-    minimumHeight: root.isStatic ? Model.size.windowMinimumHeight : 0
+    width: Constant.size.windowWidth
+    height: Constant.size.windowHeight
+    minimumWidth: Constant.size.windowMinimumWidth
+    minimumHeight: root.isStatic ? Constant.size.windowMinimumHeight : 0
 
     /*
      * Container
@@ -46,65 +52,174 @@ Window {
      *  than animating the OS-level window.
     */
     Generic.Rectangle {
-        id: container
+        id: containerId
         width: parent.width
-        color: Model.color.background
-        height: root.isStatic ? parent.height : header.height + footer.height - 1  // Modified with animation
+        color: Constant.color.background
+        height: headerId.height + footerId.height - 1
         clip: true
 
+        states: [
+            State {
+                name: "static"
+                when: root.isStatic
+                PropertyChanges { target: containerId; height: parent.height}
+            }
+        ]
+
         Header.Item {
-            id: header
-            z: 1
+            id: headerId
             anchors.left: parent.left
             anchors.right: parent.right
+            state: "overviewTab" // Default state
+            z: 1
 
             onDrag: {
                 root.x += x
                 root.y += y
             }
 
+            // When tab changes, alter visibility of body items
+            onTabChanged: bodyId.state = name
             onCloseClicked: Ctrl.closeClickedHandler()
         }
+
         
         Generic.Rectangle {
-            id: body
-            visible: false
+            id: bodyId
+
             outwards: false
-            width: parent.width - Model.margins.main * 2
+            clip: true
+            anchors.top: headerId.bottom
+            anchors.bottom: footerId.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: Constant.margins.main
 
-            anchors.top: header.bottom
-            anchors.bottom: footer.top
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.margins: Model.margins.main
+            states: [
+                State {
+                    name: "systemTab"
+                    PropertyChanges { target: systemTabId; visible: true }
+                },
+                State {
+                    // Altering opacity, as opposed to visibility
+                    // due to states of overviewTabId not functioning
+                    // properly when visiblity is turned off. (E.g. 
+                    // items did not return to their default state)
+                    name: "overviewTab"
+                    PropertyChanges { target: overviewTabId; opacity: 1.0 }
+                },
+                State {
+                    name: "logTab"
+                    PropertyChanges { target: logTabId; visible: true }
+                    PropertyChanges { target: bodyId; color: "black" }
+                }
+            ]
 
-            Instances.List {
-                id: instancesList
-                model: instancesModel
+            /*
+             * System property page
+             *
+             *
+            */
+            Item {
+                id: systemTabId
+                visible: false
                 anchors.fill: parent
-                anchors.rightMargin: parent.width / 2
-                section.property: "family"
-                hoverDirection: "left"
 
-                onItemHovered: {
-                    if (index === -1) {
-                        pluginsList.validate("");
-                    } else {
-                        var instance = instancesModel.get(index)
-                        pluginsList.validate(instance.family);
+                Generic.Text {
+                    anchors.centerIn: parent
+                    text: "System settings"
+                }
+            }
+
+            Item {
+                id: overviewTabId
+                anchors.fill: parent
+                opacity: 0
+
+                Instances.List {
+                    id: instancesList
+                    model: instancesModelId
+                    anchors.fill: parent
+                    anchors.rightMargin: parent.width / 2
+                    section.property: "family"
+                    hoverDirection: "left"
+
+                    onItemHovered: {
+                        if (index === -1) {
+                            pluginsList.validate("");
+                        } else {
+                            var instance = instancesModelId.get(index)
+                            pluginsList.validate(instance.family);
+                        }
+                    }
+                }
+
+                Plugins.List {
+                    id: pluginsList
+                    model: pluginsModelId
+                    anchors.fill: parent
+                    anchors.leftMargin: parent.width / 2
+                    section.property: "type"
+                }
+            }
+
+
+            Item {
+                id: logTabId
+                visible: false
+                anchors.fill: parent
+                anchors.margins: Constant.margins.main
+
+                Flickable {
+                    id: flickId
+                    anchors.fill: parent
+                    contentWidth: logId.paintedWidth
+                    contentHeight: logId.paintedHeight
+                    boundsBehavior: Flickable.StopAtBounds
+                    clip: true
+
+                    // function ensureVisible(r) {
+                    //     if (contentX >= r.x)
+                    //         contentX = r.x;
+                    //     else if (contentX+width <= r.x+r.width)
+                    //         contentX = r.x+r.width-width;
+                    //     if (contentY >= r.y)
+                    //         contentY = r.y;
+                    //     else if (contentY+height <= r.y+r.height)
+                    //         contentY = r.y+r.height-height;
+                    // }
+
+                    function append(line) {
+                        logId.insert(
+                            logId.text.length,
+                            "\n" + line);
+                    }
+
+                    TextEdit {
+                        id: logId
+                        width: flickId.width
+                        height: flickId.height
+                        color: "white"
+                        focus: true
+                        text: "Logging started " + Date();
+                        font.family: "Consolas"
+                        readOnly: true
+                        wrapMode: TextEdit.Wrap
                     }
                 }
             }
 
-            Plugins.List {
-                id: pluginsList
-                model: pluginsModel
-                anchors.fill: parent
-                anchors.leftMargin: parent.width / 2
-                section.property: "type"
-        }}
+
+            Generic.Text {
+                id: connectionText
+                text: "No connection"
+                anchors.centerIn: parent
+                visible: bodyId.state === ""
+            }
+        }
 
         Footer.Item {
-            id: footer
+            id: footerId
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
@@ -114,33 +229,33 @@ Window {
             onPause: Ctrl.pauseHandler();
             onStop: Ctrl.stopHandler();
         }
-
-        Generic.Text {
-            id: connectionText
-            text: "No connection"
-            anchors.centerIn: parent
-            visible: !body.visible
-    }}
+    }
 
 
-    ListModel { id: instancesModel }
-    ListModel { id: pluginsModel }
+    ListModel { id: instancesModelId }
+    ListModel { id: pluginsModelId }
 
 
     Animation.OnQuit {
-        id: _quitAnimation
-        heightTo: header.height + footer.height - 1
+        id: quitAnimationId
+        heightTo: headerId.height + footerId.height - 1
         heightFrom: root.height
-        heightTarget: container
+        heightTarget: containerId
         opacityTarget: root
     }
 
 
     Animation.OnStart {
-        id: _startAnimation
-        heightFrom: header.height + footer.height - 1
+        id: startAnimationId
+        heightFrom: headerId.height + footerId.height - 1
         heightTo: root.height
-        heightTarget: container
+        heightTarget: containerId
+    }
+
+
+    FontLoader {
+        id: mainFont
+        source: "font/OpenSans-Semibold.ttf"
     }
 
 

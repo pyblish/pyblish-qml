@@ -1,7 +1,7 @@
 import QtQuick 2.3
 
 import "../generic" as Generic
-import "../service/model.js" as Model
+import "../service/constant.js" as Constant
 
 
 Generic.Rectangle {
@@ -32,7 +32,7 @@ Generic.Rectangle {
         id: hover
         anchors.fill: parent
         anchors.margins: 1
-        color: Qt.lighter(Model.color.background, 1.6)
+        color: Qt.lighter(Constant.color.background, 1.6)
         opacity: 0
 
         Behavior on opacity {

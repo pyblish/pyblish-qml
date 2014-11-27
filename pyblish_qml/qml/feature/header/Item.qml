@@ -1,7 +1,7 @@
 import QtQuick 2.3
 
 import "../generic" as Generic
-import "../service/model.js" as Model
+import "../service/constant.js" as Constant
 import "controller.js" as Ctrl
 
 /*
@@ -13,34 +13,37 @@ import "controller.js" as Ctrl
 */
 Generic.Rectangle {
     id: root
-
-    property alias pyblishVersion: debugVersion.text
-    property alias host: debugHost.text
-    property bool logoContainsMouse
     
-    signal logoPressed
     signal closeClicked
     signal drag(real x, real y)
+    signal tabChanged(string name)
 
-    width: 200
-    height: Model.size.headerHeight
+    clip: true
+    implicitWidth: 400
+    height: Constant.size.headerHeight
+    states: [
+        State {
+            name: "systemTab"
+            PropertyChanges { target: tab1Id; state: "active"}
+            PropertyChanges { target: tab2Id; state: ""}
+            PropertyChanges { target: tab3Id; state: ""}
+        },
+        State {
+            name: "overviewTab"
+            PropertyChanges { target: tab1Id; state: ""}
+            PropertyChanges { target: tab2Id; state: "active"}
+            PropertyChanges { target: tab3Id; state: ""}
+        },
+        State {
+            name: "logTab"
+            PropertyChanges { target: tab1Id; state: ""}
+            PropertyChanges { target: tab2Id; state: ""}
+            PropertyChanges { target: tab3Id; state: "active"}
+        }
+    ]
 
-
-    /*
-     * Logo mouse area
-     *
-     * Description
-     *      Triggered when entering the area
-     *      occupied by the logotype in the upper-left corner.
-    */
-    MouseArea {
-        anchors.fill: parent
-        anchors.rightMargin: parent.width - headerImage.width
-        hoverEnabled: true
-
-        onEntered: logoContainsMouse = true;
-        onExited: logoContainsMouse = false;
-    }
+    // Default state
+    onStateChanged: tabChanged(root.state)
 
     /*
      * Main mouse area
@@ -53,11 +56,9 @@ Generic.Rectangle {
         property real lastMouseY: 0
 
         anchors.fill: parent
-        anchors.leftMargin: headerImage.width
-
         acceptedButtons: Qt.LeftButton
+        // propagateComposedEvents: true
 
-        // Internal
         onPressed: {
             lastMouseX = mouseX
             lastMouseY = mouseY
@@ -70,89 +71,41 @@ Generic.Rectangle {
         }
     }
 
-    /*
-     * Logo button
-     *
-     *
-    */
-    Image {
-        id: headerImage
-        source: Model.image.logo
-        anchors.verticalCenter: parent.verticalCenter
-        x: 4
-        opacity: logoContainsMouse ? 1.0 : 0.7
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: 200
-                easing.type: Easing.OutQuint
-            }
-        }
-    }
 
     /*
-     * Debug info
+     * Tabs
      *
-     * This item is shown upon hovering the main logo
     */
     Row {
-        id: debugInfo
-
-        property int margin: 10
-
         anchors.fill: parent
-        anchors.leftMargin: headerImage.width + debugInfo.margin
-        anchors.rightMargin: headerButtons.width
-        opacity: logoContainsMouse ? 1.0 : 0.0
+        spacing: -2
 
-        Behavior on opacity {
-            NumberAnimation {
-                duration: 50
-                easing.type: Easing.OutQuint
-            }
+        Generic.Tab {
+            id: tab1Id
+            height: parent.height
+            image: Constant.image.logo
+            width: 50
+            onClicked: root.state = "systemTab"
         }
 
-        Item {
-            width: debugVersion.paintedWidth + debugInfo.margin
+        Generic.Tab {
+            id: tab2Id
             height: parent.height
-            anchors.verticalCenter: parent.verticalCenter
-
-            Generic.Text {
-                id: debugVersion
-                anchors.centerIn: parent
-                text: "0.0.0"
-            }
+            text: "Overview"
+            onClicked: root.state = "overviewTab"
         }
 
-        Item {
-            width: debugIcon.width + debugInfo.margin
+        Generic.Tab {
+            id: tab3Id
             height: parent.height
-            anchors.verticalCenter: parent.verticalCenter
-
-            Image {
-                id: debugIcon
-                anchors.centerIn: parent
-                source: Model.image.communication
-            }
-        }
-
-
-        Item {
-            width: debugHost.paintedWidth + debugInfo.margin
-            height: parent.height
-            anchors.verticalCenter: parent.verticalCenter
-
-            Generic.Text {
-                id: debugHost
-                anchors.centerIn: parent
-                text: "QML"
-            }
+            text: "Log"
+            onClicked: root.state = "logTab"
         }
     }
+
 
     /*
      * Header buttons
-     *
      *
     */
     Row {
@@ -162,18 +115,19 @@ Generic.Rectangle {
             right: parent.right
             top: parent.top
             bottom: parent.bottom
-            margins: Model.margins.main
+            margins: Constant.margins.main
         }
 
-        spacing: Model.margins.alt
+        spacing: Constant.margins.alt
 
         Generic.Button {
             id: closeButton
-            source: Model.image.close
+            source: Constant.image.close
             width: 30
             height: 30
 
             onClicked: root.closeClicked();
         }
     }
+
 }
