@@ -2,22 +2,11 @@
 
 The Pyblish QML project provides for a graphical frontend for [Pyblish][].
 
+- [Installation][install]
 - [User Guide][userguide]
 - [Contributing][contributing]
 
+[install]: https://github.com/pyblish/pyblish-qml/wiki/Installation
 [contributing]: https://github.com/pyblish/pyblish-qml/wiki/Contributing
 [userguide]: https://github.com/pyblish/pyblish-qml/wiki/User-Guide
-
-### Installation
-
-```bash
-$ pip install pyblish-qml -U
-```
-
-The `-U` will ensure all dependencies are up to date.
-
-[Having trouble?][faq]
-
-[faq]: https://github.com/pyblish/pyblish-qml/wiki/FAQ
-
 [Pyblish]: https://github.com/abstractfactory/pyblish
