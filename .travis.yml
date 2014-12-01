@@ -1,0 +1,15 @@
+language: python
+python:
+- 2.6
+- 2.7
+script:
+- pip install git+git://github.com/pyblish/pyblish-qml.git
+deploy:
+  provider: pypi
+  user: mottosso
+  distributions: "sdist"
+  password:
+    secure: qWWWxUuFHM/ZJ8kxBIgTtS3VKgwybp0Pp7UUFkBVYioo++hCPheS7Eh1rPqqHDHYJcQVdhdiI5xGr+efMcs0NrR8Tu9ovRmV/4c1Jjso2SDKXtswxTQTyikhnsBS+3IaUiy+qvrdYH8JTX93YCZaOxtifblVPa3QA7/VBB86l6E=
+  on:
+    tags: true
+    all_branches: true
