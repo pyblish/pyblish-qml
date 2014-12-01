@@ -1,0 +1,2 @@
+pyblish-endpoint>=1.0.1
+pyblish>=1.0.11
