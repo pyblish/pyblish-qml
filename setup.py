@@ -3,9 +3,6 @@ from setuptools import setup, find_packages
 with open("README.txt") as f:
     readme = f.read()
 
-with open("requirements.txt") as f:
-    requirements = f.read()
-
 import os
 import imp
 
@@ -50,5 +47,6 @@ setup(
     package_data={
         "pyblish_qml": qml_package_data
     },
-    entry_points={}
+    entry_points={},
+    install_requires=["pyblish-endpoint>=1.0.2"]
 )
