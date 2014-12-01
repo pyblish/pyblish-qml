@@ -25,6 +25,7 @@ Window {
     property alias footer: footerId
 
     property alias terminal: terminalId
+    property alias system: systemId
     property alias instancesModel: instancesModelId
     property alias pluginsModel: pluginsModelId
 
@@ -99,40 +100,80 @@ Window {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.margins: Constant.margins.main
+            transform: Translate { id: bodyTranslateId } // Used in animation
 
             states: [
-                State {
-                    name: "systemTab"
-                    PropertyChanges { target: systemTabId; visible: true }
-                },
-                State {
-                    // Altering opacity, as opposed to visibility
-                    // due to states of overviewTabId not functioning
-                    // properly when visiblity is turned off. (E.g. 
-                    // items did not return to their default state)
-                    name: "overviewTab"
-                    PropertyChanges { target: overviewTabId; opacity: 1.0 }
-                },
-                State {
-                    name: "terminalTab"
-                    PropertyChanges { target: terminalTabId; visible: true }
-                    PropertyChanges { target: bodyId; color: "black" }
-                }
+            State {
+                name: "systemTab"
+                PropertyChanges { target: systemTabId; visible: true }
+            },
+            State {
+                // Altering opacity, as opposed to visibility
+                // due to states of overviewTabId not functioning
+                // properly when visiblity is turned off. (E.g. 
+                // items did not return to their default state)
+                name: "overviewTab"
+                PropertyChanges { target: overviewTabId; opacity: 1.0 }
+            },
+            State {
+                name: "terminalTab"
+                PropertyChanges { target: terminalTabId; visible: true }
+                PropertyChanges { target: bodyId; color: "black" }
+            }
             ]
+
+            NumberAnimation {
+                id: bodyAnimationId
+                target: bodyTranslateId
+                property: "x"
+                easing.type: Easing.OutQuint
+                duration: 500
+                from: -5
+                to: 0
+            }
+
+            onStateChanged: {
+                print("Changed");
+                bodyAnimationId.stop();
+                bodyAnimationId.start();
+            }
 
             /*
              * System property page
-             *
+             * 
+             *  _____________
+             * |      |      |
+             * |      |      |
+             * |      |      |
+             * |______|______|
+             * |             |
+             * |             |
+             * |_____________|
              *
             */
+
             Item {
                 id: systemTabId
                 visible: false
                 anchors.fill: parent
+                anchors.margins: Constant.margins.main
 
-                Generic.Text {
-                    anchors.centerIn: parent
-                    text: "System settings"
+                TextEdit {
+                    id: systemId
+                    width: terminalFlickId.width
+                    height: terminalFlickId.height
+                    color: "white"
+                    font.family: "Open Sans Semibold"
+                    readOnly: true
+                    wrapMode: TextEdit.Wrap
+                    renderType: Text.NativeRendering
+                }
+
+                Image {
+                    anchors.bottom: parent.bottom
+                    anchors.right: parent.right
+                    anchors.margins: 20
+                    source: Constant.image.logoColor
                 }
             }
 
@@ -149,6 +190,7 @@ Window {
                     section.property: "family"
                     hoverDirection: "left"
 
+                    // Upon hovering an instance, fade incompatible plug-ins
                     onItemHovered: {
                         if (index === -1) {
                             pluginsList.validate("");
@@ -181,6 +223,7 @@ Window {
                     contentWidth: terminalId.paintedWidth
                     contentHeight: terminalId.paintedHeight
                     boundsBehavior: Flickable.DragOverBounds
+                    flickableDirection: Flickable.VerticalFlick
                     clip: true
 
 
@@ -188,16 +231,13 @@ Window {
                         id: terminalId
 
                         function append2(line) {
-                            // log.warning("WHHO");
-                            print("Setting y to " + terminalFlickId.contentHeight);
                             terminalFlickId.contentY = terminalFlickId.contentHeight
                             terminalId.append(line);
                         }
 
-                        width: terminalFlickId.width
-                        height: terminalFlickId.height
+                        width: terminalTabId.width
+                        height: terminalTabId.height
                         color: "white"
-                        focus: true
                         text: "Logging started " + Date();
                         font.family: "Consolas"
                         readOnly: true

@@ -36,7 +36,6 @@ Rectangle {
 
     ListView {
         id: _listView
-        focus: true
         spacing: 1
         anchors.fill: parent
         anchors.margins: Constant.margins.main

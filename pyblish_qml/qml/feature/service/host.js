@@ -95,30 +95,30 @@ function onReady(cb) {
 
 }
 
-function get_instances(cb) {
+function getInstances(cb) {
     request("GET", "/instances", null, cb);
 }
 
 
-function get_plugins(cb) {
+function getPlugins(cb) {
     request("GET", "/plugins", null, cb);
 }
 
 
-function get_application(cb) {
+function getApplication(cb) {
     request("GET", "/application", null, cb);
 }
 
 
-function get_processes(cb) {
+function getProcesses(cb) {
     request("GET", "/processes", null, cb);
 }
 
-function get_process(process_id, cb) {
+function getProcess(process_id, cb) {
     request("GET", "/processes/" + process_id, null, cb);
 }
 
-function post_processes(instance, plugin, cb) {
+function postProcesses(instance, plugin, cb) {
     request("POST", "/processes",
             {"instance": instance, "plugin": plugin}, cb);
 }

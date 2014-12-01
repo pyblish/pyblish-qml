@@ -14,6 +14,13 @@ function Timer() {
 }
 
 
+function utcToLocalDate(seconds) {
+    var d = new Date(0);
+    d.setUTCSeconds(seconds);
+    return d;
+}
+
+
 /*
  * Mock log, replaced if Python is present
  *
@@ -93,7 +100,7 @@ function init() {
     Host.onReady(function () {
         log.debug("Populating model");
 
-        Host.get_instances(function (resp) {
+        Host.getInstances(function (resp) {
             var isToggled = false;
 
             resp.forEach(function (item) {
@@ -124,7 +131,7 @@ function init() {
             });
         });
 
-        Host.get_plugins(function (resp) {
+        Host.getPlugins(function (resp) {
 
             // Sort plug-ins by their native order
             resp.sort(function (a, b) { return a.order - b.order; });
@@ -176,6 +183,16 @@ function init() {
         root.body.state = "overviewTab";
         root.body.visible = true;
 
+        Host.getApplication(function (resp) {
+            resp.connectTime = utcToLocalDate(resp.connectTime);
+
+            var keys = Object.keys(resp);
+            keys.sort();
+            keys.forEach(function (key) {
+                root.system.append(key + ": " + resp[key]);
+            });
+        });
+
     });
 
     // Make window re-sizable once animation is complete.
@@ -186,17 +203,6 @@ function init() {
     root.startAnimation.start();
 
 }
-
-// function initDeferred() {
-//     var timer = new Timer();
-//     timer.interval = 0;
-//     timer.repeat = false;
-//     timer.triggered.connect(function () {
-//         init();
-//     });
-//     timer.start();
-// }
-
 
 
 /* 
@@ -239,7 +245,7 @@ function activatePublishingMode() {
     root.footer.mode = 1;
 }
 
-function deactivatePublishingMode() {
+function deactivatePublishingMode(message) {
     log.info("Deactivating publishing mode");
     root.footer.mode = 0;
     root.footer.paused = false;
@@ -253,6 +259,10 @@ function deactivatePublishingMode() {
             model.get(i).currentProgress = 0;
         }
     });
+
+    if (typeof message !== "undefined") {
+        setMessage(message);
+    }
 }
 
 
@@ -293,21 +303,6 @@ function getNextToggledIndex(index, model) {
     return null;
 }
 
-/*
- * Is plug-in compatible with family?
- *
-*/
-// function isCompatible(plugin, family) {
-//     var i, pluginFamily;
-//     for (i = 0; i < plugin.families.count; i++) {
-//         pluginFamily = plugin.families.get(i);
-//         if (pluginFamily === "*" || pluginFamily === family) {
-//             return true;
-//         }
-//     }
-//     return false;
-// }
-
 
 /*
  * Trigger next process
@@ -335,8 +330,7 @@ function nextProcess(status) {
     }
 
     if (nextPluginIndex === null) {
-        log.debug("All plug-ins processed");
-        deactivatePublishingMode();
+        deactivatePublishingMode("Completed successfully");
         return;
     }
 
@@ -358,16 +352,14 @@ function nextProcess(status) {
         // If next plug-in is an extractor,
         // that means all validators have completed.
         if (root.pluginsModel.get(nextPluginIndex).type === "Extractor") {
-            deactivatePublishingMode();
-            setMessage("Validation failed");
+            deactivatePublishingMode("Validation failed");
             return;
         }
     }
 
     // Publishing stopped.
     if (Constant.publishStopped) {
-        deactivatePublishingMode();
-        setMessage("Stopped");
+        deactivatePublishingMode("Stopped");
         return;
     }
 
@@ -380,12 +372,6 @@ function nextProcess(status) {
     }
 
     process(nextInstanceIndex, nextPluginIndex);
-}
-
-function utcToLocalDate(seconds) {
-    var d = new Date(0);
-    d.setUTCSeconds(seconds);
-    return d;
 }
 
 /*
@@ -407,12 +393,14 @@ function process(instanceIndex, pluginIndex) {
         incrementSize = 1 / root.pluginsModel.count;
 
     // Start by posting a process
-    Host.post_processes(instance.name, plugin.name, function (resp) {
+    Host.postProcesses(instance.name, plugin.name, function (resp) {
         process_id = resp.process_id;
 
         plugin.isProcessing = true;
+        plugin.currentProgress = 1.0;
         instance.isProcessing = true;
         instance.currentProgress += incrementSize;
+
 
         timer = new Timer();
         timer.interval = 100;
@@ -424,7 +412,7 @@ function process(instanceIndex, pluginIndex) {
             // the submitted process; such as it's current
             // state (either running or not) along with any
             // log messages produced.
-            Host.get_process(process_id + "?index=" + Constant.lastIndex, function (resp) {
+            Host.getProcess(process_id + "?index=" + Constant.lastIndex, function (resp) {
 
                 // Process is still running
                 // 
@@ -439,9 +427,10 @@ function process(instanceIndex, pluginIndex) {
                 // - Update progress bars
                 // - Initiate next process
                 } else {
-                    timer.stop();
                     log.info(plugin.name + " Complete!");
+                    timer.stop();
 
+                    // Append message to terminal
                     resp.messages.forEach(function (message) {
                         date = utcToLocalDate(message.created);
                         root.terminal.append2(
@@ -453,7 +442,6 @@ function process(instanceIndex, pluginIndex) {
 
                     instance.isProcessing = false;
                     plugin.isProcessing = false;
-                    plugin.currentProgress = 1.0;
 
                     nextProcess({
                         "instanceIndex": instanceIndex,
@@ -471,12 +459,19 @@ function process(instanceIndex, pluginIndex) {
     });
 }
 
-
+/*
+ * Publish Handler
+ *  Respond to user choosing to publish
+ *
+*/
 function publishHandler() {
     var i,
         instance,
         startInstance,
         startPlugin;
+
+    // Reset errors
+    Constant.publishErrors = {};
 
     for (i = 0; i < root.instancesModel.count; i++) {
         instance = root.instancesModel.get(i);
@@ -502,12 +497,6 @@ function publishHandler() {
         process(startInstance, startPlugin);
     }
 }
-
-
-// function published(status) {
-//     setMessage("Published successfully: " + status);
-//     quit(null, 1000);
-// }
 
 
 function closeClickedHandler() {

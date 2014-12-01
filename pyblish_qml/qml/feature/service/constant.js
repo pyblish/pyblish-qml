@@ -23,6 +23,7 @@ var size = {
 
 var image = {
     "logo": "../../img/logo-white.png",
+    "logoColor": "img/logo-small.png",
     "communication": "../../img/communication.png",
     "publish": "../../img/button-publish.png",
     "pause": "../../img/button-pause.png",
