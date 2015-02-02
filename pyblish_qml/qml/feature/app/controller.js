@@ -101,14 +101,15 @@ function init() {
         log.debug("Populating model");
 
         Host.getInstances(function (resp) {
-            var isToggled = false;
+            var isToggled = true;
 
             resp.forEach(function (item) {
-                if (typeof item.publish !== "undefined") {
+                if (item.publish != null) {
                     isToggled = item.publish;
                 }
 
                 // Append data
+
                 var obj = {
                     name: item.name,
                     family: item.family,
@@ -126,6 +127,8 @@ function init() {
                     warnings: [],
                     messages: [],
                 };
+                
+                log.info("obj.isToggled = " + obj.isToggled);
 
                 root.instancesModel.append(obj);
             });
