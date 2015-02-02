@@ -127,8 +127,6 @@ function init() {
                     warnings: [],
                     messages: [],
                 };
-                
-                log.info("obj.isToggled = " + obj.isToggled);
 
                 root.instancesModel.append(obj);
             });
