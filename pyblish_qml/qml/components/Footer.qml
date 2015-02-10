@@ -1,11 +1,9 @@
 import QtQuick 2.3
-
-import "controller.js" as Ctrl
-import "../generic" as Generic
-import "../service/constant.js" as Constant
+import "."
 
 
-Generic.Rectangle {
+
+Box {
     id: root
 
     property alias message: _message
@@ -19,7 +17,7 @@ Generic.Rectangle {
     signal stop
 
     width: 200
-    height: Constant.size.footerHeight
+    height: Constant.footerHeight
 
     Message {
         id: _message
@@ -31,26 +29,26 @@ Generic.Rectangle {
             right: parent.right
             top: parent.top
             bottom: parent.bottom
-            margins: Constant.margins.main
+            margins: Constant.marginMain
         }
 
-        spacing: Constant.margins.alt
+        spacing: Constant.marginAlt
 
 
-        Generic.Button {
-            source: Constant.image.stop
+        Button {
+            source: Constant.imageStop
             visible: mode === 1 ? true : false
             onClicked: root.stop()
         }
 
-        Generic.Button {
-            source: Constant.image.pause
+        Button {
+            source: Constant.imagePause
             visible: mode === 1 ? true : false
             onClicked: root.pause()
         }
 
-        Generic.Button {
-            source: Constant.image.publish
+        Button {
+            source: Constant.imagePublish
 
             onClicked: root.publish()
 

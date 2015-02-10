@@ -1,6 +1,6 @@
 import QtQuick 2.3
+import "."  // Include Constant singleton
 
-import "../service/constant.js" as Constant
 
 /*
  * A generic rectangle
@@ -9,13 +9,12 @@ import "../service/constant.js" as Constant
 Rectangle {
     id: root
     property bool outwards: true
-
     implicitWidth: 100
     implicitHeight: 100
 
     // An outwards rectangle is naturally lighter, whereas
     // an inwards rectangle is darker. This can be overridden.
-    color: Qt.darker(Constant.color.background, outwards ? 0.9 : 1.2)
+    color: Qt.darker(Constant.backgroundColor, outwards ? 0.9 : 1.2)
 
     /*
      * Outer border
@@ -26,7 +25,7 @@ Rectangle {
         anchors.margins: root.outwards ? 0:1
         border {
              width: 1
-             color: Qt.darker(Constant.color.background, 2)
+             color: Qt.darker(Constant.backgroundColor, 2)
         }
     }
 
@@ -39,7 +38,7 @@ Rectangle {
         anchors.margins: root.outwards ? 1:0
         border {
              width: 1
-             color: Qt.lighter(Constant.color.background, 1.2)
+             color: Qt.lighter(Constant.backgroundColor, 1.2)
         }
     }
 }

@@ -1,8 +1,6 @@
 import QtQuick 2.3
+import "."
 
-import "../generic" as Generic
-import "../service/constant.js" as Constant
-import "controller.js" as Ctrl
 
 /*
  * Header
@@ -11,7 +9,7 @@ import "controller.js" as Ctrl
  *      Main header, used for moving the application
  *      along with closing, minimizing and logo display.
 */
-Generic.Rectangle {
+Box {
     id: root
     
     signal closeClicked
@@ -20,7 +18,7 @@ Generic.Rectangle {
 
     clip: true
     implicitWidth: 400
-    height: Constant.size.headerHeight
+    height: Constant.headerHeight
     states: [
         State {
             name: "systemTab"
@@ -80,22 +78,22 @@ Generic.Rectangle {
         anchors.fill: parent
         spacing: -2
 
-        Generic.Tab {
+        Tab {
             id: tab1Id
             height: parent.height
-            image: Constant.image.logo
+            image: Constant.imageLogo
             width: 50
             onClicked: root.state = "systemTab"
         }
 
-        Generic.Tab {
+        Tab {
             id: tab2Id
             height: parent.height
             text: "Overview"
             onClicked: root.state = "overviewTab"
         }
 
-        Generic.Tab {
+        Tab {
             id: tab3Id
             height: parent.height
             text: "Terminal"
@@ -115,14 +113,14 @@ Generic.Rectangle {
             right: parent.right
             top: parent.top
             bottom: parent.bottom
-            margins: Constant.margins.main
+            margins: Constant.marginMain
         }
 
-        spacing: Constant.margins.alt
+        spacing: Constant.marginAlt
 
-        Generic.Button {
+        Button {
             id: closeButton
-            source: Constant.image.close
+            source: Constant.imageClose
             width: 30
             height: 30
 

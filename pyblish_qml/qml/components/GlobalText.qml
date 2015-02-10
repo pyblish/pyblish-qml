@@ -1,10 +1,9 @@
 import QtQuick 2.3
-
-import "../service/constant.js" as Constant
+import "."
 
 
 Text {
-    color: Constant.color.text
+    color: Constant.textColor
     renderType: Text.QtRendering
     font.family: "Open Sans Semibold"
 }

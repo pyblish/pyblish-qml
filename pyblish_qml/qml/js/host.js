@@ -1,11 +1,11 @@
 "use strict";
-/*global Constant, listConstant, print, XMLHttpRequest*/
+/*global Components, listConstant, print, XMLHttpRequest*/
 /*global mockHost, Qt, root, Component, log*/
 
 
 // Merge port from Python with current API prefix
 function get_base() {
-    return "http://127.0.0.1:" + Constant.port + Constant.urlPrefix;
+    return "http://127.0.0.1:" + Components.Constant.port + Components.Constant.urlPrefix;
 }
 
 /*
@@ -14,7 +14,8 @@ function get_base() {
  *
 */
 function MockHTTPRequest() {
-    var component = Qt.createComponent("../app/MockHTTPRequest.qml"),
+    log.debug("Creating MockHTTPRequest");
+    var component = Qt.createComponent("../components/MockHTTPRequest.qml"),
         mhr;
 
     this.readyState = null;
@@ -23,7 +24,7 @@ function MockHTTPRequest() {
 
     if (component.status === Component.Error) {
         this.readyState = this.ERROR;
-        this.errorString = component.errorString;
+        this.errorString = component.errorString();
     } else {
         mhr = component.createObject(root);
         console.assert(mhr !== "undefined", "This file should never fail");
@@ -70,7 +71,8 @@ function mock_request(verb, endpoint, obj, cb) {
     var mhr = new MockHTTPRequest();
 
     if (mhr.readyState === mhr.ERROR) {
-        return print("Running standalone");
+        log.error(mhr.errorString);
+        return log.info("Running standalone");
     }
 
     mhr.requested.connect(cb);
@@ -81,10 +83,10 @@ function mock_request(verb, endpoint, obj, cb) {
 function request(verb, endpoint, obj, cb) {
     log.debug("Request:", verb, get_base() + (endpoint || ""));
 
-    if (Constant.port === 0) {
+    if (Components.Constant.port === 0) {
         return mock_request(verb, endpoint, obj, cb);
     }
-    console.assert(Constant.port !== 0);
+    console.assert(Components.Constant.port !== 0);
     return real_request(verb, endpoint, obj, cb);
 }
 

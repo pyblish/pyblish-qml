@@ -1,7 +1,5 @@
-
 import QtQuick 2.3
-import "." as Generic
-import "../service/constant.js" as Constant
+import "."
 
 
 Item {
@@ -13,7 +11,7 @@ Item {
     signal clicked
 
     implicitWidth: 100
-    implicitHeight: Constant.size.headerHeight
+    implicitHeight: Constant.headerHeight
     y: 5
 
     // Behavior on y {
@@ -24,11 +22,11 @@ Item {
         State {
             name: "active"
             PropertyChanges { target: root; z: 1; y: 2 }
-            PropertyChanges { target: rectangle; color: Constant.color.background; anchors.bottomMargin: 0 }
+            PropertyChanges { target: rectangle; color: Constant.backgroundColor; anchors.bottomMargin: 0 }
         }
     ]
 
-    Generic.Rectangle {
+    Box {
         id: rectangle
         anchors.fill: parent
         anchors.bottomMargin: root.y
@@ -54,7 +52,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
-        Generic.Text {
+        GlobalText {
             id: textId
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter

@@ -94,7 +94,11 @@ class MockHTTPRequest(QtCore.QObject):
     def request(self, verb, endpoint, data=None):
 
         def thread():
-            response = self._request(verb, endpoint, data)
+            _data = data
+            if isinstance(data, QtQml.QJSValue):
+                _data = _data.toVariant()
+
+            response = self._request(verb, endpoint, _data)
             self.requested.emit(response)
 
         t = threading.Thread(target=thread)

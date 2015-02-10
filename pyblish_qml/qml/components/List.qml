@@ -1,8 +1,5 @@
 import QtQuick 2.3
-
-import "../generic" as Generic
-import "../service/constant.js" as Constant
-import "controller.js" as Ctrl
+import "."
 
 
 /*
@@ -38,7 +35,7 @@ Rectangle {
         id: _listView
         spacing: 1
         anchors.fill: parent
-        anchors.margins: Constant.margins.main
+        anchors.margins: Constant.marginMain
         boundsBehavior: Flickable.StopAtBounds
 
         delegate: itemDelegate
@@ -70,7 +67,7 @@ Rectangle {
                 anchors.fill: parent
                 anchors.rightMargin: isSelected ? 0 : parent.width
                 anchors.leftMargin: indicatorContainerId.width
-                color: Constant.color.item
+                color: Constant.itemColor
                 opacity: isSelected ? 0.2 : 0
 
                 Behavior on opacity {
@@ -144,7 +141,7 @@ Rectangle {
                 anchors.fill: parent
                 anchors.rightMargin: calculate_progress(currentProgress)
                 anchors.leftMargin: indicatorContainerId.width
-                color: Constant.color.item
+                color: Constant.itemColor
                 opacity: 0.5
 
                 Behavior on anchors.rightMargin {
@@ -243,7 +240,7 @@ Rectangle {
                     Image {
                         id: indicatorProcessingId
                         anchors.verticalCenter: parent.verticalCenter
-                        source: Constant.image.processing
+                        source: Constant.imageProcessing
                         visible: false
                         width: 7
                         height: 7
@@ -264,7 +261,7 @@ Rectangle {
                     Rectangle {
                         id: indicatorErroredId
                         anchors.verticalCenter: parent.verticalCenter
-                        color: Constant.color.error
+                        color: Constant.errorColor
                         width: 7
                         height: 7
                         visible: false
@@ -275,11 +272,15 @@ Rectangle {
                         id: indicatorMouseArea
                         anchors.fill: parent
                         visible: false
-                        onClicked: Ctrl.itemIndicatorClickedHandler(index)
-                }}
+                        onClicked: {
+                            var item = root.model.get(index);
+                            item.isToggled = item.isToggled ? false : true;
+                        }
+                    }
+                }
 
 
-                Generic.Text {
+                GlobalText {
                     id: text
                     text: name
                     anchors.left: indicatorContainerId.right
@@ -297,7 +298,26 @@ Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: indicatorContainerId.width
 
-                onClicked: Ctrl.itemClickedHandler(index);
+                onClicked: {
+                    var item,
+                    i;
+
+                    item = root.model.get(index);
+
+                    /* Control-click behavior */
+                    if (typeof PyQt !== "undefined") {
+                        if (PyQt.queryKeyboardModifiers() === PyQt.ControlModifier) {
+                            item.isSelected = item.isSelected ? false : true;
+
+                        } else {
+                            for (i = 0; i < root.model.count; ++i) {
+                                root.model.get(i).isSelected = false;
+                            }
+                        }
+
+                        /* Shift-click behaviour (todo) */
+                    }
+                }
                 onEntered: {
                     itemHovered(index);
                     hoverId.hovered = true;
@@ -330,7 +350,7 @@ Rectangle {
             Item {
                 anchors.fill: parent
 
-                Generic.Text {
+                GlobalText {
                     text: section
                     opacity: 0.5
                     anchors.verticalCenter: parent.verticalCenter
@@ -342,7 +362,7 @@ Rectangle {
     */
     Component.onCompleted: {
         if (!_listView.model) {
-            root.color = Constant.color.background;
+            root.color = Constant.backgroundColor;
 
             _listView.model = Qt.createQmlObject("import QtQuick 2.3; ListModel {}", root);
             _listView.section.property = "family";
@@ -350,7 +370,7 @@ Rectangle {
             for (var i = 0; i < 10; i++) {
                 _listView.model.append({
                     "name": "item " + (i + 1),
-                    "isToggled": false,
+                    "isToggled": true,
                     "isSelected": false,
                     "family": "napoleon",
                     "currentProgress": 0,
@@ -358,6 +378,6 @@ Rectangle {
                     "isCompatible": true,
                     "active": true,
                     "hasError": false,
-                    "optional": false
+                    "optional": true
                 })
 }}}}

@@ -1,18 +1,10 @@
 import QtQuick 2.3
 import QtQuick.Window 2.2
 
-import "feature/generic" as Generic
-import "feature/header" as Header
-import "feature/footer" as Footer
-import "feature/list" as List
-import "feature/instances" as Instances
-import "feature/plugins" as Plugins
-import "feature/animation" as Animation
-
-import "feature/service/constant.js" as Constant
-import "feature/service/host.js" as Host
-
-import "feature/app/controller.js" as Ctrl
+import "components" as Components
+import "js/host.js" as Host
+import "js/appController.js" as Ctrl
+// import "."
 
 
 /*
@@ -42,20 +34,20 @@ Window {
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
     color: "transparent"
 
-    width: Constant.size.windowWidth
-    height: Constant.size.windowHeight
-    minimumWidth: Constant.size.windowMinimumWidth
-    minimumHeight: root.isStatic ? Constant.size.windowMinimumHeight : 0
+    width: Components.Constant.windowWidth
+    height: Components.Constant.windowHeight
+    minimumWidth: Components.Constant.windowMinimumWidth
+    minimumHeight: root.isStatic ? Components.Constant.windowMinimumHeight : 0
 
     /*
      * Container
      *  Represents the window, for smoother animations
      *  than animating the OS-level window.
     */
-    Generic.Rectangle {
+    Components.Box {
         id: containerId
         width: parent.width
-        color: Constant.color.background
+        color: Components.Constant.backgroundColor
         height: headerId.height + footerId.height - 1
         clip: true
 
@@ -71,7 +63,7 @@ Window {
             }
         ]
 
-        Header.Item {
+        Components.Header {
             id: headerId
             anchors.left: parent.left
             anchors.right: parent.right
@@ -89,7 +81,7 @@ Window {
         }
 
         
-        Generic.Rectangle {
+        Components.Box {
             id: bodyId
 
             outwards: false
@@ -99,7 +91,7 @@ Window {
             anchors.bottom: footerId.top
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.margins: Constant.margins.main
+            anchors.margins: Components.Constant.marginMain
             transform: Translate { id: bodyTranslateId } // Used in animation
 
             states: [
@@ -156,7 +148,7 @@ Window {
                 id: systemTabId
                 visible: false
                 anchors.fill: parent
-                anchors.margins: Constant.margins.main
+                anchors.margins: Components.Constant.marginMain
 
                 TextEdit {
                     id: systemId
@@ -173,7 +165,7 @@ Window {
                     anchors.bottom: parent.bottom
                     anchors.right: parent.right
                     anchors.margins: 20
-                    source: Constant.image.logoColor
+                    source: Components.Constant.imageLogoColor
                 }
             }
 
@@ -182,7 +174,7 @@ Window {
                 anchors.fill: parent
                 opacity: 0
 
-                Instances.List {
+                Components.List {
                     id: instancesList
                     model: instancesModelId
                     anchors.fill: parent
@@ -201,21 +193,46 @@ Window {
                     }
                 }
 
-                Plugins.List {
+                Components.List {
                     id: pluginsList
                     model: pluginsModelId
                     anchors.fill: parent
                     anchors.leftMargin: parent.width / 2
                     section.property: "type"
+                    signal validate(string family)
+
+                    onValidate: {
+                        function contains(a, obj) {
+                            var i;
+                            for (i = 0; i < a.count; ++i) {
+                                if (a.get(i).name === obj) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        }
+
+                        var i, plugin;
+
+                        for (i = 0; i < pluginsList.model.count; ++i) {
+                            plugin = pluginsList.model.get(i);
+                            plugin.isCompatible = true;
+
+                            if (family) {
+                                if (!contains(plugin.families, family) && !contains(plugin.families, "*")) {
+                                    plugin.isCompatible = false;
+                                }
+                            }
+                        }
+                    }
                 }
             }
-
 
             Item {
                 id: terminalTabId
                 visible: false
                 anchors.fill: parent
-                anchors.margins: Constant.margins.main
+                anchors.margins: Components.Constant.marginMain
 
                 Flickable {
                     id: terminalFlickId
@@ -245,7 +262,7 @@ Window {
                         renderType: Text.NativeRendering
         }}}}
 
-        Generic.Text {
+        Components.GlobalText {
             id: connectionText
             text: "No connection"
             anchors.centerIn: parent
@@ -263,7 +280,7 @@ Window {
                     to: 1.0
         }}}
 
-        Footer.Item {
+        Components.Footer {
             id: footerId
             anchors.left: parent.left
             anchors.right: parent.right
@@ -280,20 +297,55 @@ Window {
     ListModel { id: pluginsModelId }
 
 
-    Animation.OnQuit {
+    SequentialAnimation {
         id: quitAnimationId
-        heightTo: headerId.height + footerId.height - 1
-        heightFrom: root.height
-        heightTarget: containerId
-        opacityTarget: root
+        property int delay: 0
+
+        running: false
+
+        PauseAnimation {
+            duration: quitAnimationId.delay
+        }
+
+        NumberAnimation {
+            property: "height"
+            from: root.height
+            to: headerId.height + footerId.height - 1
+            duration: 400
+            target: containerId
+            easing.type: Easing.OutCubic
+        }
+
+        PauseAnimation {
+            duration: 50
+        }
+
+        NumberAnimation {
+            id: opacityAnimation
+            property: "opacity"
+            target: root
+            to: 0
+            duration: 200
+        }
     }
 
 
-    Animation.OnStart {
+    ParallelAnimation {
         id: startAnimationId
-        heightFrom: headerId.height + footerId.height - 1
-        heightTo: root.height
-        heightTarget: containerId
+        property int heightFrom: 50
+        property int heightTo: 50
+
+        running: false
+        alwaysRunToEnd: true
+
+        NumberAnimation {
+            property: "height"
+            from: headerId.height + footerId.height - 1
+            to: root.height
+            duration: 1000
+            target: containerId
+            easing.type: Easing.InOutQuint
+        }
     }
 
 

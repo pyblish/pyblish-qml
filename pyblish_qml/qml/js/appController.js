@@ -1,5 +1,5 @@
 /*global Qt, XMLHttpRequest, print, Component*/ // QML features
-/*global Constant, Host, Connection*/              // Registered types
+/*global Components, Host, Connection*/              // Registered types
 /*global root, Log, log*/                       // Id's
 /*jslint plusplus: true*/
 
@@ -91,10 +91,12 @@ function setMessage(message) {
  *
 */
 function init() {
+    log.debug("Initialising..");
+
     if (typeof Connection !== "undefined") {
         log.debug("Connection found, setting port to: " + Connection.port);
-        Constant.port = Connection.port;
-        Constant.urlPrefix = Connection.prefix;
+        Components.Constant.port = Connection.port;
+        Components.Constant.urlPrefix = Connection.prefix;
     }
 
     Host.onReady(function () {
@@ -214,16 +216,16 @@ function quit(event, delay) {
     root.startAnimation.stop();
 
     if (event !== null) {
-        event.accepted = Constant.closeOk;
+        event.accepted = Components.Constant.closeOk;
     }
 
     root.quitAnimation.delay = delay || 0;
     root.quitAnimation.stopped.connect(function () {
-        Constant.closeOk = true;
+        Components.Constant.closeOk = true;
         Qt.quit();
     });
 
-    if (!Constant.closeOk) {
+    if (!Components.Constant.closeOk) {
         root.quitAnimation.start();
     }
 
@@ -250,8 +252,8 @@ function deactivatePublishingMode(message) {
     log.info("Deactivating publishing mode");
     root.footer.mode = 0;
     root.footer.paused = false;
-    Constant.publishStopped = false;
-    Constant.publishPaused = false;
+    Components.Constant.publishStopped = false;
+    Components.Constant.publishPaused = false;
 
     var i;
     [root.instancesModel, root.pluginsModel].forEach(function (model) {
@@ -268,17 +270,17 @@ function deactivatePublishingMode(message) {
 
 
 function pauseHandler() {
-    Constant.publishPaused = true;
+    Components.Constant.publishPaused = true;
     root.footer.paused = true;
     setMessage("Pausing..");
 }
 
 
 function stopHandler() {
-    Constant.publishStopped = true;
+    Components.Constant.publishStopped = true;
 
-    if (Constant.publishPaused) {
-        Constant.publishPaused = false;
+    if (Components.Constant.publishPaused) {
+        Components.Constant.publishPaused = false;
         deactivatePublishingMode();
     } else {
         setMessage("Stopping..");
@@ -337,7 +339,7 @@ function nextProcess(status) {
 
     // If there's been an error, visualise it.
     if (status.errors.length) {
-        Constant.publishErrors[status.instance.name] = [];
+        Components.Constant.publishErrors[status.instance.name] = [];
 
         status.errors.forEach(function (error) {
             status.instance.hasError = true;
@@ -348,7 +350,7 @@ function nextProcess(status) {
     }
 
     // Has there been any errors at all?
-    if (Object.keys(Constant.publishErrors).length) {
+    if (Object.keys(Components.Constant.publishErrors).length) {
 
         // If next plug-in is an extractor,
         // that means all validators have completed.
@@ -359,15 +361,15 @@ function nextProcess(status) {
     }
 
     // Publishing stopped.
-    if (Constant.publishStopped) {
+    if (Components.Constant.publishStopped) {
         deactivatePublishingMode("Stopped");
         return;
     }
 
     // Publishing paused, remember where we were.
-    if (Constant.publishPaused) {
-        Constant.publishPausedPlugin = pluginIndex;
-        Constant.publishPausedInstance = instanceIndex;
+    if (Components.Constant.publishPaused) {
+        Components.Constant.publishPausedPlugin = pluginIndex;
+        Components.Constant.publishPausedInstance = instanceIndex;
         setMessage("Paused");
         return;
     }
@@ -413,7 +415,7 @@ function process(instanceIndex, pluginIndex) {
             // the submitted process; such as it's current
             // state (either running or not) along with any
             // log messages produced.
-            Host.getProcess(process_id + "?index=" + Constant.lastIndex, function (resp) {
+            Host.getProcess(process_id + "?index=" + Components.Constant.lastIndex, function (resp) {
 
                 // Process is still running
                 // 
@@ -421,7 +423,7 @@ function process(instanceIndex, pluginIndex) {
                 // - Present log to user
                 if (resp.running === true) {
                     log.debug("Running: " + process_id);
-                    Constant.lastIndex = resp.lastIndex;
+                    Components.Constant.lastIndex = resp.lastIndex;
 
                 // Process is complete
                 // 
@@ -472,17 +474,17 @@ function publishHandler() {
         startPlugin;
 
     // Reset errors
-    Constant.publishErrors = {};
+    Components.Constant.publishErrors = {};
 
     for (i = 0; i < root.instancesModel.count; i++) {
         instance = root.instancesModel.get(i);
         instance.hasError = false;
     }
 
-    if (Constant.publishPaused) {
-        Constant.publishPaused = false;
-        process(Constant.publishPausedInstance,
-                Constant.publishPausedPlugin);
+    if (Components.Constant.publishPaused) {
+        Components.Constant.publishPaused = false;
+        process(Components.Constant.publishPausedInstance,
+                Components.Constant.publishPausedPlugin);
 
     // Otherwise, start from scratch.
     } else {

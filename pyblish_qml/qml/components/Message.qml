@@ -1,9 +1,8 @@
 import QtQuick 2.3
+import "."
 
-import "../generic" as Generic
 
-
-Generic.Text {
+GlobalText {
     id: root
     opacity: 0
 
