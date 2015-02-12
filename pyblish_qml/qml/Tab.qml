@@ -4,8 +4,8 @@ import "."
 
 Item {
     id: root
-    property alias image: imageId.source
-    property alias text: textId.text
+    property alias image: image.source
+    property alias text: text.text
     property string name
 
     signal clicked
@@ -13,10 +13,6 @@ Item {
     implicitWidth: 100
     implicitHeight: Constant.headerHeight
     y: 5
-
-    // Behavior on y {
-    //     NumberAnimation { duration: 50 }
-    // }
 
     states: [
         State {
@@ -31,10 +27,6 @@ Item {
         anchors.fill: parent
         anchors.bottomMargin: root.y
 
-        // Behavior on anchors.bottomMargin {
-        //     NumberAnimation { duration: 50 }
-        // }
-
         /*
          * Hover
          *
@@ -43,24 +35,24 @@ Item {
             anchors.fill: parent
             anchors.margins: 1
             color: "white"
-            opacity: maId.containsMouse && root.state !== "active" ? 0.1 : 0.0
+            opacity: ma.containsMouse && root.state !== "active" ? 0.1 : 0.0
         }
 
         Image {
-            id: imageId
+            id: image
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
-        GlobalText {
-            id: textId
+        Label {
+            id: text
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
         }
     }
 
     MouseArea {
-        id: maId
+        id: ma
         anchors.fill: parent
         hoverEnabled: true
 

@@ -2,8 +2,8 @@ import QtQuick 2.3
 import "."
 
 
-GlobalText {
-    id: root
+Label {
+    id: message
     opacity: 0
 
     property alias animation: messageAnimation
@@ -13,7 +13,7 @@ GlobalText {
 
         ParallelAnimation {
             NumberAnimation {
-                target: root
+                target: message
                 property: "x"
                 from: 5
                 to: 20
@@ -21,7 +21,7 @@ GlobalText {
                 easing.type: Easing.OutQuint
             }
             NumberAnimation {
-                target: root
+                target: message
                 property: "opacity"
                 from: 0
                 to: 1
@@ -35,7 +35,7 @@ GlobalText {
         }
 
         NumberAnimation {
-            target: root
+            target: message
             property: "opacity"
             to: 0
             duration: 2000

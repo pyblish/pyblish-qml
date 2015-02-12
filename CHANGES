@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Version 0.2.0
+-------------
+
+- Swapped controller from QML to Python
+- Performance enhancements; the GUI now rivals non-GUI modes.
+- Simplified terminal output; it now resembles non-GUI output
+- Simplified backend; no more thread-per-process
+- Temporarily switched to native OS window; this should help GUI appearing behind windows
+- Temporarily disabled pause/stop buttons; to stop, close the GUI.
+
 Version 0.1.2
 --------------
 

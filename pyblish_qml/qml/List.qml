@@ -16,7 +16,7 @@ import "."
  *
 */
 Rectangle {
-    id: root
+    id: list
 
     property alias view: _listView
     property alias model: _listView.model
@@ -24,6 +24,8 @@ Rectangle {
     property string hoverDirection: "right"
 
     signal itemHovered(int index)
+    signal itemToggled(int index)
+    signal itemClicked(int index)
 
     width: 200
     height: 300
@@ -66,7 +68,7 @@ Rectangle {
             Rectangle {
                 anchors.fill: parent
                 anchors.rightMargin: isSelected ? 0 : parent.width
-                anchors.leftMargin: indicatorContainerId.width
+                anchors.leftMargin: indicatorContainer.width
                 color: Constant.itemColor
                 opacity: isSelected ? 0.2 : 0
 
@@ -90,41 +92,14 @@ Rectangle {
              *
             */
             Rectangle {
-                id: hoverId
+                id: hover
                 property bool hovered: false
 
-                x: parent.width
-                height: parent.width
-                width: parent.height
-                anchors.verticalCenter: parent.verticalCenter
-                rotation: -90
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: "transparent" }
-                    GradientStop { position: 1.0; color: "white" }
-                }
+                color: "white"
+                anchors.fill: parent
+                anchors.leftMargin: -5
                 opacity: hovered ? 0.1 : 0
                 visible: false
-
-                states: [
-                    State {
-                        name: "hoverFromLeft"
-                        PropertyChanges {
-                            target: hoverId
-                            rotation: 90
-                            x: 0
-                        }
-                    },
-                    State {
-                        name: "hoverFromRight"
-                        PropertyChanges {
-                            target: hoverId
-                            rotation: -90
-                            x: parent.width
-                        }
-                    }
-                ]
-
-                state: hoverDirection === "right" ? "hoverFromRight" : "hoverFromLeft"
             }
 
 
@@ -135,12 +110,12 @@ Rectangle {
             Rectangle {
 
                 function calculate_progress(currentProgress) {
-                    return (1 - currentProgress) * (parent.width - indicatorContainerId.width)
+                    return (1 - currentProgress) * (parent.width - indicatorContainer.width)
                 }
 
                 anchors.fill: parent
                 anchors.rightMargin: calculate_progress(currentProgress)
-                anchors.leftMargin: indicatorContainerId.width
+                anchors.leftMargin: indicatorContainer.width
                 color: Constant.itemColor
                 opacity: 0.5
 
@@ -165,9 +140,9 @@ Rectangle {
                     State {
                         name: "processing"
                         when: isProcessing
-                        PropertyChanges { target: indicatorCheckboxId; visible: false }
-                        PropertyChanges { target: indicatorProcessingId; visible: true }
-                        PropertyChanges { target: indicatorProcessingAnimationId; running: true }
+                        PropertyChanges { target: indicatorCheckbox; visible: false }
+                        PropertyChanges { target: indicatorProcessing; visible: true }
+                        PropertyChanges { target: indicatorProcessingAnimation; running: true }
                     },
 
                     // An error has occured, display a little tick-
@@ -176,16 +151,16 @@ Rectangle {
                     State {
                         name: "errored"
                         when: hasError
-                        PropertyChanges { target: indicatorErroredId; visible: true }
+                        PropertyChanges { target: indicatorErrored; visible: true }
                     },
 
                     // The item is active and might be toggled
                     State {
                         name: "active"
                         when: active
-                        PropertyChanges { target: hoverId; visible: true }
+                        PropertyChanges { target: hover; visible: true }
                         PropertyChanges { target: indicatorMouseArea; visible: optional }
-                        PropertyChanges { target: indicatorContainerId; opacity: optional ? 1.0 : 0.5 }
+                        PropertyChanges { target: indicatorContainer; opacity: optional ? 1.0 : 0.5 }
                     }
                 ]
 
@@ -203,7 +178,7 @@ Rectangle {
                  *
                 */
                 Item {
-                    id: indicatorContainerId
+                    id: indicatorContainer
                     width: 10
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
@@ -211,7 +186,7 @@ Rectangle {
 
                     // Outer border
                     Rectangle {
-                        id: indicatorCheckboxId
+                        id: indicatorCheckbox
                         anchors.verticalCenter: parent.verticalCenter
                         color: "transparent"
                         border.width: 1
@@ -238,7 +213,7 @@ Rectangle {
 
                     // Processing..
                     Image {
-                        id: indicatorProcessingId
+                        id: indicatorProcessing
                         anchors.verticalCenter: parent.verticalCenter
                         source: Constant.imageProcessing
                         visible: false
@@ -246,8 +221,8 @@ Rectangle {
                         height: 7
 
                         NumberAnimation {
-                            id: indicatorProcessingAnimationId
-                            target: indicatorProcessingId
+                            id: indicatorProcessingAnimation
+                            target: indicatorProcessing
                             property: "rotation"
                             loops: Animation.Infinite
                             duration: 500
@@ -259,31 +234,27 @@ Rectangle {
 
                     // Errored
                     Rectangle {
-                        id: indicatorErroredId
+                        id: indicatorErrored
                         anchors.verticalCenter: parent.verticalCenter
                         color: Constant.errorColor
+                        opacity: 0.5
                         width: 7
                         height: 7
                         visible: false
                     }
 
-
                     MouseArea {
                         id: indicatorMouseArea
                         anchors.fill: parent
                         visible: false
-                        onClicked: {
-                            var item = root.model.get(index);
-                            item.isToggled = item.isToggled ? false : true;
-                        }
+                        onClicked: list.itemToggled(index)
                     }
                 }
 
-
-                GlobalText {
+                Label {
                     id: text
                     text: name
-                    anchors.left: indicatorContainerId.right
+                    anchors.left: indicatorContainer.right
                     anchors.leftMargin: 5
                     anchors.verticalCenter: parent.verticalCenter
                     color: isCompatible && isToggled ? "white" : "gray"
@@ -291,43 +262,33 @@ Rectangle {
                     Behavior on color {
                         ColorAnimation {
                             duration: 100
-            }}}}
+                        }
+                    }
+                }
+            }
 
             MouseArea {
                 hoverEnabled: true
                 anchors.fill: parent
-                anchors.leftMargin: indicatorContainerId.width
 
                 onClicked: {
-                    var item,
-                    i;
-
-                    item = root.model.get(index);
-
-                    /* Control-click behavior */
-                    if (typeof PyQt !== "undefined") {
-                        if (PyQt.queryKeyboardModifiers() === PyQt.ControlModifier) {
-                            item.isSelected = item.isSelected ? false : true;
-
-                        } else {
-                            for (i = 0; i < root.model.count; ++i) {
-                                root.model.get(i).isSelected = false;
-                            }
-                        }
-
-                        /* Shift-click behaviour (todo) */
+                    itemClicked(index)
+                    if (typeof optional !== "undefined" && optional) {
+                        itemToggled(index)
                     }
+
                 }
                 onEntered: {
-                    itemHovered(index);
-                    hoverId.hovered = true;
+                    // itemHovered(index);
+                    hover.hovered = true;
                 }
                 onExited: {
-                    itemHovered(-1);
-                    hoverId.hovered = false;
+                    // itemHovered(-1);
+                    hover.hovered = false;
                 }
             }
-    }}
+        }
+    }
 
 
     /*
@@ -350,7 +311,7 @@ Rectangle {
             Item {
                 anchors.fill: parent
 
-                GlobalText {
+                Label {
                     text: section
                     opacity: 0.5
                     anchors.verticalCenter: parent.verticalCenter
@@ -361,10 +322,10 @@ Rectangle {
      *
     */
     Component.onCompleted: {
-        if (!_listView.model) {
-            root.color = Constant.backgroundColor;
+        if (typeof app === "undefined") {
+            list.color = Constant.backgroundColor;
 
-            _listView.model = Qt.createQmlObject("import QtQuick 2.3; ListModel {}", root);
+            _listView.model = Qt.createQmlObject("import QtQuick 2.3; ListModel {}", list);
             _listView.section.property = "family";
 
             for (var i = 0; i < 10; i++) {
@@ -380,4 +341,7 @@ Rectangle {
                     "hasError": false,
                     "optional": true
                 })
-}}}}
+            }
+        }
+    }
+}

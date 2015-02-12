@@ -9,8 +9,8 @@ import "."  // Include Constant singleton
 Rectangle {
     id: root
     property bool outwards: true
-    implicitWidth: 100
-    implicitHeight: 100
+    // implicitWidth: 100
+    // implicitHeight: 100
 
     // An outwards rectangle is naturally lighter, whereas
     // an inwards rectangle is darker. This can be overridden.

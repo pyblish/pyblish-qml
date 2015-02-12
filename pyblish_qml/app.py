@@ -1,216 +1,202 @@
-"""Python start-up script for QML application
-
-The application registers a Filesystem type into QML
-which is then used to display the contents of a directory,
-also chosen via QML.
-
-"""
+"""Application entry-point"""
 
 # Standard library
 import os
 import sys
 import json
-import logging
-import threading
 
 # Dependencies
 from PyQt5 import QtGui, QtCore, QtQml
 
-import pyblish_qml
-import pyblish_endpoint.server
-import pyblish_endpoint.service
-
-QML_DIR = os.path.dirname(pyblish_qml.__file__)
-APP_PATH = os.path.join(QML_DIR, "qml", "app.qml")
-
-log = logging.getLogger("qml")
+# Local libraries
+import lib
+import rest
+import model
 
 
-class PyQt(QtCore.QObject):
-    """Expose common PyQt functionality"""
+class Controller(QtCore.QObject):
+    error = QtCore.pyqtSignal(str, arguments=["message"])
+    info = QtCore.pyqtSignal(str, arguments=["message"])
+    processed = QtCore.pyqtSignal(QtCore.QVariant, arguments=["data"])
 
-    NoModifier = QtCore.pyqtProperty(int)(lambda self: QtCore.Qt.NoModifier)
-    ShiftModifier = QtCore.pyqtProperty(int)(lambda self: QtCore.Qt.ShiftModifier)
-    ControlModifier = QtCore.pyqtProperty(int)(lambda self: QtCore.Qt.ControlModifier)
-    AltModifier = QtCore.pyqtProperty(int)(lambda self: QtCore.Qt.AltModifier)
+    @QtCore.pyqtProperty(QtCore.QVariant)
+    def instances(self):
+        return self._instances
 
-    @QtCore.pyqtSlot(result=int)
-    def queryKeyboardModifiers(self):
-        return QtGui.QGuiApplication.queryKeyboardModifiers()
+    @QtCore.pyqtProperty(QtCore.QVariant)
+    def plugins(self):
+        return self._plugins
 
+    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
+    def pluginModel(self):
+        return self._plugin_model
 
-class Log(QtCore.QObject):
-    """Expose Python's logging mechanism to QML"""
+    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
+    def instanceModel(self):
+        return self._instance_model
 
-    def __init__(self, name="qml", parent=None):
-        super(Log, self).__init__(parent)
-        self.log = logging.getLogger(name)
-        self.log.propagate = True
+    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
+    def system(self):
+        return self._system
 
-    @QtCore.pyqtSlot(str)
-    def debug(self, msg):
-        self.log.debug(msg)
+    @QtCore.pyqtSlot(int)
+    def toggleInstance(self, index):
+        self.toggle_item(self._instance_model, index)
 
-    @QtCore.pyqtSlot(str)
-    def info(self, msg):
-        self.log.info(msg)
+    @QtCore.pyqtSlot(int)
+    def togglePlugin(self, index):
+        self.toggle_item(self._plugin_model, index)
 
-    @QtCore.pyqtSlot(str)
-    def warning(self, msg):
-        self.log.warning(msg)
+    def toggle_item(self, model, index):
+        qindex = model.createIndex(index, index)
+        is_toggled = model.data(qindex, model.IsToggledRole)
+        model.setData(index, "isToggled", not is_toggled)
 
-    @QtCore.pyqtSlot(str)
-    def error(self, msg):
-        self.log.error(msg)
+    @QtCore.pyqtSlot()
+    def publish(self):
 
+        instances = list()
+        for instance in self._instance_model.serialized:
+            if instance["isToggled"]:
+                instances.append(instance["name"])
 
-class Connection(QtCore.QObject):
-    """Manage endpoint connection"""
+        plugins = list()
+        for plugin in self._plugin_model.serialized:
+            if plugin["isToggled"]:
+                plugins.append(plugin["name"])
 
-    def __init__(self, host, port, prefix, parent=None):
-        super(Connection, self).__init__(parent)
-        self._port = port
-        self._host = host
-        self._prefix = prefix
+        if not all([instances, plugins]):
+            msg = "Must specify an instance and plug-in"
+            self.processed.emit({"finished": True, "message": msg})
+            self.log.error(msg)
+            return
 
-    @QtCore.pyqtProperty(int)
-    def port(self):
-        return self._port
+        message = "Instances:"
+        for instance in instances:
+            message += "\n  - %s" % instance
 
-    @QtCore.pyqtProperty(str)
-    def host(self):
-        return self._host
+        message += "\nPlug-ins:"
+        for plugin in plugins:
+            message += "\n  - %s" % plugin
 
-    @QtCore.pyqtProperty(str)
-    def prefix(self):
-        return self._prefix
+        message += "\n"
+        self.info.emit(message)
 
+        state = json.dumps({"instances": instances,
+                            "plugins": plugins})
 
-class MockHTTPRequest(QtCore.QObject):
-    requested = QtCore.pyqtSignal(QtCore.QVariant)
-    client = None
+        try:
+            rest.post_state(state)
+        except Exception as e:
+            self.error.emit(e.msg)
+            self.log.error(e.msg)
+            return
 
-    @QtCore.pyqtSlot(str, str, QtCore.QVariant)
-    def request(self, verb, endpoint, data=None):
+        rest.post_next(signal=self.processed)
 
-        def thread():
-            _data = data
-            if isinstance(data, QtQml.QJSValue):
-                _data = _data.toVariant()
+    @QtCore.pyqtProperty(QtCore.QObject)
+    def log(self):
+        return self._log
 
-            response = self._request(verb, endpoint, _data)
-            self.requested.emit(response)
+    def __init__(self, host, prefix):
+        super(Controller, self).__init__(parent=None)
 
-        t = threading.Thread(target=thread)
-        t.daemon = True
-        t.start()
+        self._instances = list()
+        self._plugins = list()
+        self._system = dict()
+        self._log = lib.Log()
 
-    def _request(self, verb, endpoint, data=None):
-        """Flask test-client with PyQt slot
+        self._instance_model = model.InstanceModel()
+        self._plugin_model = model.PluginModel()
 
-        Arguments:
-            verb (str): How to request
-            endpoint (str): Where to request
-            data (dict, optional): Data to POST
+        self.load()
 
-        """
+        self.processed.connect(self.processHandler)
 
-        log.debug("%s %s (data=%s)" % (verb, endpoint, data))
-        func = getattr(self.client, verb.lower())
-        response = func(endpoint, data=data)
-        assert response.headers["Content-Type"] == "application/json"
+    def processHandler(self, data):
+        if data.get("finished"):
+            for type, model in (("instance", self._instance_model),
+                                ("plugin", self._plugin_model)):
 
-        response_data = json.loads(response.data)
-        return response_data
+                for item in model.items:
+                    index = model.itemIndex(item)
+                    model.setData(index, "isProcessing", False)
+                    model.setData(index, "currentProgress", 0)
 
-
-class Application(object):
-    """Main Application
-
-    This object wraps common QML functionality in order to
-    prevent, mainly context properties, from getting garbage
-    collected after having been set.
-
-    """
-
-    def __init__(self, host, port, prefix):
-        app = QtGui.QGuiApplication(sys.argv)
-
-        engine = QtQml.QQmlApplicationEngine()
-        engine.objectCreated.connect(self.load_finished_handler)
-
-        self.app = app
-        self.engine = engine
-        self.context_properties = []
-        self.registered_types = []
-
-        log = Log()
-        pyqt = PyQt()
-        connection = Connection(host, port, prefix)
-
-        self.set_context_property("Log", log)
-        self.set_context_property("PyQt", pyqt)
-        self.set_context_property("Connection", connection)
-
-        self.setup_log()
-
-    def setup_log(self):
-        formatter = logging.Formatter("%(levelname)s %(message)s")
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        log.addHandler(handler)
-        log.setLevel(logging.INFO)
-        # log.setLevel(logging.DEBUG)
-
-    def load(self, path):
-        qurl = QtCore.QUrl.fromLocalFile(APP_PATH)
-        self.engine.load(qurl)
-
-    def load_finished_handler(self, obj, url):
-        if obj is not None:
-            obj.show()
-            self.app.exec_()
         else:
-            sys.exit()
+            for type, model in (("instance", self._instance_model),
+                                ("plugin", self._plugin_model)):
 
-    def register_type(self, obj, uri, version_major, version_minor, qml_name):
-        QtQml.qmlRegisterType(obj, uri, version_major, version_minor, qml_name)
-        self.registered_types.append(obj)
+                item = data.get(type)
+                item = model.itemByName(item)
 
-    def set_context_property(self, name, value):
-        context = self.engine.rootContext()
-        context.setContextProperty(name, value)
-        self.context_properties.append(value)
+                if item:
+                    index = model.itemIndex(item)
+                    model.setData(index, "isProcessing", True)
+                    model.setData(index, "currentProgress", 1)
+
+    def load(self):
+        with lib.Timer("Spent %.2f ms requesting things.."):
+            rest.request("POST", "/session").json()
+            instances = rest.request("GET", "/instances").json()
+            plugins = rest.request("GET", "/plugins").json()
+            self._system = rest.request("GET", "/application").json()
+
+        defaults = {
+            "name": "default",
+            "objName": "default",
+            "family": "default",
+            "families": "default",
+            "isToggled": True,
+            "active": True,
+            "isSelected": False,
+            "currentProgress": 0,
+            "isProcessing": False,
+            "isCompatible": True,
+            "hasError": False,
+            "hasWarning": False,
+            "hasMessage": False,
+            "optional": True,
+            "errors": list(),
+            "warnings": list(),
+            "messages": list(),
+        }
+
+        for data in instances:
+            instance = defaults.copy()
+            instance.update(data)
+            item = model.Item(**instance)
+            item.isToggled = True if item.publish else False
+            self._instance_model.addItem(item)
+
+        for data in plugins:
+            if data.get("active") is False:
+                continue
+            plugin = defaults.copy()
+            plugin.update(data)
+            item = model.Item(**plugin)
+            self._plugin_model.addItem(item)
 
 
 def run_production_app(host, port):
     print "Running production app on port: %s" % port
-    app = Application(host, port, prefix="/pyblish/v1")
-    app.load(APP_PATH)
+    rest.PORT = port
 
+    app = QtGui.QGuiApplication(sys.argv)
 
-def run_debug_app():
-    """Run app with mocked Flask client
+    engine = QtQml.QQmlApplicationEngine()
 
-    The client emulates a host using the MockService used
-    in Endpoint tests.
+    ctrl = Controller(host, prefix="/pyblish/v1")
+    ctx = engine.rootContext()
+    ctx.setContextProperty("app", ctrl)
 
-    """
+    module_dir = os.path.dirname(__file__)
+    engine.load(os.path.join(module_dir, "qml", "main.qml"))
 
-    app = Application(host="Mock", port=0, prefix="/pyblish/v1")
+    window = engine.rootObjects()[0]
+    window.show()
 
-    endpoint_app, _ = pyblish_endpoint.server.create_app()
-    endpoint_app.config["TESTING"] = True
-    endpoint_client = endpoint_app.test_client()
-    endpoint_client.testing = True
-
-    Service = pyblish_endpoint.service.MockService
-    Service.PERFORMANCE = Service.MODERATE
-    pyblish_endpoint.service.register_service(Service,
-                                              force=True)
-    MockHTTPRequest.client = endpoint_client
-    app.register_type(MockHTTPRequest, 'Python', 1, 0, 'MockHTTPRequest')
-    app.load(APP_PATH)
+    sys.exit(app.exec_())
 
 
 if __name__ == '__main__':
@@ -218,11 +204,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="Python")
-    parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--port", type=int, default=6000)
 
     kwargs = parser.parse_args()
 
-    if kwargs.port == 0:
-        run_debug_app()
-    else:
-        run_production_app(**kwargs.__dict__)
+    run_production_app(**kwargs.__dict__)

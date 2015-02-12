@@ -1,5 +1,6 @@
+import QtQuick 2.0
+
 pragma Singleton
-import QtQuick 2.3
 
 
 QtObject {
@@ -20,15 +21,15 @@ QtObject {
     property int footerHeight: 40
 
     // Images
-    property string imageLogo: "../img/logo-white.png"
+    property string imageLogo: "img/logo-white.png"
     property string imageLogoColor: "img/logo-small.png"
-    property string imageCommunication: "../img/communication.png"
-    property string imagePublish: "../img/button-publish.png"
-    property string imagePause: "../img/button-pause.png"
-    property string imageStop: "../img/button-stop.png"
-    property string imageClose: "../img/button-close.png"
-    property string imageProcessing: "../img/processing-small.png"
-    property string imageProcessingError: "../img/processing-error.png"
+    property string imageCommunication: "img/communication.png"
+    property string imagePublish: "img/button-publish.png"
+    property string imagePause: "img/button-pause.png"
+    property string imageStop: "img/button-stop.png"
+    property string imageClose: "img/button-close.png"
+    property string imageProcessing: "img/processing-small.png"
+    property string imageProcessingError: "img/processing-error.png"
 
     // Margins
     property int marginMain: 5

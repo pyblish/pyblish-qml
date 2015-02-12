@@ -16,7 +16,7 @@ Box {
     signal pause
     signal stop
 
-    width: 200
+    implicitWidth: 200
     height: Constant.footerHeight
 
     Message {
@@ -35,17 +35,17 @@ Box {
         spacing: Constant.marginAlt
 
 
-        Button {
-            source: Constant.imageStop
-            visible: mode === 1 ? true : false
-            onClicked: root.stop()
-        }
+        // Button {
+        //     source: Constant.imageStop
+        //     visible: mode === 1 ? true : false
+        //     onClicked: root.stop()
+        // }
 
-        Button {
-            source: Constant.imagePause
-            visible: mode === 1 ? true : false
-            onClicked: root.pause()
-        }
+        // Button {
+        //     source: Constant.imagePause
+        //     visible: mode === 1 ? true : false
+        //     onClicked: root.pause()
+        // }
 
         Button {
             source: Constant.imagePublish
@@ -64,6 +64,8 @@ Box {
                 MouseArea {
                     // Steal focus from default button
                     anchors.fill: parent
-        }}}
-
-}}
+                }
+            }
+        }
+    }
+}
