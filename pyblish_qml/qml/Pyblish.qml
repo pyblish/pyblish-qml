@@ -20,7 +20,8 @@ Item {
 
     onStateChanged: {
         if (state === "publishing")
-            terminal.text = ""
+            terminal.text = "Logging started " + Date() + "\n"
+
     }
 
     function setMessage(message) {
@@ -178,32 +179,48 @@ Item {
             
             terminal.echo("    -----------------------------------------------")
             
-            data.log.forEach(function (record) {
+            data.records.forEach(function (record) {
                 /* 
-                 * Available data
-                 *  - args
-                 *  - created
-                 *  - filename
-                 *  - funcName
-                 *  - levelname
-                 *  - levelno
-                 *  - lineno
-                 *  - message
-                 *  - module
-                 *  - msecs
-                 *  - msg
-                 *  - name
-                 *  - pathname
-                 *  - process
-                 *  - processName
-                 *  - relativeCreated
-                 *  - thread
-                 *  - threadName
+                 * Available fields
+                 *  .args
+                 *  .created
+                 *  .filename
+                 *  .funcName
+                 *  .levelname
+                 *  .levelno
+                 *  .lineno
+                 *  .message
+                 *  .module
+                 *  .msecs
+                 *  .msg
+                 *  .name
+                 *  .pathname
+                 *  .process
+                 *  .processName
+                 *  .relativeCreated
+                 *  .thread
+                 *  .threadName
                 */
                 terminal.echo("    " + record.levelname + " - " + record.msg)
             })
 
             terminal.echo("    -----------------------------------------------")
+
+            if (data.error) {
+                /*
+                 * Available fields
+                 *  .traceback[0] (filename)
+                 *  .traceback[1] (lineNo)
+                 *  .traceback[2] (funcName)
+                 *  .traceback[3] (code)
+                 *  .message
+                */
+                terminal.echo("    FAIL: " + data.error.message)
+                terminal.echo("        filename: " + data.error.traceback[0])
+                terminal.echo("        lineNo: " + data.error.traceback[1])
+                terminal.echo("        funcName: " + data.error.traceback[2])
+            }
+
             terminal.echo()  // Newline
         }
 

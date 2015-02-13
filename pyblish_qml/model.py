@@ -51,7 +51,7 @@ class Model(QtCore.QAbstractListModel):
 
     def itemIndexByName(self, name):
         item = self.itemByName(name)
-        return self.itemIndex(item)
+        return self.itemIndex(item) if item else None
 
     @property
     def serialized(self):

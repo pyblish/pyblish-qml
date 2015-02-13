@@ -54,25 +54,26 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def publish(self):
-
-        instances = list()
+        context = list()
         for instance in self._instance_model.serialized:
-            if instance["isToggled"]:
-                instances.append(instance["name"])
+            if not instance["isToggled"]:
+                continue
+            context.append(instance["name"])
 
         plugins = list()
         for plugin in self._plugin_model.serialized:
-            if plugin["isToggled"]:
-                plugins.append(plugin["name"])
+            if not plugin["isToggled"]:
+                continue
+            plugins.append(plugin["name"])
 
-        if not all([instances, plugins]):
+        if not all([context, plugins]):
             msg = "Must specify an instance and plug-in"
             self.processed.emit({"finished": True, "message": msg})
             self.log.error(msg)
             return
 
         message = "Instances:"
-        for instance in instances:
+        for instance in context:
             message += "\n  - %s" % instance
 
         message += "\nPlug-ins:"
@@ -82,7 +83,7 @@ class Controller(QtCore.QObject):
         message += "\n"
         self.info.emit(message)
 
-        state = json.dumps({"instances": instances,
+        state = json.dumps({"context": context,
                             "plugins": plugins})
 
         try:
@@ -128,10 +129,9 @@ class Controller(QtCore.QObject):
                                 ("plugin", self._plugin_model)):
 
                 item = data.get(type)
-                item = model.itemByName(item)
+                index = model.itemIndexByName(item)
 
-                if item:
-                    index = model.itemIndex(item)
+                if index:
                     model.setData(index, "isProcessing", True)
                     model.setData(index, "currentProgress", 1)
 
@@ -191,7 +191,9 @@ def run_production_app(host, port):
     ctx.setContextProperty("app", ctrl)
 
     module_dir = os.path.dirname(__file__)
-    engine.load(os.path.join(module_dir, "qml", "main.qml"))
+
+    with lib.Timer("Spent %.2f ms building the GUI.."):
+        engine.load(os.path.join(module_dir, "qml", "main.qml"))
 
     window = engine.rootObjects()[0]
     window.show()
