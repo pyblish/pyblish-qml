@@ -1,6 +1,6 @@
 """RESTful communication with the outside world"""
 
-import requests
+from vendor import requests
 import threading
 
 ADDRESS = "http://127.0.0.1:{port}{prefix}{endpoint}"
