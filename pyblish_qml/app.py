@@ -12,6 +12,7 @@ from PyQt5 import QtGui, QtCore, QtQml
 import lib
 import rest
 import model
+import compat
 
 
 class Controller(QtCore.QObject):
@@ -179,10 +180,11 @@ class Controller(QtCore.QObject):
 
 
 def run_production_app(host, port):
-    print "Running production app on port: %s" % port
     rest.PORT = port
+    module_dir = os.path.dirname(__file__)
 
     app = QtGui.QGuiApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon(os.path.join(module_dir, "icon.ico")))
 
     engine = QtQml.QQmlApplicationEngine()
 
@@ -190,14 +192,13 @@ def run_production_app(host, port):
     ctx = engine.rootContext()
     ctx.setContextProperty("app", ctrl)
 
-    module_dir = os.path.dirname(__file__)
-
     with lib.Timer("Spent %.2f ms building the GUI.."):
         engine.load(os.path.join(module_dir, "qml", "main.qml"))
 
     window = engine.rootObjects()[0]
     window.show()
 
+    print "Running production app on port: %s" % port
     sys.exit(app.exec_())
 
 
