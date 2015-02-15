@@ -1,10 +1,9 @@
+import os
+import imp
 from setuptools import setup, find_packages
 
 with open("README.txt") as f:
     readme = f.read()
-
-import os
-import imp
 
 version_file = os.path.abspath("pyblish_qml/version.py")
 version_mod = imp.load_source("version", version_file)
@@ -48,5 +47,5 @@ setup(
         "pyblish_qml": qml_package_data
     },
     entry_points={},
-    install_requires=["pyblish-endpoint>=1.0.2"]
+    install_requires=["pyblish-endpoint>=1.1.0"]
 )
