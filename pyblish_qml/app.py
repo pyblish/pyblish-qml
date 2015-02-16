@@ -167,7 +167,7 @@ class Controller(QtCore.QObject):
             instance = defaults.copy()
             instance.update(data)
             item = model.Item(**instance)
-            item.isToggled = True if item.publish else False
+            item.isToggled = True if item.publish is None else False
             self._instance_model.addItem(item)
 
         for data in plugins:
