@@ -41,16 +41,19 @@ class Model(QtCore.QAbstractListModel):
         qindex = self.createIndex(index, 0)
         self.dataChanged.emit(qindex, qindex)
 
-    def itemByName(self, name):
+    def itemFromName(self, name):
         for item in self.items:
             if item.name == name:
                 return item
 
+    def itemFromIndex(self, index):
+        return self.items[index]
+
     def itemIndex(self, item):
         return self.items.index(item)
 
-    def itemIndexByName(self, name):
-        item = self.itemByName(name)
+    def itemIndexFromName(self, name):
+        item = self.itemFromName(name)
         return self.itemIndex(item) if item else None
 
     @property
@@ -75,9 +78,10 @@ class InstanceModel(Model):
     HasWarningRole = QtCore.Qt.UserRole + 12
     HasMessageRole = QtCore.Qt.UserRole + 13
     OptionalRole = QtCore.Qt.UserRole + 14
-    ErrorsRole = QtCore.Qt.UserRole + 15
-    WarningsRole = QtCore.Qt.UserRole + 16
-    MessagesRole = QtCore.Qt.UserRole + 17
+    SucceededRole = QtCore.Qt.UserRole + 15
+    ErrorsRole = QtCore.Qt.UserRole + 16
+    WarningsRole = QtCore.Qt.UserRole + 17
+    MessagesRole = QtCore.Qt.UserRole + 18
 
     _roles = {
         NameRole: "name",
@@ -92,6 +96,7 @@ class InstanceModel(Model):
         HasWarningRole: "hasWarning",
         HasMessageRole: "hasMessage",
         OptionalRole: "optional",
+        SucceededRole: "succeeded",
         ErrorsRole: "errors",
         WarningsRole: "warnings",
         MessagesRole: "messages"

@@ -60,7 +60,13 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot(int)
     def togglePlugin(self, index):
-        self.toggle_item(self._plugin_model, index)
+        model = self._plugin_model
+        item = model.itemFromIndex(index)
+
+        if item.optional:
+            self.toggle_item(self._plugin_model, index)
+        else:
+            self.error.emit("Plug-in is mandatory")
 
     @QtCore.pyqtSlot()
     def reset(self):
@@ -71,9 +77,12 @@ class Controller(QtCore.QObject):
         self._is_running = False
 
     def toggle_item(self, model, index):
-        qindex = model.createIndex(index, index)
-        is_toggled = model.data(qindex, model.IsToggledRole)
-        model.setData(index, "isToggled", not is_toggled)
+        if self._is_running:
+            self.error.emit("Cannot untick while publishing")
+            return
+
+        item = model.itemFromIndex(index)
+        model.setData(index, "isToggled", not item.isToggled)
 
     @QtCore.pyqtSlot()
     def publish(self):
@@ -147,6 +156,7 @@ class Controller(QtCore.QObject):
 
     def start(self):
         """Start processing-loop"""
+
         def worker():
             response = self._rest.request("POST", "/next")
             while self._is_running and response.status_code == 200:
@@ -179,6 +189,8 @@ class Controller(QtCore.QObject):
 
                 if data.get("error"):
                     model_.setData(index, "hasError", True)
+                else:
+                    model_.setData(index, "succeeded", True)
 
             else:
                 model_.setData(index, "isProcessing", False)
@@ -202,6 +214,8 @@ class Controller(QtCore.QObject):
                 if data.get("error"):
                     model_.setData(index, "hasError", True)
                     self._has_errors = True
+                else:
+                    model_.setData(index, "succeeded", True)
 
             else:
                 model_.setData(index, "isProcessing", False)
@@ -210,6 +224,7 @@ class Controller(QtCore.QObject):
         """Reset progress bars"""
         self._rest.request("POST", "/session").json()
         self._has_errors = False
+        self._is_running = False
 
         for model_ in (self._instance_model, self._plugin_model):
             for item in model_.items:
@@ -223,6 +238,7 @@ class Controller(QtCore.QObject):
             for item in model_.items:
                 index = model_.itemIndex(item)
                 model_.setData(index, "hasError", False)
+                model_.setData(index, "succeeded", False)
 
     def populate_models(self):
         with util.Timer("Spent %.2f ms requesting things.."):
@@ -246,6 +262,7 @@ class Controller(QtCore.QObject):
             "hasWarning": False,
             "hasMessage": False,
             "optional": True,
+            "succeeded": False,
             "errors": list(),
             "warnings": list(),
             "messages": list(),

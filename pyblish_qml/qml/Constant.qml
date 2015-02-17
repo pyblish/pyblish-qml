@@ -9,7 +9,11 @@ QtObject {
     property color foregroundColor: Qt.rgba(0.6, 0.6, 0.6)
     property color textColor: "white"
     property color itemColor: "#6896BB"
-    property color itemProcessingColor: "#597221"
+    property color itemProcessingColor: "#59A0DB"
+    property color succeededColor: "#82D330"
+    property color selectedColor: "#597221"
+    property color successColor: "#77AE24"
+    property color warningColor: "#597221"
     property color errorColor: Qt.rgba(1.0, 0.2, 0.2)
     
     // Sizes
@@ -48,4 +52,13 @@ QtObject {
     property int publishPausedInstance: 0
     property int lastIndex: 0
     property var publishErrors: {}
+
+    function alpha(color, alpha) {
+        // Make sure we have a real color object to work with (versus a string like "#ccc")
+        var realColor = Qt.darker(color, 1)
+
+        realColor.a = alpha
+
+        return realColor
+    }
 }

@@ -81,13 +81,16 @@ Item {
 
                 List {
                     id: instancesList
-                    model: app.instanceModel
-                    anchors.fill: parent
-                    anchors.rightMargin: parent.width / 2
-                    section.property: "family"
-                    hoverDirection: "left"
 
-                    onItemToggled: {
+                    anchors {
+                        fill: parent
+                        rightMargin: parent.width / 2
+                    }
+
+                    model: app.instanceModel
+                    section.property: "family"
+
+                    onItemClicked: {
                         app.toggleInstance(index)
                     }
                 }
@@ -102,7 +105,7 @@ Item {
                     anchors.leftMargin: parent.width / 2
                     section.property: "type"
 
-                    onItemToggled: {
+                    onItemClicked: {
                         app.togglePlugin(index)
                     }
                 }
