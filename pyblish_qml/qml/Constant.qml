@@ -28,6 +28,7 @@ QtObject {
     property string imagePause: "img/button-pause.png"
     property string imageStop: "img/button-stop.png"
     property string imageClose: "img/button-close.png"
+    property string imageReset: "img/button-reset.png"
     property string imageProcessing: "img/processing-small.png"
     property string imageProcessingError: "img/processing-error.png"
 

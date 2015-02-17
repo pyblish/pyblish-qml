@@ -4,21 +4,35 @@
 import os
 import sys
 import json
+import threading
 
 # Dependencies
 from PyQt5 import QtGui, QtCore, QtQml
 
 # Local libraries
-import lib
-import rest
+import util
 import model
 import compat
+from vendor import requests
+
+
+class Rest(object):
+    ADDRESS = "http://127.0.0.1:{port}/pyblish/v1{endpoint}"
+    PORT = 6000
+
+    def request(self, verb, endpoint, data=None, **kwargs):
+        endpoint = self.ADDRESS.format(port=self.PORT,
+                                       endpoint=endpoint)
+        request = getattr(requests, verb.lower())
+        response = request(endpoint, data=data, **kwargs)
+        return response
 
 
 class Controller(QtCore.QObject):
     error = QtCore.pyqtSignal(str, arguments=["message"])
     info = QtCore.pyqtSignal(str, arguments=["message"])
     processed = QtCore.pyqtSignal(QtCore.QVariant, arguments=["data"])
+    finished = QtCore.pyqtSignal()
 
     @QtCore.pyqtProperty(QtCore.QVariant)
     def instances(self):
@@ -48,6 +62,14 @@ class Controller(QtCore.QObject):
     def togglePlugin(self, index):
         self.toggle_item(self._plugin_model, index)
 
+    @QtCore.pyqtSlot()
+    def reset(self):
+        self.reset_state()
+
+    @QtCore.pyqtSlot()
+    def stop(self):
+        self._is_running = False
+
     def toggle_item(self, model, index):
         qindex = model.createIndex(index, index)
         is_toggled = model.data(qindex, model.IsToggledRole)
@@ -57,19 +79,18 @@ class Controller(QtCore.QObject):
     def publish(self):
         context = list()
         for instance in self._instance_model.serialized:
-            if not instance["isToggled"]:
-                continue
-            context.append(instance["name"])
+            if instance.get("isToggled"):
+                context.append(instance["name"])
 
         plugins = list()
         for plugin in self._plugin_model.serialized:
-            if not plugin["isToggled"]:
-                continue
-            plugins.append(plugin["name"])
+            if plugin.get("isToggled"):
+                plugins.append(plugin["name"])
 
         if not all([context, plugins]):
             msg = "Must specify an instance and plug-in"
-            self.processed.emit({"finished": True, "message": msg})
+            self.finished.emit()
+            self.error.emit(msg)
             self.log.error(msg)
             return
 
@@ -88,13 +109,18 @@ class Controller(QtCore.QObject):
                             "plugins": plugins})
 
         try:
-            rest.post_state(state)
+            response = self._rest.request("POST", "/state",
+                                          data={"state": state})
+            if response.status_code != 200:
+                raise Exception(response.get("message") or "An error occurred")
+
         except Exception as e:
             self.error.emit(e.msg)
             self.log.error(e.msg)
             return
 
-        rest.post_next(signal=self.processed)
+        self._is_running = True
+        self.start()
 
     @QtCore.pyqtProperty(QtCore.QObject)
     def log(self):
@@ -106,42 +132,104 @@ class Controller(QtCore.QObject):
         self._instances = list()
         self._plugins = list()
         self._system = dict()
-        self._log = lib.Log()
+        self._has_errors = False
+        self._log = util.Log()
+        self._rest = Rest()
+        self._is_running = False
 
         self._instance_model = model.InstanceModel()
         self._plugin_model = model.PluginModel()
 
-        self.load()
+        self.populate_models()
 
-        self.processed.connect(self.processHandler)
+        self.processed.connect(self.process_handler)
+        self.finished.connect(self.finished_handler)
 
-    def processHandler(self, data):
-        if data.get("finished"):
-            for type, model in (("instance", self._instance_model),
-                                ("plugin", self._plugin_model)):
+    def start(self):
+        """Start processing-loop"""
+        def worker():
+            response = self._rest.request("POST", "/next")
+            while self._is_running and response.status_code == 200:
+                self.processed.emit(response.json())
+                response = self._rest.request("POST", "/next")
+            self.finished.emit()
 
-                for item in model.items:
-                    index = model.itemIndex(item)
-                    model.setData(index, "isProcessing", False)
-                    model.setData(index, "currentProgress", 0)
+        self.reset_state()
 
-        else:
-            for type, model in (("instance", self._instance_model),
-                                ("plugin", self._plugin_model)):
+        thread = threading.Thread(target=worker)
+        thread.daemon = True
+        thread.start()
 
-                item = data.get(type)
-                index = model.itemIndexByName(item)
+    def finished_handler(self):
+        self.reset_status()
 
-                if index:
-                    model.setData(index, "isProcessing", True)
-                    model.setData(index, "currentProgress", 1)
+    def process_handler(self, data):
+        self.update_instances(data)
+        self.update_plugins(data)
 
-    def load(self):
-        with lib.Timer("Spent %.2f ms requesting things.."):
-            rest.request("POST", "/session").json()
-            instances = rest.request("GET", "/instances").json()
-            plugins = rest.request("GET", "/plugins").json()
-            self._system = rest.request("GET", "/application").json()
+    def update_instances(self, data):
+        model_ = self._instance_model
+        for item in model_.items:
+            index = model_.itemIndex(item)
+            current_item = data.get("instance")
+
+            if current_item == item.name:
+                model_.setData(index, "isProcessing", True)
+                model_.setData(index, "currentProgress", 1)
+
+                if data.get("error"):
+                    model_.setData(index, "hasError", True)
+
+            else:
+                model_.setData(index, "isProcessing", False)
+
+    def update_plugins(self, data):
+        model_ = self._plugin_model
+        for item in model_.items:
+            index = model_.itemIndex(item)
+            current_item = data.get("plugin")
+
+            if current_item == item.name:
+                if self._has_errors:
+                    if item.type == "Extractor":
+                        self.info.emit("Stopped due to failed vaildation")
+                        self._is_running = False
+                        return
+
+                model_.setData(index, "isProcessing", True)
+                model_.setData(index, "currentProgress", 1)
+
+                if data.get("error"):
+                    model_.setData(index, "hasError", True)
+                    self._has_errors = True
+
+            else:
+                model_.setData(index, "isProcessing", False)
+
+    def reset_status(self):
+        """Reset progress bars"""
+        self._rest.request("POST", "/session").json()
+        self._has_errors = False
+
+        for model_ in (self._instance_model, self._plugin_model):
+            for item in model_.items:
+                index = model_.itemIndex(item)
+                model_.setData(index, "isProcessing", False)
+                model_.setData(index, "currentProgress", 0)
+
+    def reset_state(self):
+        """Reset data from last publish"""
+        for model_ in (self._instance_model, self._plugin_model):
+            for item in model_.items:
+                index = model_.itemIndex(item)
+                model_.setData(index, "hasError", False)
+
+    def populate_models(self):
+        with util.Timer("Spent %.2f ms requesting things.."):
+            self._rest.request("POST", "/session").json()
+            instances = self._rest.request("GET", "/instances").json()
+            plugins = self._rest.request("GET", "/plugins").json()
+            self._system = self._rest.request("GET", "/application").json()
 
         defaults = {
             "name": "default",
@@ -180,7 +268,7 @@ class Controller(QtCore.QObject):
 
 
 def run_production_app(host, port):
-    rest.PORT = port
+    Rest.PORT = port
     module_dir = os.path.dirname(__file__)
 
     app = QtGui.QGuiApplication(sys.argv)
@@ -192,7 +280,7 @@ def run_production_app(host, port):
     ctx = engine.rootContext()
     ctx.setContextProperty("app", ctrl)
 
-    with lib.Timer("Spent %.2f ms building the GUI.."):
+    with util.Timer("Spent %.2f ms building the GUI.."):
         engine.load(os.path.join(module_dir, "qml", "main.qml"))
 
     window = engine.rootObjects()[0]

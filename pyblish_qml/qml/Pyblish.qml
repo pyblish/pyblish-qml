@@ -77,7 +77,7 @@ Item {
                 id: overviewTab
                 anchors.fill: parent
                 anchors.margins: Constant.marginMain
-                visible: header.state == "overviewTab"
+                opacity: header.state == "overviewTab" ? 1 : 0
 
                 List {
                     id: instancesList
@@ -154,24 +154,26 @@ Item {
                 pyblish.state = "publishing"
                 app.publish()
             }
-            // onPause: ..
-            // onStop: ..
+
+            onReset: {
+                setMessage("Resetting..")
+                app.reset()
+            }
+
+            onStop: {
+                setMessage("Stopping..")
+                app.stop()
+            }
         }
     }
 
     Connections {
         target: app
-        
+
         /*
          * Print results of publish in Terminal
         */
         onProcessed: {
-            if (data.finished === true) {
-                pyblish.state = "default"
-                setMessage(data.message)
-                return
-            }
-
             if (typeof data.instance === "undefined")
                 return
 
@@ -222,6 +224,10 @@ Item {
             }
 
             terminal.echo()  // Newline
+        }
+
+        onFinished: {
+            pyblish.state = "default"
         }
 
         onError: {

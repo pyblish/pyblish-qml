@@ -140,9 +140,24 @@ Rectangle {
                     State {
                         name: "processing"
                         when: isProcessing
-                        PropertyChanges { target: indicatorCheckbox; visible: false }
-                        PropertyChanges { target: indicatorProcessing; visible: true }
-                        PropertyChanges { target: indicatorProcessingAnimation; running: true }
+                        PropertyChanges {
+                            target: indicatorCheckbox
+
+                            visible: false
+                        }
+
+                        PropertyChanges {
+                            target: indicatorProcessing
+
+                            visible: true
+                        }
+
+                        PropertyChanges {
+                            target: indicatorProcessingAnimation
+
+                            running: true
+                        }
+
                     },
 
                     // An error has occured, display a little tick-
@@ -151,16 +166,43 @@ Rectangle {
                     State {
                         name: "errored"
                         when: hasError
-                        PropertyChanges { target: indicatorErrored; visible: true }
+                        
+                        PropertyChanges {
+                            target: text
+
+                            color: Qt.lighter(Constant.errorColor, 1.3)
+                        }
+
+                        PropertyChanges {
+                            target: hover
+
+                            visible: true
+                        }
+
+                        PropertyChanges {
+                            target: indicatorErrored
+
+                            visible: true
+                        }
+
                     },
 
                     // The item is active and might be toggled
                     State {
                         name: "active"
                         when: active
-                        PropertyChanges { target: hover; visible: true }
-                        PropertyChanges { target: indicatorMouseArea; visible: optional }
-                        PropertyChanges { target: indicatorContainer; opacity: optional ? 1.0 : 0.5 }
+                        PropertyChanges {
+                            target: hover
+
+                            visible: true
+                        }
+
+                        PropertyChanges {
+                            target: indicatorContainer
+
+                            opacity: optional ? 1.0 : 0.5
+                        }
+
                     }
                 ]
 
@@ -242,13 +284,6 @@ Rectangle {
                         height: 7
                         visible: false
                     }
-
-                    MouseArea {
-                        id: indicatorMouseArea
-                        anchors.fill: parent
-                        visible: false
-                        onClicked: list.itemToggled(index)
-                    }
                 }
 
                 Label {
@@ -279,11 +314,9 @@ Rectangle {
 
                 }
                 onEntered: {
-                    // itemHovered(index);
                     hover.hovered = true;
                 }
                 onExited: {
-                    // itemHovered(-1);
                     hover.hovered = false;
                 }
             }
