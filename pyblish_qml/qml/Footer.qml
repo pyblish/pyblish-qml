@@ -4,7 +4,7 @@ import "."
 
 
 Box {
-    id: root
+    id: footer
 
     property alias message: _message
     
@@ -15,6 +15,7 @@ Box {
     signal publish
     signal pause
     signal stop
+    signal reset
 
     implicitWidth: 200
     height: Constant.footerHeight
@@ -35,22 +36,28 @@ Box {
         spacing: Constant.marginAlt
 
 
-        // Button {
-        //     source: Constant.imageStop
-        //     visible: mode === 1 ? true : false
-        //     onClicked: root.stop()
-        // }
+        Button {
+            source: Constant.imageStop
+            visible: mode === 1 ? true : false
+            onClicked: footer.stop()
+        }
 
         // Button {
         //     source: Constant.imagePause
         //     visible: mode === 1 ? true : false
-        //     onClicked: root.pause()
+        //     onClicked: footer.pause()
         // }
+
+        Button {
+            source: Constant.imageReset
+            visible: mode == 0 ? true : false
+            onClicked: footer.reset()
+        }
 
         Button {
             source: Constant.imagePublish
 
-            onClicked: root.publish()
+            onClicked: footer.publish()
 
             /*
              * Disable publish-button
