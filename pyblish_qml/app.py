@@ -304,6 +304,7 @@ def run_production_app(host, port):
 
     engine = QtQml.QQmlApplicationEngine()
     engine.addImportPath(qml_import_dir)
+    engine.objectCreated.connect(object_created_handler)
 
     ctrl = Controller(host, prefix="/pyblish/v1")
     ctx = engine.rootContext()
@@ -312,11 +313,16 @@ def run_production_app(host, port):
     with util.Timer("Spent %.2f ms building the GUI.."):
         engine.load(app_path)
 
-    window = engine.rootObjects()[0]
-    window.show()
-
     print "Running production app on port: %s" % port
     sys.exit(app.exec_())
+
+
+def object_created_handler(obj, url):
+    """Show the Window as soon as it has been created"""
+    if obj is not None:
+        obj.show()
+    else:
+        sys.exit()
 
 
 if __name__ == '__main__':
