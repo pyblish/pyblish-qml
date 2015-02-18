@@ -1,6 +1,6 @@
 import QtQuick 2.3
-import "listitems" as ListItem
-import "."
+import Pyblish 0.1
+import Pyblish.ListItems 0.1 as ListItem
 
 
 ListView {
@@ -27,11 +27,11 @@ ListView {
 
         status: {
             if (isProcessing)
-                return "processing"
+                return "selected"
             if (hasError)
                 return "error"
             if (succeeded)
-                return "succeeded"
+                return "success"
             return "default"
         }
 

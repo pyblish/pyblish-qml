@@ -1,5 +1,5 @@
 import QtQuick 2.3
-import ".."
+import Pyblish 0.1
 
 Ink {
     width: 500

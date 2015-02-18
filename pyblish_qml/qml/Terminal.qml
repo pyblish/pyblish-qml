@@ -1,7 +1,8 @@
 import QtQuick 2.3
+import Pyblish 0.1
 
 
-Item {
+View {
     id: terminal
 
     property alias color: textEdit.color
@@ -11,10 +12,15 @@ Item {
         textEdit.append(line);
     }
 
+    function clear() {
+        textEdit.text = ""
+    }
+
     Flickable {
         id: flickable
 
         anchors.fill: parent
+        anchors.margins: terminal.margins
 
         contentWidth: textEdit.paintedWidth
         contentHeight: textEdit.paintedHeight

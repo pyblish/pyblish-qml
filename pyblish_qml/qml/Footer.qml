@@ -1,12 +1,11 @@
 import QtQuick 2.3
-import "."
+import Pyblish 0.1
 
 
-
-Box {
+View {
     id: footer
 
-    property alias message: _message
+    property alias message: __message
     
     // 0 = Default; 1 = Publishing
     property int mode: 0
@@ -17,11 +16,11 @@ Box {
     signal stop
     signal reset
 
-    implicitWidth: 200
-    height: Constant.footerHeight
+    width: 200
+    height: 40
 
     Message {
-        id: _message
+        id: __message
         anchors.verticalCenter: parent.verticalCenter
     }
 
@@ -30,14 +29,14 @@ Box {
             right: parent.right
             top: parent.top
             bottom: parent.bottom
-            margins: Constant.marginMain
+            margins: 5
         }
 
-        spacing: Constant.marginAlt
+        spacing: 3
 
 
         Button {
-            source: Constant.imageStop
+            icon: "button-stop"
             visible: mode === 1 ? true : false
             onClicked: footer.stop()
         }
@@ -49,13 +48,13 @@ Box {
         // }
 
         Button {
-            source: Constant.imageReset
+            icon: "button-reset"
             visible: mode == 0 ? true : false
             onClicked: footer.reset()
         }
 
         Button {
-            source: Constant.imagePublish
+            icon: "button-publish"
 
             onClicked: footer.publish()
 

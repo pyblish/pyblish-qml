@@ -10,7 +10,7 @@ Image {
         if (name == "")
             return ""
 
-        return Qt.resolvedUrl("img/%1.png".arg(name))
+        return Qt.resolvedUrl("icons/%1.png".arg(name))
     }
 
     width: sourceSize.Width

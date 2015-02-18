@@ -1,5 +1,5 @@
 import QtQuick 2.3
-import "."
+import Pyblish 0.1
 
 
 Item {
@@ -19,7 +19,8 @@ Item {
 
     onStateChanged: {
         if (state === "publishing") {
-            terminal.text = "Logging started " + Date() + "\n"
+            terminal.clear()
+            terminal.echo("Logging started " + Date() + "\n")
         }
     }
 
@@ -30,92 +31,97 @@ Item {
         app.log.info(message)
     }
 
-    Column {
-        anchors.fill: parent
+    TabBar {
+        id: tabBar
 
-        Tabs {
-            id: tabbar
+        anchors.top: parent.top
 
-            tabs: [
-                {
-                    text: "",
-                    icon: "logo-white"
-                },
-                "Terminal"
-            ]
-        }
+        tabs: [
+            {
+                text: "",
+                icon: "logo-white"
+            },
+            "Terminal"
+        ]
+    }
 
-        TabView {
-            id: tabView
-            height: parent.height
-            width: parent.width
+    TabView {
+        id: tabView
 
-            currentIndex: tabbar.currentIndex
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: tabBar.bottom
+        anchors.bottom: footer.top
 
-            model: tabs
-        }
+        currentIndex: tabBar.currentIndex
 
-        VisualItemModel {
-            id: tabs
+        model: tabs
+    }
 
-            Box {
-                width: tabView.width
-                height: tabView.height
+    VisualItemModel {
+        id: tabs
 
-                style: "inwards"
+        View {
+            width: tabView.width
+            height: tabView.height
 
-                Row {
-                    List {
-                        model: app.instanceModel
+            style: "inwards"
 
-                        section.property: "family"
+            Row {
+                anchors.fill: parent
+                anchors.margins: parent.margins
 
-                        onItemClicked: {
-                            app.toggleInstance(index)
-                        }
-                    }
+                List {
+                    model: app.instanceModel
 
-                    List {
-                        model: app.pluginModel
+                    section.property: "family"
 
-                        section.property: "type"
-
-                        onItemClicked: {
-                            app.togglePlugin(index)
-                        }
+                    onItemClicked: {
+                        app.toggleInstance(index)
                     }
                 }
-            }
 
-            Box {
-                width: tabView.width
-                height: tabView.height
-                
-                Terminal {
-                    id: terminal
-                    anchors.fill: parent
+                List {
+                    model: app.pluginModel
+
+                    section.property: "type"
+
+                    onItemClicked: {
+                        app.togglePlugin(index)
+                    }
                 }
             }
         }
 
-        Footer {
-            id: footer
-            width: parent.width
-
-            onPublish: {
-                pyblish.state = "publishing"
-                app.publish()
+        View {
+            width: tabView.width
+            height: tabView.height
+            
+            Terminal {
+                id: terminal
+                anchors.fill: parent
             }
+        }
+    }
 
-            onReset: {
-                setMessage("Resetting..")
-                app.reset()
-            }
+    Footer {
+        id: footer
+        width: parent.width
+        anchors.bottom: parent.bottom
 
-            onStop: {
-                setMessage("Stopping..")
-                app.stop()
-            }
+        onPublish: {
+            pyblish.state = "publishing"
+            app.publish()
+        }
+
+        onReset: {
+            setMessage("Resetting..")
+            app.reset()
+        }
+
+        onStop: {
+            setMessage("Stopping..")
+            app.stop()
         }
     }
 

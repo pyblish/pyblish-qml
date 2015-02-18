@@ -1,25 +1,22 @@
 import QtQuick 2.3
-import "."
+import Pyblish 0.1
 
-MouseArea {
-    id: checkBox
+
+Ink {
+    id: checkView
 
     width: 10
     height: 10
-
-    // opacity: active ? 1 : 0.3
 
     property bool active: true
     property bool checked: false
 
     property var statuses: {
         "default": "white",
-        "selected": Constant.selectedColor,
-        "processing": Constant.itemProcessingColor,
-        "succeeded": Constant.succeededColor,
-        "warning": Constant.warningColor,
-        "success": Constant.successColor,
-        "error": Constant.errorColor
+        "selected": Theme.primaryColor,
+        "success": Theme.dark.successColor,
+        "warning": Theme.dark.warningColor,
+        "error": Theme.dark.errorColor
     }
             
     property string status: "default"
@@ -29,8 +26,8 @@ MouseArea {
             fill: parent
         }
 
-        color: statuses[status]
-        opacity: checkBox.checked ? 1 : 0
+        color: checkView.statuses[typeof checkView.status !== "undefined" ? checkView.status : "default"]
+        opacity: checkView.checked ? 1 : 0
 
         z: -1
 

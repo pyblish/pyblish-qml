@@ -8,7 +8,7 @@ Row {
     property var tabs: []
     property int currentIndex: 0
 
-    height: 48
+    height: 45
 
     spacing: -2
 
@@ -16,12 +16,12 @@ Row {
         id: repeater
         model: tabbar.tabs
 
-        delegate: Box {
+        delegate: View {
             id: tabItem
 
             property int heightOffset: 4
 
-            width: 48 + row.width
+            width: 40 + row.width
             height: tabbar.height - (selected() ? 0 : heightOffset)
 
             function selected() {
@@ -29,7 +29,7 @@ Row {
             }
 
             z: selected() ? 1 : 0
-            y: selected() ? 0 : heightOffset
+            y: selected() ? 1 : heightOffset
 
             Behavior on y {
                 NumberAnimation {

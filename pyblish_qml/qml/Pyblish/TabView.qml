@@ -4,6 +4,8 @@ import QtQuick 2.3
 ListView {
     id: tabView
 
+    spacing: 5
+
     orientation: Qt.Horizontal
 
     highlightMoveDuration: 400

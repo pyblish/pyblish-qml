@@ -195,6 +195,7 @@ class Controller(QtCore.QObject):
                 model_.setData(index, "currentProgress", 1)
 
                 if data.get("error"):
+                    print "ERROR: %s" % current_item
                     model_.setData(index, "hasError", True)
                 else:
                     model_.setData(index, "succeeded", True)
@@ -293,19 +294,23 @@ class Controller(QtCore.QObject):
 
 def run_production_app(host, port):
     rest.PORT = port
+
     module_dir = os.path.dirname(__file__)
+    qml_import_dir = os.path.join(module_dir, "qml")
+    app_path = os.path.join(module_dir, "qml", "main.qml")
 
     app = QtGui.QGuiApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon(os.path.join(module_dir, "icon.ico")))
 
     engine = QtQml.QQmlApplicationEngine()
+    engine.addImportPath(qml_import_dir)
 
     ctrl = Controller(host, prefix="/pyblish/v1")
     ctx = engine.rootContext()
     ctx.setContextProperty("app", ctrl)
 
     with util.Timer("Spent %.2f ms building the GUI.."):
-        engine.load(os.path.join(module_dir, "qml", "main.qml"))
+        engine.load(app_path)
 
     window = engine.rootObjects()[0]
     window.show()

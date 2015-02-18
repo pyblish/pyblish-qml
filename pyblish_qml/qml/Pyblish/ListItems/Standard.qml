@@ -1,6 +1,6 @@
 import QtQuick 2.3
-import "."
-import ".."
+import Pyblish 0.1
+import Pyblish.ListItems 0.1
 
 
 BaseListItem {
@@ -12,11 +12,13 @@ BaseListItem {
 
     property alias text: label.text
 
+    property int margins: 5
+
     Row {
         spacing: 5
         anchors.fill: parent
-        anchors.leftMargin: 5
-        anchors.rightMargin: 5
+        anchors.leftMargin: listItem.margins
+        anchors.rightMargin: listItem.margins
 
         CheckBox {
             id: indicator

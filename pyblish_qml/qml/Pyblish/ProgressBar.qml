@@ -1,12 +1,12 @@
 import QtQuick 2.3
-import "."
+import Pyblish 0.1
 
 
 Item {
     id: progressBar
 
     property real progress: 0
-    property color color: Constant.itemColor
+    property color color: Theme.primaryColor
 
     clip: true
 

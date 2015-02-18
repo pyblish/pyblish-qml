@@ -1,11 +1,11 @@
 import QtQuick 2.3
-import ".."
+import Pyblish 0.1
 
-Tabs {
+TabBar {
     tabs: [
         {
-            text: "World",
-            icon: "button-stop"
+            text: "",
+            icon: "logo-white"
         },
 
         "Hello",

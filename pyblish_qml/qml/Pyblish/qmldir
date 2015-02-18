@@ -1,0 +1,11 @@
+module Pyblish
+View 0.1 View.qml
+Button 0.1 Button.qml
+CheckBox 0.1 CheckBox.qml
+Ink 0.1 Ink.qml
+Label 0.1 Label.qml
+Object 0.1 Object.qml
+ProgressBar 0.1 ProgressBar.qml
+singleton Theme 0.1 Theme.qml
+TabBar 0.1 TabBar.qml
+TabView 0.1 TabView.qml
