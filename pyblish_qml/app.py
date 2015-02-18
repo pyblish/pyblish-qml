@@ -12,23 +12,21 @@ from PyQt5 import QtGui, QtCore, QtQml
 # Local libraries
 import util
 import model
+import rest
 import compat
-from vendor import requests
-
-
-class Rest(object):
-    ADDRESS = "http://127.0.0.1:{port}/pyblish/v1{endpoint}"
-    PORT = 6000
-
-    def request(self, verb, endpoint, data=None, **kwargs):
-        endpoint = self.ADDRESS.format(port=self.PORT,
-                                       endpoint=endpoint)
-        request = getattr(requests, verb.lower())
-        response = request(endpoint, data=data, **kwargs)
-        return response
 
 
 class Controller(QtCore.QObject):
+    """Handle events coming from QML
+
+    Attributes:
+        error (str): [Signal] Outgoing error
+        info (str): [Signal] Outgoing message
+        processed (dict): [Signal] Outgoing state from host per process
+        finished: [Signal] Upon finished publish
+
+    """
+
     error = QtCore.pyqtSignal(str, arguments=["message"])
     info = QtCore.pyqtSignal(str, arguments=["message"])
     processed = QtCore.pyqtSignal(QtCore.QVariant, arguments=["data"])
@@ -60,7 +58,13 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot(int)
     def togglePlugin(self, index):
-        self.toggle_item(self._plugin_model, index)
+        model = self._plugin_model
+        item = model.itemFromIndex(index)
+
+        if item.optional:
+            self.toggle_item(self._plugin_model, index)
+        else:
+            self.error.emit("Plug-in is mandatory")
 
     @QtCore.pyqtSlot()
     def reset(self):
@@ -71,9 +75,12 @@ class Controller(QtCore.QObject):
         self._is_running = False
 
     def toggle_item(self, model, index):
-        qindex = model.createIndex(index, index)
-        is_toggled = model.data(qindex, model.IsToggledRole)
-        model.setData(index, "isToggled", not is_toggled)
+        if self._is_running:
+            self.error.emit("Cannot untick while publishing")
+            return
+
+        item = model.itemFromIndex(index)
+        model.setData(index, "isToggled", not item.isToggled)
 
     @QtCore.pyqtSlot()
     def publish(self):
@@ -109,8 +116,8 @@ class Controller(QtCore.QObject):
                             "plugins": plugins})
 
         try:
-            response = self._rest.request("POST", "/state",
-                                          data={"state": state})
+            response = rest.request("POST", "/state",
+                                    data={"state": state})
             if response.status_code != 200:
                 raise Exception(response.get("message") or "An error occurred")
 
@@ -127,6 +134,15 @@ class Controller(QtCore.QObject):
         return self._log
 
     def __init__(self, host, prefix):
+        """
+
+        Attributes:
+            _instances
+            _plugins
+            _state: The current state in use during processing
+
+        """
+
         super(Controller, self).__init__(parent=None)
 
         self._instances = list()
@@ -134,8 +150,8 @@ class Controller(QtCore.QObject):
         self._system = dict()
         self._has_errors = False
         self._log = util.Log()
-        self._rest = Rest()
         self._is_running = False
+        self._state = dict()
 
         self._instance_model = model.InstanceModel()
         self._plugin_model = model.PluginModel()
@@ -147,11 +163,12 @@ class Controller(QtCore.QObject):
 
     def start(self):
         """Start processing-loop"""
+
         def worker():
-            response = self._rest.request("POST", "/next")
+            response = rest.request("POST", "/next")
             while self._is_running and response.status_code == 200:
                 self.processed.emit(response.json())
-                response = self._rest.request("POST", "/next")
+                response = rest.request("POST", "/next")
             self.finished.emit()
 
         self.reset_state()
@@ -178,7 +195,10 @@ class Controller(QtCore.QObject):
                 model_.setData(index, "currentProgress", 1)
 
                 if data.get("error"):
+                    print "ERROR: %s" % current_item
                     model_.setData(index, "hasError", True)
+                else:
+                    model_.setData(index, "succeeded", True)
 
             else:
                 model_.setData(index, "isProcessing", False)
@@ -202,14 +222,17 @@ class Controller(QtCore.QObject):
                 if data.get("error"):
                     model_.setData(index, "hasError", True)
                     self._has_errors = True
+                else:
+                    model_.setData(index, "succeeded", True)
 
             else:
                 model_.setData(index, "isProcessing", False)
 
     def reset_status(self):
         """Reset progress bars"""
-        self._rest.request("POST", "/session").json()
+        rest.request("POST", "/session").json()
         self._has_errors = False
+        self._is_running = False
 
         for model_ in (self._instance_model, self._plugin_model):
             for item in model_.items:
@@ -223,13 +246,14 @@ class Controller(QtCore.QObject):
             for item in model_.items:
                 index = model_.itemIndex(item)
                 model_.setData(index, "hasError", False)
+                model_.setData(index, "succeeded", False)
 
     def populate_models(self):
         with util.Timer("Spent %.2f ms requesting things.."):
-            self._rest.request("POST", "/session").json()
-            instances = self._rest.request("GET", "/instances").json()
-            plugins = self._rest.request("GET", "/plugins").json()
-            self._system = self._rest.request("GET", "/application").json()
+            rest.request("POST", "/session").json()
+            instances = rest.request("GET", "/instances").json()
+            plugins = rest.request("GET", "/plugins").json()
+            self._system = rest.request("GET", "/application").json()
 
         defaults = {
             "name": "default",
@@ -246,6 +270,7 @@ class Controller(QtCore.QObject):
             "hasWarning": False,
             "hasMessage": False,
             "optional": True,
+            "succeeded": False,
             "errors": list(),
             "warnings": list(),
             "messages": list(),
@@ -268,20 +293,24 @@ class Controller(QtCore.QObject):
 
 
 def run_production_app(host, port):
-    Rest.PORT = port
+    rest.PORT = port
+
     module_dir = os.path.dirname(__file__)
+    qml_import_dir = os.path.join(module_dir, "qml")
+    app_path = os.path.join(module_dir, "qml", "main.qml")
 
     app = QtGui.QGuiApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon(os.path.join(module_dir, "icon.ico")))
 
     engine = QtQml.QQmlApplicationEngine()
+    engine.addImportPath(qml_import_dir)
 
     ctrl = Controller(host, prefix="/pyblish/v1")
     ctx = engine.rootContext()
     ctx.setContextProperty("app", ctrl)
 
     with util.Timer("Spent %.2f ms building the GUI.."):
-        engine.load(os.path.join(module_dir, "qml", "main.qml"))
+        engine.load(app_path)
 
     window = engine.rootObjects()[0]
     window.show()

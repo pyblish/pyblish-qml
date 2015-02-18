@@ -1,10 +1,9 @@
 import QtQuick 2.3
-import "."
+import Pyblish 0.1
 
 
 Item {
     id: pyblish
-    state: header.state
 
     states: [
         State {
@@ -19,9 +18,10 @@ Item {
     ]
 
     onStateChanged: {
-        if (state === "publishing")
-            terminal.text = "Logging started " + Date() + "\n"
-
+        if (state === "publishing") {
+            terminal.clear()
+            terminal.echo("Logging started " + Date() + "\n")
+        }
     }
 
     function setMessage(message) {
@@ -31,139 +31,97 @@ Item {
         app.log.info(message)
     }
 
-    Column {
-        anchors.fill: parent
+    TabBar {
+        id: tabBar
 
-        Header {
-            id: header
-            state: "overviewTab" // Default state
-            width: parent.width
-        }
+        anchors.top: parent.top
 
-        Box {
-            id: body
+        tabs: [
+            {
+                text: "",
+                icon: "logo-white"
+            },
+            "Terminal"
+        ]
+    }
 
-            outwards: false
-            width: parent.width
-            height: parent.height - header.height - footer.height
+    TabView {
+        id: tabView
 
-            Item {
-                id: systemTab
-                visible: header.state == "systemTab"
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: tabBar.bottom
+        anchors.bottom: footer.top
+
+        currentIndex: tabBar.currentIndex
+
+        model: tabs
+    }
+
+    VisualItemModel {
+        id: tabs
+
+        View {
+            width: tabView.width
+            height: tabView.height
+
+            style: "inwards"
+
+            Row {
                 anchors.fill: parent
-                anchors.margins: Constant.marginMain
-
-                TextEdit {
-                    id: system
-                    width: terminalFlick.width
-                    height: terminalFlick.height
-                    color: "white"
-                    font.family: "Open Sans Semibold"
-                    readOnly: true
-                    wrapMode: TextEdit.Wrap
-                    renderType: Text.NativeRendering
-
-                    Component.onCompleted: {
-                        var keys = Object.keys(app.system);
-                        keys.sort();
-                        keys.forEach(function (key) {
-                            append(key + ": " + app.system[key]);
-                        });
-                    }
-                }
-            }
-
-            Item {
-                id: overviewTab
-                anchors.fill: parent
-                anchors.margins: Constant.marginMain
-                opacity: header.state == "overviewTab" ? 1 : 0
+                anchors.margins: parent.margins
 
                 List {
-                    id: instancesList
                     model: app.instanceModel
-                    anchors.fill: parent
-                    anchors.rightMargin: parent.width / 2
-                    section.property: "family"
-                    hoverDirection: "left"
 
-                    onItemToggled: {
+                    section.property: "family"
+
+                    onItemClicked: {
                         app.toggleInstance(index)
                     }
                 }
 
                 List {
-                    id: pluginsList
-
-                    signal validate(string family)
-
                     model: app.pluginModel
-                    anchors.fill: parent
-                    anchors.leftMargin: parent.width / 2
+
                     section.property: "type"
 
-                    onItemToggled: {
+                    onItemClicked: {
                         app.togglePlugin(index)
-                    }
-                }
-            }
-
-            Item {
-                id: terminalTab
-                visible: header.state == "terminalTab"
-                anchors.fill: parent
-                anchors.margins: Constant.marginMain
-
-                Flickable {
-                    id: terminalFlick
-                    anchors.fill: parent
-                    contentWidth: terminal.paintedWidth
-                    contentHeight: terminal.paintedHeight
-                    boundsBehavior: Flickable.DragOverBounds
-                    flickableDirection: Flickable.VerticalFlick
-                    clip: true
-
-
-                    TextEdit {
-                        id: terminal
-
-                        function echo(line) {
-                            terminalFlick.contentY = terminalFlick.contentHeight
-                            terminal.append(line);
-                        }
-
-                        width: terminalTab.width
-                        height: terminalTab.height
-                        color: "white"
-                        text: "Logging started " + Date();
-                        font.family: "Consolas"
-                        readOnly: true
-                        wrapMode: TextEdit.Wrap
-                        renderType: Text.NativeRendering
-                        textFormat: TextEdit.AutoText
                     }
                 }
             }
         }
 
-        Footer {
-            id: footer
-            width: parent.width
-
-            onPublish: {
-                pyblish.state = "publishing"
-                app.publish()
+        View {
+            width: tabView.width
+            height: tabView.height
+            
+            Terminal {
+                id: terminal
+                anchors.fill: parent
             }
+        }
+    }
 
-            onReset: {
-                setMessage("Resetting..")
-                app.reset()
-            }
+    Footer {
+        id: footer
+        width: parent.width
+        anchors.bottom: parent.bottom
 
-            onStop: {
-                setMessage("Stopping..")
-                app.stop()
-            }
+        onPublish: {
+            pyblish.state = "publishing"
+            app.publish()
+        }
+
+        onReset: {
+            setMessage("Resetting..")
+            app.reset()
+        }
+
+        onStop: {
+            setMessage("Stopping..")
+            app.stop()
         }
     }
 
@@ -236,5 +194,11 @@ Item {
 
         onInfo:
             terminal.echo(message)
+    }
+
+    Component.onCompleted: {
+        Object.keys(app.system).sort().forEach(function (key) {
+            terminal.echo(key + ": " + app.system[key]);
+        });
     }
 }
