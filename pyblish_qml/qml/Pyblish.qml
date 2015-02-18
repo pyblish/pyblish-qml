@@ -4,7 +4,6 @@ import "."
 
 Item {
     id: pyblish
-    state: header.state
 
     states: [
         State {
@@ -19,9 +18,9 @@ Item {
     ]
 
     onStateChanged: {
-        if (state === "publishing")
+        if (state === "publishing") {
             terminal.text = "Logging started " + Date() + "\n"
-
+        }
     }
 
     function setMessage(message) {
@@ -34,117 +33,67 @@ Item {
     Column {
         anchors.fill: parent
 
-        Header {
-            id: header
-            state: "overviewTab" // Default state
-            width: parent.width
+        Tabs {
+            id: tabbar
+
+            tabs: [
+                {
+                    text: "",
+                    icon: "logo-white"
+                },
+                "Terminal"
+            ]
         }
 
-        Box {
-            id: body
-
-            outwards: false
+        TabView {
+            id: tabView
+            height: parent.height
             width: parent.width
-            height: parent.height - header.height - footer.height
 
-            Item {
-                id: systemTab
-                visible: header.state == "systemTab"
-                anchors.fill: parent
-                anchors.margins: Constant.marginMain
+            currentIndex: tabbar.currentIndex
 
-                TextEdit {
-                    id: system
-                    width: terminalFlick.width
-                    height: terminalFlick.height
-                    color: "white"
-                    font.family: "Open Sans Semibold"
-                    readOnly: true
-                    wrapMode: TextEdit.Wrap
-                    renderType: Text.NativeRendering
+            model: tabs
+        }
 
-                    Component.onCompleted: {
-                        var keys = Object.keys(app.system);
-                        keys.sort();
-                        keys.forEach(function (key) {
-                            append(key + ": " + app.system[key]);
-                        });
-                    }
-                }
-            }
+        VisualItemModel {
+            id: tabs
 
-            Item {
-                id: overviewTab
-                anchors.fill: parent
-                anchors.margins: Constant.marginMain
-                opacity: header.state == "overviewTab" ? 1 : 0
+            Box {
+                width: tabView.width
+                height: tabView.height
 
-                List {
-                    id: instancesList
+                style: "inwards"
 
-                    anchors {
-                        fill: parent
-                        rightMargin: parent.width / 2
-                    }
+                Row {
+                    List {
+                        model: app.instanceModel
 
-                    model: app.instanceModel
-                    section.property: "family"
+                        section.property: "family"
 
-                    onItemClicked: {
-                        app.toggleInstance(index)
-                    }
-                }
-
-                List {
-                    id: pluginsList
-
-                    signal validate(string family)
-
-                    model: app.pluginModel
-                    anchors.fill: parent
-                    anchors.leftMargin: parent.width / 2
-                    section.property: "type"
-
-                    onItemClicked: {
-                        app.togglePlugin(index)
-                    }
-                }
-            }
-
-            Item {
-                id: terminalTab
-                visible: header.state == "terminalTab"
-                anchors.fill: parent
-                anchors.margins: Constant.marginMain
-
-                Flickable {
-                    id: terminalFlick
-                    anchors.fill: parent
-                    contentWidth: terminal.paintedWidth
-                    contentHeight: terminal.paintedHeight
-                    boundsBehavior: Flickable.DragOverBounds
-                    flickableDirection: Flickable.VerticalFlick
-                    clip: true
-
-
-                    TextEdit {
-                        id: terminal
-
-                        function echo(line) {
-                            terminalFlick.contentY = terminalFlick.contentHeight
-                            terminal.append(line);
+                        onItemClicked: {
+                            app.toggleInstance(index)
                         }
-
-                        width: terminalTab.width
-                        height: terminalTab.height
-                        color: "white"
-                        text: "Logging started " + Date();
-                        font.family: "Consolas"
-                        readOnly: true
-                        wrapMode: TextEdit.Wrap
-                        renderType: Text.NativeRendering
-                        textFormat: TextEdit.AutoText
                     }
+
+                    List {
+                        model: app.pluginModel
+
+                        section.property: "type"
+
+                        onItemClicked: {
+                            app.togglePlugin(index)
+                        }
+                    }
+                }
+            }
+
+            Box {
+                width: tabView.width
+                height: tabView.height
+                
+                Terminal {
+                    id: terminal
+                    anchors.fill: parent
                 }
             }
         }
@@ -239,5 +188,11 @@ Item {
 
         onInfo:
             terminal.echo(message)
+    }
+
+    Component.onCompleted: {
+        Object.keys(app.system).sort().forEach(function (key) {
+            terminal.echo(key + ": " + app.system[key]);
+        });
     }
 }

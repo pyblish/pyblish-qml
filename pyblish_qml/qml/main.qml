@@ -6,7 +6,7 @@ import "."
 Window {
     title: "Pyblish"
     width: 400
-    height: 600
+    height: 400
     color: Constant.backgroundColor
 
     Item {

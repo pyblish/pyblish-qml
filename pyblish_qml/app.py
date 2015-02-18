@@ -12,23 +12,21 @@ from PyQt5 import QtGui, QtCore, QtQml
 # Local libraries
 import util
 import model
+import rest
 import compat
-from vendor import requests
-
-
-class Rest(object):
-    ADDRESS = "http://127.0.0.1:{port}/pyblish/v1{endpoint}"
-    PORT = 6000
-
-    def request(self, verb, endpoint, data=None, **kwargs):
-        endpoint = self.ADDRESS.format(port=self.PORT,
-                                       endpoint=endpoint)
-        request = getattr(requests, verb.lower())
-        response = request(endpoint, data=data, **kwargs)
-        return response
 
 
 class Controller(QtCore.QObject):
+    """Handle events coming from QML
+
+    Attributes:
+        error (str): [Signal] Outgoing error
+        info (str): [Signal] Outgoing message
+        processed (dict): [Signal] Outgoing state from host per process
+        finished: [Signal] Upon finished publish
+
+    """
+
     error = QtCore.pyqtSignal(str, arguments=["message"])
     info = QtCore.pyqtSignal(str, arguments=["message"])
     processed = QtCore.pyqtSignal(QtCore.QVariant, arguments=["data"])
@@ -118,8 +116,8 @@ class Controller(QtCore.QObject):
                             "plugins": plugins})
 
         try:
-            response = self._rest.request("POST", "/state",
-                                          data={"state": state})
+            response = rest.request("POST", "/state",
+                                    data={"state": state})
             if response.status_code != 200:
                 raise Exception(response.get("message") or "An error occurred")
 
@@ -136,6 +134,15 @@ class Controller(QtCore.QObject):
         return self._log
 
     def __init__(self, host, prefix):
+        """
+
+        Attributes:
+            _instances
+            _plugins
+            _state: The current state in use during processing
+
+        """
+
         super(Controller, self).__init__(parent=None)
 
         self._instances = list()
@@ -143,8 +150,8 @@ class Controller(QtCore.QObject):
         self._system = dict()
         self._has_errors = False
         self._log = util.Log()
-        self._rest = Rest()
         self._is_running = False
+        self._state = dict()
 
         self._instance_model = model.InstanceModel()
         self._plugin_model = model.PluginModel()
@@ -158,10 +165,10 @@ class Controller(QtCore.QObject):
         """Start processing-loop"""
 
         def worker():
-            response = self._rest.request("POST", "/next")
+            response = rest.request("POST", "/next")
             while self._is_running and response.status_code == 200:
                 self.processed.emit(response.json())
-                response = self._rest.request("POST", "/next")
+                response = rest.request("POST", "/next")
             self.finished.emit()
 
         self.reset_state()
@@ -222,7 +229,7 @@ class Controller(QtCore.QObject):
 
     def reset_status(self):
         """Reset progress bars"""
-        self._rest.request("POST", "/session").json()
+        rest.request("POST", "/session").json()
         self._has_errors = False
         self._is_running = False
 
@@ -242,10 +249,10 @@ class Controller(QtCore.QObject):
 
     def populate_models(self):
         with util.Timer("Spent %.2f ms requesting things.."):
-            self._rest.request("POST", "/session").json()
-            instances = self._rest.request("GET", "/instances").json()
-            plugins = self._rest.request("GET", "/plugins").json()
-            self._system = self._rest.request("GET", "/application").json()
+            rest.request("POST", "/session").json()
+            instances = rest.request("GET", "/instances").json()
+            plugins = rest.request("GET", "/plugins").json()
+            self._system = rest.request("GET", "/application").json()
 
         defaults = {
             "name": "default",
@@ -285,7 +292,7 @@ class Controller(QtCore.QObject):
 
 
 def run_production_app(host, port):
-    Rest.PORT = port
+    rest.PORT = port
     module_dir = os.path.dirname(__file__)
 
     app = QtGui.QGuiApplication(sys.argv)

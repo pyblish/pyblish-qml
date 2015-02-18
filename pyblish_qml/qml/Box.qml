@@ -1,5 +1,5 @@
 import QtQuick 2.3
-import "."  // Include Constant singleton
+import "."
 
 
 /*
@@ -8,13 +8,13 @@ import "."  // Include Constant singleton
 */
 Rectangle {
     id: root
-    property bool outwards: true
-    // implicitWidth: 100
-    // implicitHeight: 100
+    
+    property var styles: ["inwards", "outwards"]
+    property string style: "outwards"
 
     // An outwards rectangle is naturally lighter, whereas
     // an inwards rectangle is darker. This can be overridden.
-    color: Qt.darker(Constant.backgroundColor, outwards ? 0.9 : 1.2)
+    color: Qt.darker(Constant.backgroundColor, style == "outwards" ? 0.9 : 1.2)
 
     /*
      * Outer border
@@ -22,7 +22,8 @@ Rectangle {
     Rectangle {
         color: "transparent"
         anchors.fill: parent
-        anchors.margins: root.outwards ? 0:1
+        anchors.margins: root.style == "outwards" ? 0 : 1
+
         border {
              width: 1
              color: Qt.darker(Constant.backgroundColor, 2)
@@ -35,7 +36,8 @@ Rectangle {
     Rectangle {
         color: "transparent"
         anchors.fill: parent
-        anchors.margins: root.outwards ? 1:0
+        anchors.margins: root.style == "outwards" ? 1 : 0
+
         border {
              width: 1
              color: Qt.lighter(Constant.backgroundColor, 1.2)
