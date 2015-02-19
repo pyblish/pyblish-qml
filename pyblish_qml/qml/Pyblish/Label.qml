@@ -56,11 +56,6 @@ Text {
             "font": "regular"
         },
 
-        "caption": {
-            "size": 12,
-            "font": "regular"
-        },
-
         "menu": {
             "size": 14,
             "size_desktop": 13,
@@ -70,14 +65,17 @@ Text {
         "button": {
             "size": 14,
             "font": "medium"
+        },
+
+        "caption": {
+            "size": 12,
+            "font": "regular"
         }
     }
 
     property real sizeMult: .75
 
     property var fontInfo: fontStyles[style]
-
-    // renderType: Text.QtRendering
 
     font.pixelSize: fontInfo.size * sizeMult
     font.family: "Open Sans Semibold"
