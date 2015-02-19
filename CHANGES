@@ -9,6 +9,7 @@ Version 0.2.4
 - Added Pyblish.TextArea
 - Improved feedback when clicking
 - Refactoring
+- Made package executable
 
 Version 0.2.3
 -------------

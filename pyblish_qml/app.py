@@ -339,6 +339,8 @@ def _object_created_handler(obj, url):
 
 
 if __name__ == "__main__":
+    print "Deprecated; use __main__.py"
+
     import argparse
 
     parser = argparse.ArgumentParser()
