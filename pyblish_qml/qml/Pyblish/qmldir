@@ -9,3 +9,4 @@ ProgressBar 0.1 ProgressBar.qml
 singleton Theme 0.1 Theme.qml
 TabBar 0.1 TabBar.qml
 TabView 0.1 TabView.qml
+TextArea 0.1 TextArea.qml

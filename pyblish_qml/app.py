@@ -14,6 +14,7 @@ import util
 import model
 import rest
 import compat
+import mock
 
 
 class Controller(QtCore.QObject):
@@ -54,7 +55,15 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
-        self.toggle_item(self._instance_model, index)
+        self._toggle_item(self._instance_model, index)
+
+    @QtCore.pyqtSlot(int, result=QtCore.QVariant)
+    def pluginData(self, index):
+        return self._item_data(self._plugin_model, index)
+
+    @QtCore.pyqtSlot(int, result=QtCore.QVariant)
+    def instanceData(self, index):
+        return self._item_data(self._instance_model, index)
 
     @QtCore.pyqtSlot(int)
     def togglePlugin(self, index):
@@ -62,7 +71,7 @@ class Controller(QtCore.QObject):
         item = model.itemFromIndex(index)
 
         if item.optional:
-            self.toggle_item(self._plugin_model, index)
+            self._toggle_item(self._plugin_model, index)
         else:
             self.error.emit("Plug-in is mandatory")
 
@@ -74,7 +83,12 @@ class Controller(QtCore.QObject):
     def stop(self):
         self._is_running = False
 
-    def toggle_item(self, model, index):
+    def _item_data(self, model, index):
+        """Return item data as dict"""
+        item = model.itemFromIndex(index)
+        return item.__dict__
+
+    def _toggle_item(self, model, index):
         if self._is_running:
             self.error.emit("Cannot untick while publishing")
             return
@@ -105,7 +119,7 @@ class Controller(QtCore.QObject):
         for instance in context:
             message += "\n  - %s" % instance
 
-        message += "\nPlug-ins:"
+        message += "\n\nPlug-ins:"
         for plugin in plugins:
             message += "\n  - %s" % plugin
 
@@ -133,7 +147,7 @@ class Controller(QtCore.QObject):
     def log(self):
         return self._log
 
-    def __init__(self, host, prefix):
+    def __init__(self):
         """
 
         Attributes:
@@ -255,46 +269,46 @@ class Controller(QtCore.QObject):
             plugins = rest.request("GET", "/plugins").json()
             self._system = rest.request("GET", "/application").json()
 
-        defaults = {
-            "name": "default",
-            "objName": "default",
-            "family": "default",
-            "families": "default",
-            "isToggled": True,
-            "active": True,
-            "isSelected": False,
-            "currentProgress": 0,
-            "isProcessing": False,
-            "isCompatible": True,
-            "hasError": False,
-            "hasWarning": False,
-            "hasMessage": False,
-            "optional": True,
-            "succeeded": False,
-            "errors": list(),
-            "warnings": list(),
-            "messages": list(),
-        }
-
         for data in instances:
-            instance = defaults.copy()
-            instance.update(data)
-            item = model.Item(**instance)
+            item = model.Item(**data)
             item.isToggled = True if item.publish in (True, None) else False
             self._instance_model.addItem(item)
 
         for data in plugins:
             if data.get("active") is False:
                 continue
-            plugin = defaults.copy()
-            plugin.update(data)
-            item = model.Item(**plugin)
+
+            item = model.Item(**data)
             self._plugin_model.addItem(item)
 
 
-def run_production_app(host, port):
+def run_production_app(port):
     rest.PORT = port
 
+    print "Running production app on port: %s" % rest.PORT
+    return _run_app()
+
+
+def run_debug_app():
+    import pyblish_endpoint.server
+
+    endpoint_app, _ = pyblish_endpoint.server.create_app()
+    endpoint_app.config["TESTING"] = True
+    endpoint_client = endpoint_app.test_client()
+    endpoint_client.testing = True
+
+    rest.MOCK = endpoint_client
+
+    Service = mock.MockService
+    Service.SLEEP_DURATION = 0.5
+    Service.PERFORMANCE = Service.FAST
+    pyblish_endpoint.service.register_service(Service, force=True)
+
+    print "Running debug app on port: %s" % rest.PORT
+    return _run_app()
+
+
+def _run_app():
     module_dir = os.path.dirname(__file__)
     qml_import_dir = os.path.join(module_dir, "qml")
     app_path = os.path.join(module_dir, "qml", "main.qml")
@@ -304,20 +318,19 @@ def run_production_app(host, port):
 
     engine = QtQml.QQmlApplicationEngine()
     engine.addImportPath(qml_import_dir)
-    engine.objectCreated.connect(object_created_handler)
+    engine.objectCreated.connect(_object_created_handler)
 
-    ctrl = Controller(host, prefix="/pyblish/v1")
+    ctrl = Controller()
     ctx = engine.rootContext()
     ctx.setContextProperty("app", ctrl)
 
     with util.Timer("Spent %.2f ms building the GUI.."):
         engine.load(app_path)
 
-    print "Running production app on port: %s" % port
     sys.exit(app.exec_())
 
 
-def object_created_handler(obj, url):
+def _object_created_handler(obj, url):
     """Show the Window as soon as it has been created"""
     if obj is not None:
         obj.show()
@@ -325,7 +338,7 @@ def object_created_handler(obj, url):
         sys.exit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -334,4 +347,7 @@ if __name__ == '__main__':
 
     kwargs = parser.parse_args()
 
-    run_production_app(**kwargs.__dict__)
+    if kwargs.port is not 6000:
+        run_production_app(kwargs.port)
+    else:
+        run_debug_app()

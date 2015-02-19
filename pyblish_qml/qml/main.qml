@@ -1,11 +1,12 @@
 import QtQuick 2.3
 import QtQuick.Window 2.2
 
-
 Window {
     title: "Pyblish"
+
     width: 400
     height: 600
+
     color: Qt.rgba(0.3, 0.3, 0.3)
 
     Item {

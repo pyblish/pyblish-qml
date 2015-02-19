@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.2.4
+-------------
+
+- Implementing basic Properties page
+- Implementing independent Endpoint server for testing
+- Added Pyblish.TextArea
+- Improved feedback when clicking
+- Refactoring
+
 Version 0.2.3
 -------------
 

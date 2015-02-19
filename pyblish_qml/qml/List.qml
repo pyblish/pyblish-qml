@@ -9,6 +9,7 @@ ListView {
     signal itemHovered(int index)
     signal itemToggled(int index)
     signal itemClicked(int index)
+    signal itemDoubleClicked(int index)
 
     width: 200
     height: 300
@@ -35,9 +36,8 @@ ListView {
             return "default"
         }
 
-        onClicked: {
-            list.itemClicked(index)
-        }
+        onClicked: list.itemClicked(index)
+        onDoubleClicked: list.itemDoubleClicked(index)
     }
 
     section.delegate: Item {
