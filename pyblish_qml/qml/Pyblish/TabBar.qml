@@ -1,72 +1,78 @@
 import QtQuick 2.3
-import "."
 
 
-Row {
+View {
     id: tabbar
+
+    height: 45
+
+    clip: true
 
     property var tabs: []
     property int currentIndex: 0
 
-    height: 45
+    Row {
 
-    spacing: -2
+        anchors.fill: parent
 
-    Repeater {
-        id: repeater
-        model: tabbar.tabs
+        spacing: -2
 
-        delegate: View {
-            id: tabItem
+        Repeater {
+            id: repeater
+            model: tabbar.tabs
 
-            property int heightOffset: 4
+            delegate: View {
+                id: tabItem
 
-            width: 40 + row.width
-            height: tabbar.height - (selected() ? 0 : heightOffset)
+                property int heightOffset: 8
 
-            function selected() {
-                return index == tabbar.currentIndex
-            }
+                width: 40 + row.width
+                height: tabbar.height - (selected() ? 2 : heightOffset)
 
-            z: selected() ? 1 : 0
-            y: selected() ? 1 : heightOffset
-
-            Behavior on y {
-                NumberAnimation {
-                    duration: 50
-                }
-            }
-
-            Behavior on height {
-                NumberAnimation {
-                    duration: 50
-                }
-            }
-
-            Ink {
-                anchors.fill: parent
-
-                onClicked: {
-                    tabbar.currentIndex = index
-                }
-            }
-
-            Row {
-                id: row
-
-                anchors.centerIn: parent
-                spacing: 10
-
-                Icon {
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: modelData.hasOwnProperty("icon") ? modelData.icon : ""
-                    visible: name != ""
+                function selected() {
+                    return index == tabbar.currentIndex
                 }
 
-                Label {
-                    id: label
-                    text: modelData.hasOwnProperty("text") ? modelData.text : modelData
-                    anchors.verticalCenter: parent.verticalCenter
+                z: selected() ? 1 : 0
+                y: selected() ? 2 : heightOffset
+
+                Behavior on y {
+                    NumberAnimation {
+                        duration: 50
+                    }
+                }
+
+                Behavior on height {
+                    NumberAnimation {
+                        duration: 50
+                    }
+                }
+
+                Ink {
+                    anchors.fill: parent
+
+                    onClicked: {
+                        tabbar.currentIndex = index
+                    }
+                }
+
+                Row {
+                    id: row
+
+                    anchors.centerIn: parent
+                    spacing: 10
+
+                    Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: modelData.hasOwnProperty("icon") ? modelData.icon : ""
+                        visible: name != ""
+                    }
+
+                    Label {
+                        id: label
+                        text: modelData.hasOwnProperty("text") ? modelData.text : modelData
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
             }
         }
