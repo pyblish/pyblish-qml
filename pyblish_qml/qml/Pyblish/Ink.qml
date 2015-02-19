@@ -15,7 +15,7 @@ MouseArea {
                                    : width * 1.5
 
     property Item currentCircle
-    property color color: Theme.alpha(Theme.backgroundColor, 0.1)
+    property color color: Theme.alpha("white", 0.1)
 
     property bool circular: false
     property bool centered: false
