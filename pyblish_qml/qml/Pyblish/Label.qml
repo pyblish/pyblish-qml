@@ -78,7 +78,7 @@ Text {
     property var fontInfo: fontStyles[style]
 
     font.pixelSize: fontInfo.size * sizeMult
-    font.family: "Open Sans Semibold"
+    font.family: "Open Sans"
     font.weight: {
         var weight = fontInfo.font
 

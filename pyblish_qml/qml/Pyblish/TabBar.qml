@@ -1,77 +1,85 @@
 import QtQuick 2.3
+import Pyblish 0.1
 
 
 View {
-    id: tabbar
+    id: tabBar
 
     height: 45
 
-    clip: true
+    elevation: 1
 
     property var tabs: []
     property int currentIndex: 0
 
     Row {
-
-        anchors.fill: parent
-
         spacing: -2
+        anchors.fill: parent
 
         Repeater {
             id: repeater
-            model: tabbar.tabs
+            model: tabBar.tabs
+            delegate: tab
+        }
+    }
 
-            delegate: View {
-                id: tabItem
+    Component {
+        id: tab
 
-                property int heightOffset: 8
+        View {
+            width: 40 + row.width
+            height: tabBar.height
 
-                width: 40 + row.width
-                height: tabbar.height - (selected() ? 2 : heightOffset)
+            elevation: 1
 
-                function selected() {
-                    return index == tabbar.currentIndex
+            function selected() {
+                return index == tabBar.currentIndex
+            }
+
+            Ink {
+                anchors.fill: parent
+
+                onClicked: {
+                    tabBar.currentIndex = index
+                }
+            }
+
+            Row {
+                id: row
+
+                anchors.centerIn: parent
+
+                spacing: 10
+
+                Icon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: modelData.hasOwnProperty("icon") ? modelData.icon : ""
+                    visible: name != ""
                 }
 
-                z: selected() ? 1 : 0
-                y: selected() ? 2 : heightOffset
-
-                Behavior on y {
-                    NumberAnimation {
-                        duration: 50
-                    }
+                Label {
+                    id: label
+                    text: modelData.hasOwnProperty("text") ? modelData.text : modelData
+                    anchors.verticalCenter: parent.verticalCenter
                 }
+            }
+
+            Rectangle {
+                id: underline
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: 2
+
+                height: selected() ? 2 : 0
+                
+                y: parent.height - height - 1
+
+                color: Theme.primaryColor
 
                 Behavior on height {
                     NumberAnimation {
-                        duration: 50
-                    }
-                }
-
-                Ink {
-                    anchors.fill: parent
-
-                    onClicked: {
-                        tabbar.currentIndex = index
-                    }
-                }
-
-                Row {
-                    id: row
-
-                    anchors.centerIn: parent
-                    spacing: 10
-
-                    Icon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        name: modelData.hasOwnProperty("icon") ? modelData.icon : ""
-                        visible: name != ""
-                    }
-
-                    Label {
-                        id: label
-                        text: modelData.hasOwnProperty("text") ? modelData.text : modelData
-                        anchors.verticalCenter: parent.verticalCenter
+                        duration: 100
                     }
                 }
             }

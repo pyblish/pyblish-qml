@@ -1,133 +1,203 @@
 import QtQuick 2.3
 import Pyblish 0.1
-import QtWebKit 3.0
 
 
-Item {
+Flickable {
     id: properties
 
-    property string type
-    property int currentIndex
+    contentHeight: content.height
+    boundsBehavior: Flickable.DragOverBounds
 
     property var itemData: {}
 
-    View {
-        id: header
+    property var model: {
+        var sourceData,
+            data = []
 
-        height: 50
+        if (typeof itemData.data == "undefined")
+            var sourceData = itemData
+        else
+            var sourceData = itemData.data
+        
+        Object.keys(sourceData).forEach(function (key) {
+            data.push({"value": key, "column": 0})
+            data.push({"value": sourceData[key], "column": 1})
+        })
 
-        anchors.left: parent.left
-        anchors.right: parent.right
+        return data
+    }
 
-        elevation: 1
+    Column {
+        id: content
 
-        Row {
+        View {
+            id: header
 
-            anchors.fill: parent
-            anchors.margins: header.margins
+            height: 50
 
-            Button {
-                id: back
+            width: properties.width
 
-                icon: "button-back"
+            elevation: 1
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: header.margins
+
+                Button {
+                    id: back
+
+                    icon: "button-back"
+                    
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    onClicked: stack.pop()
+                }
+
+                Label {
+                    text: itemData.name
+
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+        }
+
+        View {
+            id: body
+
+            elevation: -1
+
+            width: properties.width
+            height: 400
+
+            Column {
+                id: bodyColumn
+
+                spacing: 5
                 
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.fill: parent
+                anchors.margins: 10
 
-                onClicked: stack.pop()
-            }
+                View {
+                    height: 50
+                    width: bodyColumn.width
 
-            Button {                
-                anchors.verticalCenter: parent.verticalCenter
+                    elevation: -1
 
-                text: "Home"
+                    Label {
+                        id: headline
 
-                onClicked: stack.pop()
-            }
+                        anchors.fill: parent
+                        anchors.margins: parent.margins
 
-            Label {                
-                style: "title"
-                
-                text: "/"
+                        style: "headline"
 
-                anchors.verticalCenter: parent.verticalCenter
-            }
+                        text: itemData.name
+                    }
+                }
 
-            Button {
-                text: "Properties"
 
-                anchors.verticalCenter: parent.verticalCenter
+                View {
+                    height: 100
+                    width: bodyColumn.width
+
+                    elevation: -1
+
+                    TextArea {
+                        id: description
+
+                        anchors.fill: parent
+                        anchors.margins: parent.margins
+                        
+                        text: itemData.doc != null ? itemData.doc : "No description"
+                    }
+                }
+
+                View {
+                    height: bodyColumn.height - 150 - margins * 2
+                    width: bodyColumn.width
+
+                    elevation: 1
+
+                    Grid {
+                        columns: 2
+                        columnSpacing: 10
+
+                        anchors.fill: parent
+                        anchors.margins: parent.margins
+
+                        Repeater {
+                            id: repeater
+
+                            delegate: property
+
+                            model: properties.model
+                        }
+                    }
+                }
             }
         }
     }
 
-    View {
-        id: body
+    Component {
+        id: property
 
-        elevation: -1
+        Loader {
+            id: loader
 
-        anchors.top: header.bottom
+            property var value: modelData.value
 
-        width: parent.width
-        height: parent.height - header.height
+            visible: loader.status == Loader.Ready
 
-        Column {
-            id: bodyColumn
+            Component.onCompleted: {
+                if (modelData.column == 0) {
+                    loader.sourceComponent = labelProperty
 
-            spacing: 5
+                } else if (typeof value == "number") {
+                    loader.sourceComponent = numberProperty
+
+                } else {
+                    loader.sourceComponent = textProperty
+                }
+            }
+        }
+    }
+
+    Component {
+        id: labelProperty
+
+        Label {
+            id: label
+
+            font.weight: Font.DemiBold
+
+            text: value
+        }
+    }
+
+    Component {
+        id: textProperty
+
+        TextField {
+            id: label
+
+            anchors.verticalCenter: parent.verticalCenter
             
-            anchors.fill: parent
-            anchors.margins: 10
+            text: JSON.stringify(value)
+        }
+    }
 
-            Label {
-                id: headline
+    Component {
+        id: numberProperty
 
-                style: "headline"
+        View {
+            width: label.paintedWidth + 48
 
-                text: itemData.name
-            }
-
-            TextArea {
-                id: description
-
-                width: bodyColumn.width
-                
-                text: itemData.doc != null ? itemData.doc : ""
-            }
-
-            Repeater {
-                id: repeater
-
-                model: {
-                    var data = []
-
-                    if (typeof itemData.data != "undefined") {
-                    
-                        Object.keys(itemData.data).forEach(function (key) {
-                            data.push({"key": key,
-                                       "value": itemData.data[key]})
-                        })
-                    }
-
-                    return data
-                }
-
-                delegate: Row {
-
-                    spacing: 3
-
-                    Label {
-                        text: modelData.key
-                    }
-
-                    Label {
-                        text: "="
-                    }
-
-                    Label {
-                        text: modelData.value
-                    }
-
-                }
+            SpinBox {
+                id: label
+                anchors.fill: parent
+                anchors.margins: parent.margins
+                anchors.verticalCenter: parent.verticalCenter
+                value: value
             }
         }
     }

@@ -23,6 +23,10 @@ class Item(object):
         self.errors = list()
         self.warnings = list()
         self.messages = list()
+        self.doc = None
+        self.order = None
+        self.families = list()
+        self.type = None
 
         for key, value in kwargs.iteritems():
             setattr(self, key, value)

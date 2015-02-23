@@ -2,12 +2,21 @@ import QtQuick 2.3
 import Pyblish 0.1
 
 
-Item {
+Rectangle {
     id: view
+
+    width: 100
+    height: 62
+
+    clip: true
+
+    color: "transparent"
 
     property int elevation
 
-    property color color: Theme.backgroundColor
+    property int radius: 0
+
+    property color __color: Theme.backgroundColor
 
     property int margins: 5
 
@@ -21,7 +30,8 @@ Item {
         Rectangle {
             id: outerBorder
 
-            color: Qt.darker(view.color, view.elevation > 0 ? 0.9 : 1.2)
+            color: Qt.darker(view.__color, view.elevation > 0 ? 0.9 : 1.2)
+            radius: view.radius
 
             anchors {
                 fill: parent
@@ -29,8 +39,8 @@ Item {
             }
 
             border {
-                 width: 1
-                 color: Qt.darker(view.color, 2)
+                width: 1
+                color: Qt.darker(view.__color, 2)
             }
         }
 
@@ -38,6 +48,7 @@ Item {
             id: innerBorder
 
             color: "transparent"
+            radius: view.radius
 
             anchors {
                 fill: parent
@@ -45,8 +56,8 @@ Item {
             }
 
             border {
-                 width: 1
-                 color: Qt.lighter(view.color, 1.2)
+                width: 1
+                color: Qt.lighter(view.__color, 1.2)
             }
         }
     }

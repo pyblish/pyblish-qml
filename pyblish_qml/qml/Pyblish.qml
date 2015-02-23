@@ -18,8 +18,6 @@ StackView {
                 stack.push({
                     item: properties,
                     properties: {
-                        type: "plugin",
-                        currentIndex: index,
                         itemData: itemData
                     }
                 })
@@ -31,8 +29,6 @@ StackView {
                 stack.push({
                     item: properties,
                     properties: {
-                        type: "instance",
-                        currentIndex: index,
                         itemData: itemData
                     }
                 })
@@ -43,6 +39,8 @@ StackView {
     Component {
         id: properties
 
-        Properties {}
+        Properties {
+            height: stack.height
+        }
     }
 }

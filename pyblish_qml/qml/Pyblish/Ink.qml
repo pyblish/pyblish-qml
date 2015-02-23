@@ -40,6 +40,14 @@ MouseArea {
                                                    });
     }
 
+    Rectangle {
+        id: hover
+
+        anchors.fill: parent
+        color: Theme.alpha("white", 0.05)
+        visible: view.containsMouse
+    }
+
     Component {
         id: tapCircle
 

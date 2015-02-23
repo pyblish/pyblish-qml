@@ -31,10 +31,14 @@ Flickable {
 
         width: terminal.width
         height: terminal.height
+        
+        readOnly: true
+
         color: "white"
+
         text: "Logging started " + Date();
         font.family: "Consolas"
-        readOnly: true
+
         wrapMode: TextEdit.Wrap
         renderType: Text.NativeRendering
         textFormat: TextEdit.AutoText

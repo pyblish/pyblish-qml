@@ -209,7 +209,6 @@ class Controller(QtCore.QObject):
                 model_.setData(index, "currentProgress", 1)
 
                 if data.get("error"):
-                    print "ERROR: %s" % current_item
                     model_.setData(index, "hasError", True)
                 else:
                     model_.setData(index, "succeeded", True)
@@ -282,7 +281,7 @@ class Controller(QtCore.QObject):
             self._plugin_model.addItem(item)
 
 
-def run_production_app(port):
+def run_production_app(port=6000):
     rest.PORT = port
 
     print "Running production app on port: %s" % rest.PORT
