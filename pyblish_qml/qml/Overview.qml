@@ -71,6 +71,7 @@ Item {
             List {
                 model: app.instanceModel
                 width: parent.width / 2
+                height: parent.height
 
                 section.property: "family"
 
@@ -81,6 +82,7 @@ Item {
             List {
                 model: app.pluginModel
                 width: parent.width / 2
+                height: parent.height
 
                 section.property: "type"
 
