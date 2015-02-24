@@ -113,6 +113,7 @@ Item {
 
         onReset: {
             setMessage("Resetting..")
+            terminal.clear()
             app.reset()
         }
 
