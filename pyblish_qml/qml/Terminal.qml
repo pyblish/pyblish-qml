@@ -40,7 +40,9 @@ Flickable {
         font.family: "Consolas"
 
         wrapMode: TextEdit.Wrap
-        renderType: Text.NativeRendering
+        // renderType: Text.NativeRendering
         textFormat: TextEdit.AutoText
+
+        onLinkActivated: Qt.openUrlExternally(link)
     }
 }

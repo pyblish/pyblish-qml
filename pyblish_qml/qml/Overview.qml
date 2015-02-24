@@ -133,9 +133,11 @@ Item {
             if (typeof data.instance === "undefined")
                 return
 
-            terminal.echo("<b>" + data.plugin + "</b>")
+            terminal.echo("<p>-----------------------------------------------</p>")
             
-            terminal.echo("    -----------------------------------------------")
+            terminal.echo()
+
+            terminal.echo("<b style='font-size: 15px'>" + data.plugin + "</b>")
             
             data.records.forEach(function (record) {
                 /* 
@@ -159,10 +161,9 @@ Item {
                  *  .thread
                  *  .threadName
                 */
-                terminal.echo("    " + record.levelname + " - " + record.msg)
+                terminal.echo("<p>%1</p".arg(record.levelname + " - " + record.msg))
             })
 
-            terminal.echo("    -----------------------------------------------")
 
             if (data.error) {
                 /*
@@ -173,12 +174,15 @@ Item {
                  *  .traceback[3] (code)
                  *  .message
                 */
-                terminal.echo("    FAIL: " + data.error.message)
-                terminal.echo("        filename: " + data.error.traceback[0])
-                terminal.echo("        lineNo: " + data.error.traceback[1])
-                terminal.echo("        funcName: " + data.error.traceback[2])
+                terminal.echo()
+                terminal.echo("<p style='color: rgb(255, 100, 100)'>Validation failed</p>")
+                terminal.echo("<p style='color: rgb(255, 100, 100)'>%1</p>".arg(data.error.message))
+                // terminal.echo("    File: " + data.error.traceback[0])
+                // terminal.echo("    Line Number: " + data.error.traceback[1])
+                // terminal.echo("    Function Name: " + data.error.traceback[2])
             }
 
+            // terminal.echo("-----------------------------------------------")
             terminal.echo()  // Newline
         }
 

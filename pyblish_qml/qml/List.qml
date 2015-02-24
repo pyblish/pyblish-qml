@@ -16,7 +16,7 @@ ListView {
 
     clip: true
 
-    boundsBehavior: Flickable.StopAtBounds
+    boundsBehavior: Flickable.DragOverBounds
 
     delegate: ListItem.Standard {
         text: name
