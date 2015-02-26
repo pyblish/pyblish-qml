@@ -13,7 +13,7 @@ Flickable {
     }
 
     function clear() {
-        textEdit.text = ""
+        textEdit.text = "Logging started %1\n".arg(new Date());
     }
 
     anchors.fill: parent
@@ -36,11 +36,9 @@ Flickable {
 
         color: "white"
 
-        text: "Logging started " + Date();
         font.family: "Consolas"
 
         wrapMode: TextEdit.Wrap
-        // renderType: Text.NativeRendering
         textFormat: TextEdit.AutoText
 
         onLinkActivated: Qt.openUrlExternally(link)

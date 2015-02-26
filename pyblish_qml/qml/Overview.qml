@@ -23,7 +23,6 @@ Item {
     onStateChanged: {
         if (state === "publishing") {
             terminal.clear()
-            terminal.echo("Logging started " + Date() + "\n")
         }
     }
 
@@ -138,7 +137,7 @@ Item {
             terminal.echo()
 
             terminal.echo("<b style='font-size: 15px'>" + data.plugin + "</b>")
-            
+
             data.records.forEach(function (record) {
                 /* 
                  * Available fields
