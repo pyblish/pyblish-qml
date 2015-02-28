@@ -10,8 +10,8 @@ Item {
 
     property bool doubleClickEnabled: false
 
-    signal clicked
-    signal doubleClicked
+    signal clicked(var mouse)
+    signal doubleClicked(var mouse)
 
     property int startSize: circular ? width/5 : width/3
     property int middleSize: circular ? width * 3/4 : width - 10
@@ -36,9 +36,9 @@ Item {
 
         repeat: false
 
-        property int index
+        property var mouse
 
-        onTriggered: view.clicked(index)
+        onTriggered: view.clicked(mouse)
     }
 
     MouseArea {
@@ -54,12 +54,12 @@ Item {
             currentCircle.removeCircle();
 
             if (doubleClickTimer.running) {
-                view.doubleClicked(index)
+                view.doubleClicked(mouse)
                 doubleClickTimer.stop()
                 return
             }
 
-            doubleClickTimer.index = index
+            doubleClickTimer.mouse = mouse
             doubleClickTimer.start()
         }
     }
