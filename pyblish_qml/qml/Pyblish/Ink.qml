@@ -76,8 +76,12 @@ Item {
     Rectangle {
         id: hover
 
+        z: 2
+
         anchors.fill: parent
+        
         color: Theme.alpha("white", 0.05)
+        
         visible: mouseArea.containsMouse
     }
 
