@@ -1,7 +1,6 @@
 import QtQuick 2.3
 import QtQuick.Window 2.2
 import QtQml.StateMachine 1.0
-import Pyblish 0.1
 
 
 Window {
@@ -51,7 +50,13 @@ Window {
         
         asynchronous: true
 
-        visible: running.active
+        opacity: running.active ? 1 : 0
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 200
+            }
+        }
 
         onStatusChanged: {
             if (status == Loader.Loading)
@@ -63,8 +68,9 @@ Window {
         }
 
         Component.onCompleted: {
-            var component = Qt.createComponent(Qt.resolvedUrl("Pyblish.qml"), Component.Asynchronous)
-            loader.sourceComponent = component
+            loader.sourceComponent = Qt.createComponent(
+                Qt.resolvedUrl("Pyblish.qml"),
+                Component.Asynchronous)
         }
     }
 
@@ -73,7 +79,6 @@ Window {
         
         anchors.centerIn: parent
 
-        opacity: loader.status == Loader.Ready ? 1 : 0
         visible: loader.status == Loader.Loading
 
         Rectangle {
@@ -90,18 +95,6 @@ Window {
                 loops: Animation.Infinite
                 from: 0
                 to: 360
-            }
-        }
-
-        Behavior on opacity {
-            SequentialAnimation {
-                PauseAnimation {
-                    duration: 500
-                }
-
-                NumberAnimation {
-                    duration: 1000
-                }
             }
         }
     }
