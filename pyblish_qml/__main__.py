@@ -1,2 +1,4 @@
+import sys
 import app
-app.main()
+
+sys.exit(app.main())
