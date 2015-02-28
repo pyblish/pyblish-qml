@@ -14,16 +14,19 @@ View {
     Row {
         anchors.fill: parent
 
+        spacing: -2
+
         Repeater {
             id: repeater
+
             model: actionBar.actions
+
             delegate: IconButton {
-                id: iconAction
+                elevation: 1
 
                 action: actionBar.actions[index]
 
-                // size: name == "content/add" ? units.dp(30) : units.dp(27)
-                anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                height: parent.height
             }
         }
     }
