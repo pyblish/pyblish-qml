@@ -8,8 +8,14 @@ Ink {
 
     property string text
     property string icon
+
+    property string style: "button"
+
+    property int padding: 20
     
-    width: Math.max(row.width, label.width + 20, 30)
+    width: Math.max(row.width,
+                    label.width + padding,
+                    10 + padding)
     height: 30
 
     View {
@@ -34,7 +40,7 @@ Ink {
             Label {
                 id: label
                 text: button.text
-                style: "button"
+                style: button.style
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
