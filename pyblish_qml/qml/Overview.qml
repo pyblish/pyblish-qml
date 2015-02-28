@@ -56,6 +56,7 @@ Item {
         anchors.bottom: footer.top
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.margins: tabView.margins
+        anchors.bottomMargin: 0
 
         width: parent.width - 10
 
@@ -102,6 +103,7 @@ Item {
 
     Footer {
         id: footer
+
         width: parent.width
         anchors.bottom: parent.bottom
 
