@@ -9,7 +9,7 @@ Ink {
     property string text
     property string icon
     
-    width: row.width + 48
+    width: Math.max(row.width, label.width + 20, 30)
     height: 30
 
     View {
