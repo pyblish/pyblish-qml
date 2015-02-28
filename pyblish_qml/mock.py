@@ -31,7 +31,10 @@ class MockService(pyblish_endpoint.service.EndpointService):
     def init(self):
         self.plugins = []
         for plugin, superclass in (
+                ["SelectInstances", pyblish.api.Selector],
+                ["ValidateMushroom", pyblish.api.Validator],
                 ["ExtractAsMa", pyblish.api.Extractor],
+                ["ExtractPlayblast", pyblish.api.Extractor],
                 ["ConformAsset", pyblish.api.Conformer]):
             obj = type(plugin, (superclass,), {})
 
