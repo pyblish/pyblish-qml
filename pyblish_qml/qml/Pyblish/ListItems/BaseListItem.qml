@@ -8,6 +8,8 @@ Ink {
 
     z: -1
 
+    doubleClickEnabled: true
+
     property int elevation: 0
     property int margins: 16
 
