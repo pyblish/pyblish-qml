@@ -6,8 +6,6 @@ import Pyblish.ListItems 0.1 as ListItem
 ListView {
     id: list
 
-    signal itemHovered(int index)
-    signal itemToggled(int index)
     signal itemClicked(int index)
     signal itemDoubleClicked(int index)
 

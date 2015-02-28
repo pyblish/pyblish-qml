@@ -30,35 +30,23 @@ Flickable {
     Column {
         id: content
 
-        View {
+        ActionBar {
             id: header
 
-            height: 50
+            actions: [
+                Action {
+                    iconName: "button-back"
+                    onTriggered: stack.pop()
+                },
+
+                Action {
+                    name: itemData.name
+                }
+            ]
 
             width: properties.width
 
             elevation: 1
-
-            Row {
-                anchors.fill: parent
-                anchors.margins: header.margins
-
-                Button {
-                    id: back
-
-                    icon: "button-back"
-                    
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    onClicked: stack.pop()
-                }
-
-                Label {
-                    text: itemData.name
-
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
         }
 
         View {
