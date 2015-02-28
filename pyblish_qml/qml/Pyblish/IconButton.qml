@@ -7,9 +7,14 @@ Button {
 
     signal triggered
 
+    style: "body1"
+
     text: action ? action.name : ""
     icon: action ? action.iconName : ""
+    
     enabled: action ? action.enabled : true
+
+    padding: 40
 
     onTriggered: {
         if (action) action.triggered(icon)

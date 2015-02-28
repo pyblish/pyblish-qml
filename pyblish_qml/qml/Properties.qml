@@ -2,11 +2,8 @@ import QtQuick 2.3
 import Pyblish 0.1
 
 
-Flickable {
+Item {
     id: properties
-
-    contentHeight: content.height
-    boundsBehavior: Flickable.DragOverBounds
 
     property var itemData: {}
 
@@ -27,99 +24,88 @@ Flickable {
         return data
     }
 
-    Column {
-        id: content
+    ActionBar {
+        id: header
 
-        ActionBar {
-            id: header
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
 
-            actions: [
-                Action {
-                    iconName: "button-back"
-                    onTriggered: stack.pop()
-                },
+        actions: [
+            Action {
+                iconName: "button-back"
+                onTriggered: stack.pop()
+            },
 
-                Action {
-                    name: itemData.name
-                }
-            ]
+            Action {
+                name: itemData.name
+            }
+        ]
 
-            width: properties.width
+        width: properties.width
 
-            elevation: 1
-        }
+        elevation: 1
+    }
 
-        View {
-            id: body
+    View {
+        id: body
 
-            elevation: -1
+        elevation: -1
 
-            width: properties.width
-            height: 400
+        anchors.top: header.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
 
-            Column {
-                id: bodyColumn
+        anchors.margins: 5
 
-                spacing: 5
-                
-                anchors.fill: parent
-                anchors.margins: 10
+        ListView {
+            id: content
 
-                View {
-                    height: 50
-                    width: bodyColumn.width
+            spacing: 10
 
-                    elevation: -1
+            clip: true
 
-                    Label {
-                        id: headline
+            anchors.fill: parent
+            anchors.margins: 10
 
-                        anchors.fill: parent
-                        anchors.margins: parent.margins
+            model: VisualItemModel {
+                Label {
+                    id: headline
 
-                        style: "headline"
+                    style: "headline"
 
-                        text: itemData.name
-                    }
+                    text: itemData.name
                 }
 
-
-                View {
-                    height: 100
-                    width: bodyColumn.width
-
-                    elevation: -1
-
-                    TextArea {
-                        id: description
-
-                        anchors.fill: parent
-                        anchors.margins: parent.margins
-                        
-                        text: itemData.doc != null ? itemData.doc : "No description"
-                    }
+                TextArea {
+                    id: description
+                    
+                    // TODO(marcus): Make a better indent
+                    x: 20
+                    
+                    text: itemData.doc != null ? itemData.doc : "No description"
                 }
 
-                View {
-                    height: bodyColumn.height - 150 - margins * 2
-                    width: bodyColumn.width
+                Label {
+                    style: "title"
 
-                    elevation: 1
+                    text: "Data"
+                }
 
-                    Grid {
-                        columns: 2
-                        columnSpacing: 10
+                Grid {
+                    columns: 2
+                    columnSpacing: 20
+                    rowSpacing: 2
 
-                        anchors.fill: parent
-                        anchors.margins: parent.margins
+                    x: 20
 
-                        Repeater {
-                            id: repeater
+                    Repeater {
+                        id: repeater
 
-                            delegate: property
+                        delegate: property
 
-                            model: properties.model
-                        }
+                        model: properties.model
                     }
                 }
             }
@@ -140,9 +126,6 @@ Flickable {
                 if (modelData.column == 0) {
                     loader.sourceComponent = labelProperty
 
-                } else if (typeof value == "number") {
-                    loader.sourceComponent = numberProperty
-
                 } else {
                     loader.sourceComponent = textProperty
                 }
@@ -158,6 +141,8 @@ Flickable {
 
             font.weight: Font.DemiBold
 
+            color: "gray"
+
             text: value
         }
     }
@@ -165,28 +150,16 @@ Flickable {
     Component {
         id: textProperty
 
-        TextField {
+        Label {
             id: label
+
+            wrapMode: Text.WordWrap
 
             anchors.verticalCenter: parent.verticalCenter
             
-            text: JSON.stringify(value)
-        }
-    }
-
-    Component {
-        id: numberProperty
-
-        View {
-            width: label.paintedWidth + 48
-
-            SpinBox {
-                id: label
-                anchors.fill: parent
-                anchors.margins: parent.margins
-                anchors.verticalCenter: parent.verticalCenter
-                value: value
-            }
+            text: typeof value == "string" ? value : 
+                  typeof value != "undefined" ? JSON.stringify(value) :
+                  "No value"
         }
     }
 }
