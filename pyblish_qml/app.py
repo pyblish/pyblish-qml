@@ -12,7 +12,6 @@ from PyQt5 import QtCore, QtGui, QtQml
 # Local libraries
 import util
 import rest
-import mock
 import model
 import compat
 
@@ -41,15 +40,21 @@ class Application(object):
         self.port = port
         self.controller = controller
 
+    def exec_(self):
+        return self.qapp.exec_()
+
     def init(self):
         self.controller.init()
 
     def run_production(self):
         print "Running production app on port: %s" % rest.PORT
         rest.PORT = self.port
-        return self._run()
+
+        with util.Timer("Spent %.2f ms building the GUI.."):
+            self.engine.load(self.APP_PATH)
 
     def run_debug(self):
+        import mock
         import pyblish_endpoint.server
 
         endpoint_app, _ = pyblish_endpoint.server.create_app()
@@ -65,9 +70,7 @@ class Application(object):
         pyblish_endpoint.service.register_service(Service, force=True)
 
         print "Running debug app on port: %s" % rest.PORT
-        return self._run()
 
-    def _run(self):
         with util.Timer("Spent %.2f ms building the GUI.."):
             self.engine.load(self.APP_PATH)
 
@@ -76,9 +79,8 @@ class Application(object):
         if obj is not None:
             obj.show()
             self.init()
-            sys.exit(self.qapp.exec_())
         else:
-            sys.exit()
+            print "Error"
 
 
 class Controller(QtCore.QObject):
@@ -157,10 +159,9 @@ class Controller(QtCore.QObject):
     def __toggle_item(self, model, index):
         if self._is_running:
             self.error.emit("Cannot untick while publishing")
-            return
-
-        item = model.itemFromIndex(index)
-        model.setData(index, "isToggled", not item.isToggled)
+        else:
+            item = model.itemFromIndex(index)
+            model.setData(index, "isToggled", not item.isToggled)
 
     @QtCore.pyqtSlot()
     def publish(self):
@@ -243,7 +244,7 @@ class Controller(QtCore.QObject):
 
     def __init(self):
         def worker():
-            with util.Timer("Spent %.2f ms requesting things.."):
+            with util.Timer("Spent %.2f ms requesting things.. (async)"):
                 rest.request("POST", "/session").json()
                 instances = rest.request("GET", "/instances").json()
                 plugins = rest.request("GET", "/plugins").json()
@@ -256,6 +257,9 @@ class Controller(QtCore.QObject):
 
             for data in plugins:
                 if data.get("active") is False:
+                    continue
+
+                if data.get("type") == "Selector":
                     continue
 
                 item = model.Item(**data)
@@ -363,13 +367,16 @@ def main():
 
     kwargs = parser.parse_args()
 
-    app = Application(kwargs.port)
+    with util.Timer("Spent %.2f ms creating the application"):
+        app = Application(kwargs.port)
 
     if kwargs.port is 6000:
         app.run_debug()
     else:
         app.run_production()
 
+    return app.exec_()
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
