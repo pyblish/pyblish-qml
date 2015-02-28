@@ -25,6 +25,8 @@ View {
     }
 
     Row {
+        id: row
+
         anchors {
             right: parent.right
             top: parent.top
@@ -33,7 +35,6 @@ View {
         }
 
         spacing: 3
-
 
         Button {
             icon: "button-stop"
@@ -48,12 +49,16 @@ View {
         // }
 
         Button {
+            elevation: 1
+
             icon: "button-reset"
             visible: mode == 0 ? true : false
             onClicked: footer.reset()
         }
 
         Button {
+            elevation: 1
+
             icon: "button-publish"
 
             onClicked: footer.publish()
