@@ -4,8 +4,30 @@ from PyQt5 import QtCore
 
 
 class Item(object):
-    def __init__(self, name, **kwargs):
-        self.name = name
+    def __init__(self, **kwargs):
+        self.name = "default"
+        self.objName = "default"
+        self.family = "default"
+        self.families = "default"
+        self.isToggled = True
+        self.active = True
+        self.isSelected = False
+        self.currentProgress = 0
+        self.isProcessing = False
+        self.isCompatible = True
+        self.hasError = False
+        self.hasWarning = False
+        self.hasMessage = False
+        self.optional = True
+        self.succeeded = False
+        self.errors = list()
+        self.warnings = list()
+        self.messages = list()
+        self.doc = None
+        self.order = None
+        self.families = list()
+        self.type = None
+
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
 
@@ -82,6 +104,8 @@ class InstanceModel(Model):
     ErrorsRole = QtCore.Qt.UserRole + 16
     WarningsRole = QtCore.Qt.UserRole + 17
     MessagesRole = QtCore.Qt.UserRole + 18
+    HelpRole = QtCore.Qt.UserRole + 19
+    CategoryRole = QtCore.Qt.UserRole + 20
 
     _roles = {
         NameRole: "name",
@@ -99,7 +123,9 @@ class InstanceModel(Model):
         SucceededRole: "succeeded",
         ErrorsRole: "errors",
         WarningsRole: "warnings",
-        MessagesRole: "messages"
+        MessagesRole: "messages",
+        HelpRole: "help",
+        CategoryRole: "category"
     }
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
@@ -122,7 +148,7 @@ class PluginModel(InstanceModel):
     _roles = InstanceModel._roles
     _roles[OrderRole] = "order"
     _roles[FamiliesRole] = "families"
-    # _roles[TypeRole] = "type"
+    _roles[TypeRole] = "type"
 
 
 if __name__ == '__main__':

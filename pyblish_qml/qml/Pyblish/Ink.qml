@@ -2,12 +2,16 @@ import QtQuick 2.0
 import Pyblish 0.1
 
 
-MouseArea {
+Item {
     id: view
 
     clip: true
-    hoverEnabled: enabled
     z: 2
+
+    property bool doubleClickEnabled: false
+
+    signal clicked(var mouse)
+    signal doubleClicked(var mouse)
 
     property int startSize: circular ? width/5 : width/3
     property int middleSize: circular ? width * 3/4 : width - 10
@@ -15,29 +19,70 @@ MouseArea {
                                    : width * 1.5
 
     property Item currentCircle
-    property color color: Theme.alpha(Theme.backgroundColor, 0.1)
+    property color color: Theme.alpha("white", 0.1)
 
     property bool circular: false
     property bool centered: false
 
-    onPressed: {
-        createTapCircle(mouse.x, mouse.y)
+    /*!
+
+      Distinguish between clicks and double clicks
+
+    */
+    Timer {
+        id: doubleClickTimer
+
+        interval: view.doubleClickEnabled ? 200 : 0
+
+        repeat: false
+
+        property var mouse
+
+        onTriggered: view.clicked(mouse)
     }
 
-    onCanceled: {
-        currentCircle.removeCircle();
-    }
+    MouseArea {
+        id: mouseArea
 
-    onReleased: {
-        currentCircle.removeCircle();
+        anchors.fill: parent
+
+        hoverEnabled: enabled
+
+        onPressed: createTapCircle(mouse.x, mouse.y)
+        onCanceled: currentCircle.removeCircle();
+        onReleased: {
+            currentCircle.removeCircle();
+
+            if (doubleClickTimer.running) {
+                view.doubleClicked(mouse)
+                doubleClickTimer.stop()
+                return
+            }
+
+            doubleClickTimer.mouse = mouse
+            doubleClickTimer.start()
+        }
     }
 
     function createTapCircle(x, y) {
         if (!currentCircle)
-            currentCircle = tapCircle.createObject(view, {
-                                                       "circleX": centered ? width/2 : x,
-                                                       "circleY": centered ? height/2 : y
-                                                   });
+            currentCircle = tapCircle.createObject(
+                view, {
+                       "circleX": centered ? width/2 : x,
+                       "circleY": centered ? height/2 : y
+                   });
+    }
+
+    Rectangle {
+        id: hover
+
+        z: 2
+
+        anchors.fill: parent
+        
+        color: Theme.alpha("white", 0.05)
+        
+        visible: mouseArea.containsMouse
     }
 
     Component {

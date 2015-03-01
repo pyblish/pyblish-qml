@@ -1,6 +1,23 @@
 Changelog
 =========
 
+Version 0.2.4
+-------------
+
+- Implementing basic Properties page
+- Implementing independent Endpoint server for testing
+- Added Pyblish.TextArea
+- Added Pyblish.ActionBar
+- Added Pyblish.Action
+- Added Pyblish.IconButton
+- Improved feedback when clicking
+- Improved feedback when hovering
+- Made package executable
+- Fixed issue 155
+- Fixed issue 156
+- Fixed issue 158
+- Refactoring
+
 Version 0.2.3
 -------------
 

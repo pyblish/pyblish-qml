@@ -2,47 +2,63 @@ import QtQuick 2.3
 import Pyblish 0.1
 
 
-Item {
+Rectangle {
     id: view
 
-    /*!
-       An outwards rectangle is naturally lighter, whereas
-       an inwards rectangle is darker.
-    */
-    property var styles: ["inwards", "outwards"]
-    property string style: "outwards"
+    width: 100
+    height: 62
 
-    property color color: Theme.backgroundColor
+    clip: true
+
+    color: "transparent"
+
+    property int elevation
+
+    property int radius: 0
+
+    property color __color: Theme.backgroundColor
 
     property int margins: 5
 
-    Rectangle {
-        id: outerBorder
-        color: Qt.darker(view.color, style == "outwards" ? 0.9 : 1.2)
+    Item {
+        id: fill
 
-        anchors {
-            fill: parent
-            margins: view.style == "outwards" ? 0 : 1
+        anchors.fill: parent
+
+        visible: view.elevation != 0
+
+        Rectangle {
+            id: outerBorder
+
+            color: Qt.darker(view.__color, view.elevation > 0 ? 0.9 : 1.2)
+            radius: view.radius
+
+            anchors {
+                fill: parent
+                margins: view.elevation > 0 ? 0 : 1
+            }
+
+            border {
+                width: 1
+                color: Qt.darker(view.__color, 2)
+            }
         }
 
-        border {
-             width: 1
-             color: Qt.darker(view.color, 2)
-        }
-    }
+        Rectangle {
+            id: innerBorder
 
-    Rectangle {
-        id: innerBorder
-        color: "transparent"
-        
-        anchors {
-            fill: parent
-            margins: view.style == "outwards" ? 1 : 0
-        }
+            color: "transparent"
+            radius: view.radius
 
-        border {
-             width: 1
-             color: Qt.lighter(view.color, 1.2)
+            anchors {
+                fill: parent
+                margins: view.elevation > 0 ? 1 : 0
+            }
+
+            border {
+                width: 1
+                color: Qt.lighter(view.__color, 1.2)
+            }
         }
     }
 }

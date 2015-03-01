@@ -7,13 +7,80 @@ import json
 import threading
 
 # Dependencies
-from PyQt5 import QtGui, QtCore, QtQml
+from PyQt5 import QtCore, QtGui, QtQml
 
 # Local libraries
 import util
-import model
 import rest
+import model
 import compat
+
+
+class Application(object):
+    MODULE_DIR = os.path.dirname(__file__)
+    QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
+    APP_PATH = os.path.join(MODULE_DIR, "qml", "main.qml")
+    ICON_PATH = os.path.join(MODULE_DIR, "icon.ico")
+
+    def __init__(self, port=6000):
+        qapp = QtGui.QGuiApplication(sys.argv)
+        qapp.setWindowIcon(QtGui.QIcon(self.ICON_PATH))
+
+        engine = QtQml.QQmlApplicationEngine()
+        engine.addImportPath(self.QML_IMPORT_DIR)
+        engine.objectCreated.connect(self._object_created_handler)
+
+        controller = Controller()
+
+        ctx = engine.rootContext()
+        ctx.setContextProperty("app", controller)
+
+        self.engine = engine
+        self.qapp = qapp
+        self.port = port
+        self.controller = controller
+
+    def exec_(self):
+        return self.qapp.exec_()
+
+    def init(self):
+        self.controller.init()
+
+    def run_production(self):
+        print "Running production app on port: %s" % rest.PORT
+        rest.PORT = self.port
+
+        with util.Timer("Spent %.2f ms building the GUI.."):
+            self.engine.load(self.APP_PATH)
+
+    def run_debug(self):
+        import mock
+        import pyblish_endpoint.server
+
+        endpoint_app, _ = pyblish_endpoint.server.create_app()
+        endpoint_app.config["TESTING"] = True
+        endpoint_client = endpoint_app.test_client()
+        endpoint_client.testing = True
+
+        rest.MOCK = endpoint_client
+
+        Service = mock.MockService
+        Service.SLEEP_DURATION = 0.5
+        Service.PERFORMANCE = Service.FAST
+        pyblish_endpoint.service.register_service(Service, force=True)
+
+        print "Running debug app on port: %s" % rest.PORT
+
+        with util.Timer("Spent %.2f ms building the GUI.."):
+            self.engine.load(self.APP_PATH)
+
+    def _object_created_handler(self, obj, url):
+        """Show the Window as soon as it has been created"""
+        if obj is not None:
+            obj.show()
+            self.init()
+        else:
+            print "Error"
 
 
 class Controller(QtCore.QObject):
@@ -31,6 +98,8 @@ class Controller(QtCore.QObject):
     info = QtCore.pyqtSignal(str, arguments=["message"])
     processed = QtCore.pyqtSignal(QtCore.QVariant, arguments=["data"])
     finished = QtCore.pyqtSignal()
+
+    called = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
 
     @QtCore.pyqtProperty(QtCore.QVariant)
     def instances(self):
@@ -54,7 +123,15 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
-        self.toggle_item(self._instance_model, index)
+        self.__toggle_item(self._instance_model, index)
+
+    @QtCore.pyqtSlot(int, result=QtCore.QVariant)
+    def pluginData(self, index):
+        return self.__item_data(self._plugin_model, index)
+
+    @QtCore.pyqtSlot(int, result=QtCore.QVariant)
+    def instanceData(self, index):
+        return self.__item_data(self._instance_model, index)
 
     @QtCore.pyqtSlot(int)
     def togglePlugin(self, index):
@@ -62,25 +139,29 @@ class Controller(QtCore.QObject):
         item = model.itemFromIndex(index)
 
         if item.optional:
-            self.toggle_item(self._plugin_model, index)
+            self.__toggle_item(self._plugin_model, index)
         else:
             self.error.emit("Plug-in is mandatory")
 
     @QtCore.pyqtSlot()
     def reset(self):
-        self.reset_state()
+        self.__reset_state()
 
     @QtCore.pyqtSlot()
     def stop(self):
         self._is_running = False
 
-    def toggle_item(self, model, index):
+    def __item_data(self, model, index):
+        """Return item data as dict"""
+        item = model.itemFromIndex(index)
+        return item.__dict__
+
+    def __toggle_item(self, model, index):
         if self._is_running:
             self.error.emit("Cannot untick while publishing")
-            return
-
-        item = model.itemFromIndex(index)
-        model.setData(index, "isToggled", not item.isToggled)
+        else:
+            item = model.itemFromIndex(index)
+            model.setData(index, "isToggled", not item.isToggled)
 
     @QtCore.pyqtSlot()
     def publish(self):
@@ -105,7 +186,7 @@ class Controller(QtCore.QObject):
         for instance in context:
             message += "\n  - %s" % instance
 
-        message += "\nPlug-ins:"
+        message += "\n\nPlug-ins:"
         for plugin in plugins:
             message += "\n  - %s" % plugin
 
@@ -127,15 +208,14 @@ class Controller(QtCore.QObject):
             return
 
         self._is_running = True
-        self.start()
+        self.__start()
 
     @QtCore.pyqtProperty(QtCore.QObject)
     def log(self):
         return self._log
 
-    def __init__(self, host, prefix):
+    def __init__(self, parent=None):
         """
-
         Attributes:
             _instances
             _plugins
@@ -143,7 +223,7 @@ class Controller(QtCore.QObject):
 
         """
 
-        super(Controller, self).__init__(parent=None)
+        super(Controller, self).__init__(parent)
 
         self._instances = list()
         self._plugins = list()
@@ -156,12 +236,40 @@ class Controller(QtCore.QObject):
         self._instance_model = model.InstanceModel()
         self._plugin_model = model.PluginModel()
 
-        self.populate_models()
+        self.processed.connect(self.__on_processed)
+        self.finished.connect(self.__on_finished)
 
-        self.processed.connect(self.process_handler)
-        self.finished.connect(self.finished_handler)
+    def init(self):
+        self.__init()
 
-    def start(self):
+    def __init(self):
+        def worker():
+            with util.Timer("Spent %.2f ms requesting things.. (async)"):
+                rest.request("POST", "/session").json()
+                instances = rest.request("GET", "/instances").json()
+                plugins = rest.request("GET", "/plugins").json()
+                self._system = rest.request("GET", "/application").json()
+
+            for data in instances:
+                item = model.Item(**data)
+                item.isToggled = True if item.publish in (True, None) else False
+                self._instance_model.addItem(item)
+
+            for data in plugins:
+                if data.get("active") is False:
+                    continue
+
+                if data.get("type") == "Selector":
+                    continue
+
+                item = model.Item(**data)
+                self._plugin_model.addItem(item)
+
+        thread = threading.Thread(target=worker)
+        thread.daemon = True
+        thread.start()
+
+    def __start(self):
         """Start processing-loop"""
 
         def worker():
@@ -171,20 +279,20 @@ class Controller(QtCore.QObject):
                 response = rest.request("POST", "/next")
             self.finished.emit()
 
-        self.reset_state()
+        self.__reset_state()
 
         thread = threading.Thread(target=worker)
         thread.daemon = True
         thread.start()
 
-    def finished_handler(self):
-        self.reset_status()
+    def __on_finished(self):
+        self.__reset_status()
 
-    def process_handler(self, data):
-        self.update_instances(data)
-        self.update_plugins(data)
+    def __on_processed(self, data):
+        self.__update_instances(data)
+        self.__update_plugins(data)
 
-    def update_instances(self, data):
+    def __update_instances(self, data):
         model_ = self._instance_model
         for item in model_.items:
             index = model_.itemIndex(item)
@@ -195,7 +303,6 @@ class Controller(QtCore.QObject):
                 model_.setData(index, "currentProgress", 1)
 
                 if data.get("error"):
-                    print "ERROR: %s" % current_item
                     model_.setData(index, "hasError", True)
                 else:
                     model_.setData(index, "succeeded", True)
@@ -203,7 +310,7 @@ class Controller(QtCore.QObject):
             else:
                 model_.setData(index, "isProcessing", False)
 
-    def update_plugins(self, data):
+    def __update_plugins(self, data):
         model_ = self._plugin_model
         for item in model_.items:
             index = model_.itemIndex(item)
@@ -228,7 +335,7 @@ class Controller(QtCore.QObject):
             else:
                 model_.setData(index, "isProcessing", False)
 
-    def reset_status(self):
+    def __reset_status(self):
         """Reset progress bars"""
         rest.request("POST", "/session").json()
         self._has_errors = False
@@ -240,7 +347,7 @@ class Controller(QtCore.QObject):
                 model_.setData(index, "isProcessing", False)
                 model_.setData(index, "currentProgress", 0)
 
-    def reset_state(self):
+    def __reset_state(self):
         """Reset data from last publish"""
         for model_ in (self._instance_model, self._plugin_model):
             for item in model_.items:
@@ -248,85 +355,11 @@ class Controller(QtCore.QObject):
                 model_.setData(index, "hasError", False)
                 model_.setData(index, "succeeded", False)
 
-    def populate_models(self):
-        with util.Timer("Spent %.2f ms requesting things.."):
-            rest.request("POST", "/session").json()
-            instances = rest.request("GET", "/instances").json()
-            plugins = rest.request("GET", "/plugins").json()
-            self._system = rest.request("GET", "/application").json()
 
-        defaults = {
-            "name": "default",
-            "objName": "default",
-            "family": "default",
-            "families": "default",
-            "isToggled": True,
-            "active": True,
-            "isSelected": False,
-            "currentProgress": 0,
-            "isProcessing": False,
-            "isCompatible": True,
-            "hasError": False,
-            "hasWarning": False,
-            "hasMessage": False,
-            "optional": True,
-            "succeeded": False,
-            "errors": list(),
-            "warnings": list(),
-            "messages": list(),
-        }
-
-        for data in instances:
-            instance = defaults.copy()
-            instance.update(data)
-            item = model.Item(**instance)
-            item.isToggled = True if item.publish in (True, None) else False
-            self._instance_model.addItem(item)
-
-        for data in plugins:
-            if data.get("active") is False:
-                continue
-            plugin = defaults.copy()
-            plugin.update(data)
-            item = model.Item(**plugin)
-            self._plugin_model.addItem(item)
-
-
-def run_production_app(host, port):
-    rest.PORT = port
-
-    module_dir = os.path.dirname(__file__)
-    qml_import_dir = os.path.join(module_dir, "qml")
-    app_path = os.path.join(module_dir, "qml", "main.qml")
-
-    app = QtGui.QGuiApplication(sys.argv)
-    app.setWindowIcon(QtGui.QIcon(os.path.join(module_dir, "icon.ico")))
-
-    engine = QtQml.QQmlApplicationEngine()
-    engine.addImportPath(qml_import_dir)
-    engine.objectCreated.connect(object_created_handler)
-
-    ctrl = Controller(host, prefix="/pyblish/v1")
-    ctx = engine.rootContext()
-    ctx.setContextProperty("app", ctrl)
-
-    with util.Timer("Spent %.2f ms building the GUI.."):
-        engine.load(app_path)
-
-    print "Running production app on port: %s" % port
-    sys.exit(app.exec_())
-
-
-def object_created_handler(obj, url):
-    """Show the Window as soon as it has been created"""
-    if obj is not None:
-        obj.show()
-    else:
-        sys.exit()
-
-
-if __name__ == '__main__':
+def main():
     import argparse
+
+    compat.main()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="Python")
@@ -334,4 +367,16 @@ if __name__ == '__main__':
 
     kwargs = parser.parse_args()
 
-    run_production_app(**kwargs.__dict__)
+    with util.Timer("Spent %.2f ms creating the application"):
+        app = Application(kwargs.port)
+
+    if kwargs.port is 6000:
+        app.run_debug()
+    else:
+        app.run_production()
+
+    return app.exec_()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

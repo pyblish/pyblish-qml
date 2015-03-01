@@ -12,7 +12,7 @@ Object {
        Material Design guidelines, this should normally be a 500 color from one of the color
        palettes at \l {http://www.google.com/design/spec/style/color.html#color-color-palette}.
      */
-    property color primaryColor: "#2196F3"
+    property color primaryColor: "#99CEEE"
 
     /*!
        A darker version of the primary color used for the window titlebar (if client-side
@@ -32,7 +32,7 @@ Object {
        complements the primary color palette at
        \l {http://www.google.com/design/spec/style/color.html#color-color-palette}.
     */
-    property color accentColor: "#ff4081"
+    property color accentColor: "#99CEEE"
 
     /*!
        The default background color for the application.

@@ -4,13 +4,25 @@ import Pyblish 0.1
 Ink {
     id: button
 
-    property string text: ""
-    property string icon: ""
+    property int elevation
+
+    property string text
+    property string icon
+
+    property string style: "button"
+
+    property int padding: 20
     
-    width: 30
+    width: Math.max(row.width,
+                    label.width + padding,
+                    10 + padding)
     height: 30
 
     View {
+        id: view
+
+        elevation: button.elevation
+
         anchors.fill: parent
 
         Row {
@@ -22,13 +34,13 @@ Ink {
             Icon {
                 anchors.verticalCenter: parent.verticalCenter
                 name: button.icon
-                visible: button.icon != ""
+                visible: typeof button.icon != "undefined"
             }
 
             Label {
                 id: label
                 text: button.text
-                style: "button"
+                style: button.style
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
