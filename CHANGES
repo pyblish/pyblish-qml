@@ -1,6 +1,18 @@
 Changelog
 =========
 
+Version 0.2.5
+-------------
+
+- Preloading
+- Performance enhancement (deferred requests)
+
+Known issues:
+    1. Showing an already visible GUI will cause the GUI
+    to re-appear once closed.
+    2. GUI may not appear gracefully under Windows using Aero
+    or Windows 8, but may instead pop into place.
+
 Version 0.2.4
 -------------
 

@@ -15,46 +15,165 @@ import rest
 import model
 import compat
 
+try:
+    import psutil
+    HAS_PSUTIL = True
+except:
+    HAS_PSUTIL = False
 
-class Application(object):
-    MODULE_DIR = os.path.dirname(__file__)
-    QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
-    APP_PATH = os.path.join(MODULE_DIR, "qml", "main.qml")
-    ICON_PATH = os.path.join(MODULE_DIR, "icon.ico")
 
-    def __init__(self, port=6000):
+MODULE_DIR = os.path.dirname(__file__)
+QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
+APP_PATH = os.path.join(MODULE_DIR, "qml", "main.qml")
+ICON_PATH = os.path.join(MODULE_DIR, "icon.ico")
+
+
+class CloseEventHandler(QtCore.QObject):
+    """Prefer hiding the window, to closing it."""
+
+    def __init__(self, app, parent=None):
+        super(CloseEventHandler, self).__init__(parent)
+        self.app = app
+
+    def eventFilter(self, obj, event):
+        """Allow GUI to be closed upon holding Shift"""
+        if event.type() == QtCore.QEvent.Close:
+            modifiers = self.app.qapp.queryKeyboardModifiers()
+            shift_pressed = QtCore.Qt.ShiftModifier & modifiers
+            if not shift_pressed:
+                event.ignore()
+                self.app.hide()
+
+        return super(CloseEventHandler, self).eventFilter(obj, event)
+
+
+class Application(QtCore.QObject):
+    """Pyblish QML wrapper around QApplication
+
+    Provides production and debug launchers along with controller
+    initialisation and orchestration.
+
+    """
+
+    shown = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(Application, self).__init__(parent)
+
         qapp = QtGui.QGuiApplication(sys.argv)
-        qapp.setWindowIcon(QtGui.QIcon(self.ICON_PATH))
+        qapp.setWindowIcon(QtGui.QIcon(ICON_PATH))
 
         engine = QtQml.QQmlApplicationEngine()
-        engine.addImportPath(self.QML_IMPORT_DIR)
-        engine.objectCreated.connect(self._object_created_handler)
+        engine.addImportPath(QML_IMPORT_DIR)
+
+        with util.Timer("Spent %.2f ms building the GUI.."):
+            engine.load(APP_PATH)
+
+        window = engine.rootObjects()[0]
 
         controller = Controller()
 
         ctx = engine.rootContext()
         ctx.setContextProperty("app", controller)
 
-        self.engine = engine
         self.qapp = qapp
-        self.port = port
+        self.window = window
+        self.engine = engine
         self.controller = controller
 
+        self.shown.connect(self.on_shown)
+
+        self.__close_event_handler = CloseEventHandler(self)
+        window.installEventFilter(self.__close_event_handler)
+
+    def show(self):
+        """Display GUI
+
+        Once the QML interface has been loaded, use this
+        to display it.
+
+        """
+
+        self.controller.reload()
+
+        window = self.window
+        flags = window.flags()
+
+        window.show()
+
+        if os.name == "nt":
+            window.setFlags(flags | QtCore.Qt.WindowStaysOnTopHint)
+            window.setFlags(flags)
+
+    def hide(self):
+        """Hide GUI
+
+        Process remains active and may be shown via a call to `show()`
+
+        """
+
+        self.window.hide()
+        self.preload()
+
+    def on_shown(self):
+        """Handle show events"""
+
+        self.show()
+
     def exec_(self):
+        """Wrapper around QApplication.exec_()"""
+
         return self.qapp.exec_()
 
-    def init(self):
+    def preload(self):
+        """Launch GUI, but do not display until requested
+
+        A blocking call is sent to the host. The host then
+        releases the block in the event of having the GUI
+        displayed.
+
+        Usage:
+            >> from pyblish_endpoint import client
+            >> client.request("show")  # Release block
+
+        """
+
         self.controller.init()
 
-    def run_production(self):
-        print "Running production app on port: %s" % rest.PORT
-        rest.PORT = self.port
+        # Emit show-event upon completion
+        def worker():
+            rest.request("POST", "/dispatch", data={"command": "show"}).json()
+            self.shown.emit()
 
-        with util.Timer("Spent %.2f ms building the GUI.."):
-            self.engine.load(self.APP_PATH)
+        thread = threading.Thread(target=worker)
+        thread.daemon = True
+        thread.start()
+
+    def run_production(self):
+        """Launch production-version of GUI
+
+        A production-version is dependent on an externally
+        available instance of Pyblish Endpoint at rest.PORT
+
+        """
+
+        print "Running production app on port: %s" % rest.PORT
+
+        self.controller.init()
+        self.show()
 
     def run_debug(self):
-        import mock
+        """Launch debug-version of GUI
+
+        The debug-version does not require an independent
+        instance of Pyblish Endpoint, but rather instantiates
+        a mock to simulate it's responses.
+
+        See mocking.py for more details.
+
+        """
+
+        import mocking
         import pyblish_endpoint.server
 
         endpoint_app, _ = pyblish_endpoint.server.create_app()
@@ -64,23 +183,15 @@ class Application(object):
 
         rest.MOCK = endpoint_client
 
-        Service = mock.MockService
+        Service = mocking.MockService
         Service.SLEEP_DURATION = 0.5
         Service.PERFORMANCE = Service.FAST
         pyblish_endpoint.service.register_service(Service, force=True)
 
         print "Running debug app on port: %s" % rest.PORT
 
-        with util.Timer("Spent %.2f ms building the GUI.."):
-            self.engine.load(self.APP_PATH)
-
-    def _object_created_handler(self, obj, url):
-        """Show the Window as soon as it has been created"""
-        if obj is not None:
-            obj.show()
-            self.init()
-        else:
-            print "Error"
+        self.controller.init()
+        self.show()
 
 
 class Controller(QtCore.QObject):
@@ -240,34 +351,35 @@ class Controller(QtCore.QObject):
         self.finished.connect(self.__on_finished)
 
     def init(self):
-        self.__init()
+        with util.Timer("Spent %.2f ms initializing requests.."):
+            self._system = rest.request("GET", "/application").json()
 
-    def __init(self):
-        def worker():
-            with util.Timer("Spent %.2f ms requesting things.. (async)"):
-                rest.request("POST", "/session").json()
-                instances = rest.request("GET", "/instances").json()
-                plugins = rest.request("GET", "/plugins").json()
-                self._system = rest.request("GET", "/application").json()
+        self.reload()
 
-            for data in instances:
-                item = model.Item(**data)
-                item.isToggled = True if item.publish in (True, None) else False
-                self._instance_model.addItem(item)
+    def reload(self):
+        with util.Timer("Spent %.2f ms requesting data host.."):
+            rest.request("POST", "/session")
+            instances = rest.request("GET", "/instances").json()
+            plugins = rest.request("GET", "/plugins").json()
 
-            for data in plugins:
-                if data.get("active") is False:
-                    continue
+        # Remove existing items from model
+        self._instance_model.reset()
+        self._plugin_model.reset()
 
-                if data.get("type") == "Selector":
-                    continue
+        for data in instances:
+            item = model.Item(**data)
+            item.isToggled = True if item.publish in (True, None) else False
+            self._instance_model.addItem(item)
 
-                item = model.Item(**data)
-                self._plugin_model.addItem(item)
+        for data in plugins:
+            if data.get("active") is False:
+                continue
 
-        thread = threading.Thread(target=worker)
-        thread.daemon = True
-        thread.start()
+            if data.get("type") == "Selector":
+                continue
+
+            item = model.Item(**data)
+            self._plugin_model.addItem(item)
 
     def __start(self):
         """Start processing-loop"""
@@ -356,27 +468,65 @@ class Controller(QtCore.QObject):
                 model_.setData(index, "succeeded", False)
 
 
-def main():
+def main(port, pid=None, preload=False):
+    rest.PORT = port
+
+    with util.Timer("Spent %.2f ms creating the application"):
+        app = Application()
+
+        if preload:
+            app.preload()
+
+        elif port == 6000:
+            app.run_debug()
+
+        else:
+            app.run_production()
+
+    if pid and HAS_PSUTIL:
+        print "Process parented to pid: %s" % pid
+
+        def monitor():
+            psutil.Process(pid).wait()
+            sys.exit()
+
+        t = threading.Thread(target=monitor)
+        t.daemon = True
+        t.start()
+
+    return app.exec_()
+
+
+def cli():
+    """Pyblish QML command-line interface
+
+    Arguments:
+        port (int): Port at which to communicate with Pyblish Endpoint
+        pid (int, optional): Process ID of parent process
+        preload (bool, optional): Whether or not to pre-load the GUI
+
+    """
+
     import argparse
 
     compat.main()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", type=str, default="Python")
+    parser.add_argument("--host", type=str, default="Python")  # deprecated
     parser.add_argument("--port", type=int, default=6000)
+    parser.add_argument("--pid", type=int, default=None)
+    parser.add_argument("--preload", action="store_true")
 
     kwargs = parser.parse_args()
+    port = kwargs.port
+    pid = kwargs.pid
+    preload = kwargs.preload
 
-    with util.Timer("Spent %.2f ms creating the application"):
-        app = Application(kwargs.port)
-
-    if kwargs.port is 6000:
-        app.run_debug()
-    else:
-        app.run_production()
-
-    return app.exec_()
+    return main(port, pid, preload)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(cli())
+    except SystemExit:
+        print "Shutting down.."

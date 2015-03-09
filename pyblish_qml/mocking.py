@@ -117,7 +117,11 @@ class MockService(pyblish_endpoint.service.EndpointService):
 
 @pyblish.api.log
 class ValidateNamespace(pyblish.api.Validator):
-    """Ensure name-spaces are in order."""
+    """Ensure name-spaces are in order.
+
+    And this is a long description. Lorem ipsum and what not. La la la, long.
+
+    """
 
     families = ["napoleon.animation.cache"]
     hosts = ["*"]

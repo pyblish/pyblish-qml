@@ -85,6 +85,11 @@ class Model(QtCore.QAbstractListModel):
             serialized.append(item.__dict__)
         return serialized
 
+    def reset(self):
+        self.beginResetModel()
+        self.items[:] = []
+        self.endResetModel()
+
 
 class InstanceModel(Model):
 
