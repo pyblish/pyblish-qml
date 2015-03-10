@@ -134,20 +134,15 @@ class Application(QtCore.QObject):
 
         return self.qapp.exec_()
 
-    def show_on_request(self):
-        """Launch GUI, but do not display until requested
-
-        A blocking call is sent to the host. The host then
-        releases the block in the event of having the GUI
-        displayed.
+    def listen(self):
+        """Listen on incoming requests from host
 
         Usage:
             >> from pyblish_endpoint import client
-            >> client.request("show")  # Release block
+            >> client.request("show")
 
         """
 
-    def listen(self):
         def worker():
             while True:
                 resp = rest.request("POST", "/dispatch").json()
@@ -158,13 +153,15 @@ class Application(QtCore.QObject):
                     self.controller.info.emit(
                         "Unhandled incoming message: %s" % resp)
 
+                # NOTE(marcus): If we don't sleep, signals get trapped
+                # TODO(marcus): Find a way around that.
                 time.sleep(0.1)
 
         thread = threading.Thread(target=worker, name="listener")
         thread.daemon = True
         thread.start()
 
-        print "Listening.."
+        util.echo("Listening..")
 
     def run_production(self):
         """Launch production-version of GUI
@@ -174,7 +171,7 @@ class Application(QtCore.QObject):
 
         """
 
-        print "Running production app on port: %s" % rest.PORT
+        util.echo("Running production app on port: %s" % rest.PORT)
 
         self.show()
         self.listen()
@@ -205,7 +202,7 @@ class Application(QtCore.QObject):
         Service.PERFORMANCE = Service.FAST
         pyblish_endpoint.service.register_service(Service, force=True)
 
-        print "Running debug app on port: %s" % rest.PORT
+        util.echo("Running debug app on port: %s" % rest.PORT)
 
         self.show()
 
@@ -525,11 +522,11 @@ See below message for more information.
             app.run_production()
 
     if pid and HAS_PSUTIL:
-        print "%s parented to pid: %s" % (os.getpid(), pid)
+        util.echo("%s parented to pid: %s" % (os.getpid(), pid))
 
         def monitor():
             psutil.Process(pid).wait()
-            print "Force quitting.. (parent killed)"
+            util.echo("Force quitting.. (parent killed)")
             os._exit(1)
 
         t = threading.Thread(target=monitor, name="psutilMonitor")
