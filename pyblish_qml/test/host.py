@@ -16,7 +16,7 @@ import pyblish_endpoint.service
 
 
 if __name__ == '__main__':
-    port = 6000
+    port = 6001
     pid = os.getpid()
     data = dict(count=0)
 
