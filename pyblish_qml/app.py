@@ -4,6 +4,7 @@
 import os
 import sys
 import json
+import time
 import threading
 
 # Dependencies
@@ -40,7 +41,10 @@ class CloseEventHandler(QtCore.QObject):
         if event.type() == QtCore.QEvent.Close:
             modifiers = self.app.qapp.queryKeyboardModifiers()
             shift_pressed = QtCore.Qt.ShiftModifier & modifiers
-            if not shift_pressed:
+
+            if not self.app.keep_alive or shift_pressed:
+                event.accept()
+            else:
                 event.ignore()
                 self.app.hide()
 
@@ -56,6 +60,7 @@ class Application(QtCore.QObject):
     """
 
     shown = QtCore.pyqtSignal()
+    keep_alive = False
 
     def __init__(self, parent=None):
         super(Application, self).__init__(parent)
@@ -94,16 +99,20 @@ class Application(QtCore.QObject):
 
         """
 
-        self.controller.reload()
-
         window = self.window
-        flags = window.flags()
 
-        window.show()
+        if not window.isVisible():
+            self.controller.reload()
+
+        window.requestActivate()
+        window.showNormal()
 
         if os.name == "nt":
-            window.setFlags(flags | QtCore.Qt.WindowStaysOnTopHint)
-            window.setFlags(flags)
+            # Work-around for window appearing behind
+            # other windows upon being shown once hidden.
+            previous_flags = window.flags()
+            window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
+            window.setFlags(previous_flags)
 
     def hide(self):
         """Hide GUI
@@ -113,7 +122,6 @@ class Application(QtCore.QObject):
         """
 
         self.window.hide()
-        self.preload()
 
     def on_shown(self):
         """Handle show events"""
@@ -125,7 +133,7 @@ class Application(QtCore.QObject):
 
         return self.qapp.exec_()
 
-    def preload(self):
+    def show_on_request(self):
         """Launch GUI, but do not display until requested
 
         A blocking call is sent to the host. The host then
@@ -138,16 +146,24 @@ class Application(QtCore.QObject):
 
         """
 
-        self.controller.init()
-
-        # Emit show-event upon completion
+    def listen(self):
         def worker():
-            rest.request("POST", "/dispatch", data={"command": "show"}).json()
-            self.shown.emit()
+            while True:
+                resp = rest.request("POST", "/dispatch").json()
 
-        thread = threading.Thread(target=worker)
+                if resp.get("show"):
+                    self.shown.emit()
+                else:
+                    self.controller.info.emit(
+                        "Unhandled incoming message: %s" % resp)
+
+                time.sleep(0.1)
+
+        thread = threading.Thread(target=worker, name="listener")
         thread.daemon = True
         thread.start()
+
+        print "Listening.."
 
     def run_production(self):
         """Launch production-version of GUI
@@ -159,8 +175,8 @@ class Application(QtCore.QObject):
 
         print "Running production app on port: %s" % rest.PORT
 
-        self.controller.init()
         self.show()
+        self.listen()
 
     def run_debug(self):
         """Launch debug-version of GUI
@@ -190,7 +206,6 @@ class Application(QtCore.QObject):
 
         print "Running debug app on port: %s" % rest.PORT
 
-        self.controller.init()
         self.show()
 
 
@@ -350,14 +365,9 @@ class Controller(QtCore.QObject):
         self.processed.connect(self.__on_processed)
         self.finished.connect(self.__on_finished)
 
-    def init(self):
-        with util.Timer("Spent %.2f ms initializing requests.."):
-            self._system = rest.request("GET", "/application").json()
-
-        self.reload()
-
     def reload(self):
         with util.Timer("Spent %.2f ms requesting data host.."):
+            self._system = rest.request("GET", "/application").json()
             rest.request("POST", "/session")
             instances = rest.request("GET", "/instances").json()
             plugins = rest.request("GET", "/plugins").json()
@@ -393,7 +403,7 @@ class Controller(QtCore.QObject):
 
         self.__reset_state()
 
-        thread = threading.Thread(target=worker)
+        thread = threading.Thread(target=worker, name="publisher")
         thread.daemon = True
         thread.start()
 
@@ -475,22 +485,25 @@ def main(port, pid=None, preload=False):
         app = Application()
 
         if preload:
-            app.preload()
+            app.keep_alive = True
+            app.listen()
 
         elif port == 6000:
             app.run_debug()
 
         else:
+            app.keep_alive = True
             app.run_production()
 
     if pid and HAS_PSUTIL:
-        print "Process parented to pid: %s" % pid
+        print "%s parented to pid: %s" % (os.getpid(), pid)
 
         def monitor():
             psutil.Process(pid).wait()
-            sys.exit()
+            print "Force quitting.. (parent killed)"
+            os._exit(1)
 
-        t = threading.Thread(target=monitor)
+        t = threading.Thread(target=monitor, name="psutilMonitor")
         t.daemon = True
         t.start()
 
@@ -526,7 +539,4 @@ def cli():
 
 
 if __name__ == "__main__":
-    try:
-        sys.exit(cli())
-    except SystemExit:
-        print "Shutting down.."
+    sys.exit(cli())
