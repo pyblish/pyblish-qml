@@ -271,7 +271,7 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def reset(self):
-        self.__reset_state()
+        self.reload()
 
     @QtCore.pyqtSlot()
     def stop(self):
