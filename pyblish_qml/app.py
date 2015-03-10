@@ -15,6 +15,7 @@ import util
 import rest
 import model
 import compat
+import safety
 
 try:
     import psutil
@@ -367,8 +368,8 @@ class Controller(QtCore.QObject):
 
     def reload(self):
         with util.Timer("Spent %.2f ms requesting data host.."):
-            self._system = rest.request("GET", "/application").json()
             rest.request("POST", "/session")
+            system = rest.request("GET", "/application").json()
             instances = rest.request("GET", "/instances").json()
             plugins = rest.request("GET", "/plugins").json()
 
@@ -390,6 +391,8 @@ class Controller(QtCore.QObject):
 
             item = model.Item(**data)
             self._plugin_model.addItem(item)
+
+        self._system = system
 
     def __start(self):
         """Start processing-loop"""
@@ -478,7 +481,33 @@ class Controller(QtCore.QObject):
                 model_.setData(index, "succeeded", False)
 
 
-def main(port, pid=None, preload=False):
+def main(port, pid=None, preload=False, validate=True):
+
+    try:
+        safety.validate()
+    except Exception as e:
+        util.echo(
+            """Could not start application due to a misconfigured environment.
+
+Pass validate=False to pyblish_qml.app:main
+in order to bypass validation.
+
+See below message for more information.
+"""
+        )
+
+        util.echo("Environment:")
+        util.echo("-" * 32)
+
+        for key, value in safety.stats.iteritems():
+            util.echo("%s = %s" % (key, value))
+
+        util.echo()
+        util.echo("Error:")
+        util.echo("-" * 32)
+        util.echo(e)
+        return 255
+
     rest.PORT = port
 
     with util.Timer("Spent %.2f ms creating the application"):
