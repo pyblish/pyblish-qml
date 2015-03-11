@@ -360,7 +360,6 @@ class Controller(QtCore.QObject):
         self._instance_model = model.InstanceModel()
         self._plugin_model = model.PluginModel()
 
-        self.processed.connect(self.__on_processed)
         self.finished.connect(self.__on_finished)
 
     def reload(self):
@@ -397,6 +396,7 @@ class Controller(QtCore.QObject):
         def worker():
             response = rest.request("POST", "/next")
             while self._is_running and response.status_code == 200:
+                self.__on_processed(response.json())
                 self.processed.emit(response.json())
                 response = rest.request("POST", "/next")
             self.finished.emit()
