@@ -4,6 +4,7 @@
 import os
 import sys
 import json
+import time
 import threading
 
 # Dependencies
@@ -14,6 +15,7 @@ import util
 import rest
 import model
 import compat
+import safety
 
 try:
     import psutil
@@ -40,7 +42,10 @@ class CloseEventHandler(QtCore.QObject):
         if event.type() == QtCore.QEvent.Close:
             modifiers = self.app.qapp.queryKeyboardModifiers()
             shift_pressed = QtCore.Qt.ShiftModifier & modifiers
-            if not shift_pressed:
+
+            if not self.app.keep_alive or shift_pressed:
+                event.accept()
+            else:
                 event.ignore()
                 self.app.hide()
 
@@ -56,6 +61,7 @@ class Application(QtCore.QObject):
     """
 
     shown = QtCore.pyqtSignal()
+    keep_alive = False
 
     def __init__(self, parent=None):
         super(Application, self).__init__(parent)
@@ -94,16 +100,20 @@ class Application(QtCore.QObject):
 
         """
 
-        self.controller.reload()
-
         window = self.window
-        flags = window.flags()
 
-        window.show()
+        if not window.isVisible():
+            self.controller.reload()
+
+        window.requestActivate()
+        window.showNormal()
 
         if os.name == "nt":
-            window.setFlags(flags | QtCore.Qt.WindowStaysOnTopHint)
-            window.setFlags(flags)
+            # Work-around for window appearing behind
+            # other windows upon being shown once hidden.
+            previous_flags = window.flags()
+            window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
+            window.setFlags(previous_flags)
 
     def hide(self):
         """Hide GUI
@@ -113,7 +123,6 @@ class Application(QtCore.QObject):
         """
 
         self.window.hide()
-        self.preload()
 
     def on_shown(self):
         """Handle show events"""
@@ -125,29 +134,34 @@ class Application(QtCore.QObject):
 
         return self.qapp.exec_()
 
-    def preload(self):
-        """Launch GUI, but do not display until requested
-
-        A blocking call is sent to the host. The host then
-        releases the block in the event of having the GUI
-        displayed.
+    def listen(self):
+        """Listen on incoming requests from host
 
         Usage:
             >> from pyblish_endpoint import client
-            >> client.request("show")  # Release block
+            >> client.request("show")
 
         """
 
-        self.controller.init()
-
-        # Emit show-event upon completion
         def worker():
-            rest.request("POST", "/dispatch", data={"command": "show"}).json()
-            self.shown.emit()
+            while True:
+                resp = rest.request("POST", "/dispatch").json()
 
-        thread = threading.Thread(target=worker)
+                if resp.get("show"):
+                    self.shown.emit()
+                else:
+                    self.controller.info.emit(
+                        "Unhandled incoming message: %s" % resp)
+
+                # NOTE(marcus): If we don't sleep, signals get trapped
+                # TODO(marcus): Find a way around that.
+                time.sleep(0.1)
+
+        thread = threading.Thread(target=worker, name="listener")
         thread.daemon = True
         thread.start()
+
+        util.echo("Listening..")
 
     def run_production(self):
         """Launch production-version of GUI
@@ -157,10 +171,10 @@ class Application(QtCore.QObject):
 
         """
 
-        print "Running production app on port: %s" % rest.PORT
+        util.echo("Running production app on port: %s" % rest.PORT)
 
-        self.controller.init()
         self.show()
+        self.listen()
 
     def run_debug(self):
         """Launch debug-version of GUI
@@ -188,9 +202,8 @@ class Application(QtCore.QObject):
         Service.PERFORMANCE = Service.FAST
         pyblish_endpoint.service.register_service(Service, force=True)
 
-        print "Running debug app on port: %s" % rest.PORT
+        util.echo("Running debug app on port: %s" % rest.PORT)
 
-        self.controller.init()
         self.show()
 
 
@@ -256,7 +269,7 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def reset(self):
-        self.__reset_state()
+        self.reload()
 
     @QtCore.pyqtSlot()
     def stop(self):
@@ -347,18 +360,12 @@ class Controller(QtCore.QObject):
         self._instance_model = model.InstanceModel()
         self._plugin_model = model.PluginModel()
 
-        self.processed.connect(self.__on_processed)
         self.finished.connect(self.__on_finished)
-
-    def init(self):
-        with util.Timer("Spent %.2f ms initializing requests.."):
-            self._system = rest.request("GET", "/application").json()
-
-        self.reload()
 
     def reload(self):
         with util.Timer("Spent %.2f ms requesting data host.."):
             rest.request("POST", "/session")
+            system = rest.request("GET", "/application").json()
             instances = rest.request("GET", "/instances").json()
             plugins = rest.request("GET", "/plugins").json()
 
@@ -381,19 +388,22 @@ class Controller(QtCore.QObject):
             item = model.Item(**data)
             self._plugin_model.addItem(item)
 
+        self._system = system
+
     def __start(self):
         """Start processing-loop"""
 
         def worker():
             response = rest.request("POST", "/next")
             while self._is_running and response.status_code == 200:
+                self.__on_processed(response.json())
                 self.processed.emit(response.json())
                 response = rest.request("POST", "/next")
             self.finished.emit()
 
         self.__reset_state()
 
-        thread = threading.Thread(target=worker)
+        thread = threading.Thread(target=worker, name="publisher")
         thread.daemon = True
         thread.start()
 
@@ -468,29 +478,58 @@ class Controller(QtCore.QObject):
                 model_.setData(index, "succeeded", False)
 
 
-def main(port, pid=None, preload=False):
+def main(port, pid=None, preload=False, validate=True):
+
+    try:
+        safety.validate()
+    except Exception as e:
+        util.echo(
+            """Could not start application due to a misconfigured environment.
+
+Pass validate=False to pyblish_qml.app:main
+in order to bypass validation.
+
+See below message for more information.
+"""
+        )
+
+        util.echo("Environment:")
+        util.echo("-" * 32)
+
+        for key, value in safety.stats.iteritems():
+            util.echo("%s = %s" % (key, value))
+
+        util.echo()
+        util.echo("Error:")
+        util.echo("-" * 32)
+        util.echo(e)
+        return 255
+
     rest.PORT = port
 
     with util.Timer("Spent %.2f ms creating the application"):
         app = Application()
 
         if preload:
-            app.preload()
+            app.keep_alive = True
+            app.listen()
 
         elif port == 6000:
             app.run_debug()
 
         else:
+            app.keep_alive = True
             app.run_production()
 
     if pid and HAS_PSUTIL:
-        print "Process parented to pid: %s" % pid
+        util.echo("%s parented to pid: %s" % (os.getpid(), pid))
 
         def monitor():
             psutil.Process(pid).wait()
-            sys.exit()
+            util.echo("Force quitting.. (parent killed)")
+            os._exit(1)
 
-        t = threading.Thread(target=monitor)
+        t = threading.Thread(target=monitor, name="psutilMonitor")
         t.daemon = True
         t.start()
 
@@ -526,7 +565,4 @@ def cli():
 
 
 if __name__ == "__main__":
-    try:
-        sys.exit(cli())
-    except SystemExit:
-        print "Shutting down.."
+    sys.exit(cli())

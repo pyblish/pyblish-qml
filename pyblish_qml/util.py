@@ -5,6 +5,10 @@ import logging
 from PyQt5 import QtCore
 
 
+def echo(text=""):
+    print text
+
+
 class Timer(object):
     """Time operations using this context manager
 
