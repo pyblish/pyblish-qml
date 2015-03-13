@@ -29,26 +29,20 @@ class MockService(pyblish_endpoint.service.EndpointService):
     PERFORMANCE = NATIVE
 
     def init(self):
-        self.plugins = []
-        for plugin, superclass in (
-                ["SelectInstances", pyblish.api.Selector],
-                ["ValidateMushroom", pyblish.api.Validator],
-                ["ExtractAsMa", pyblish.api.Extractor],
-                ["ExtractPlayblast", pyblish.api.Extractor],
-                ["ConformAsset", pyblish.api.Conformer]):
-            obj = type(plugin, (superclass,), {})
+        self.reset()
 
-            obj.families = ["napoleon.animation.cache"]
-
-            if plugin == "ConformAsset":
-                obj.families = ["napoleon.asset.rig"]
-
-            obj.hosts = ["python", "maya"]
-            self.plugins.append(obj)
-
-        fake_instances = ["Peter01", "Richard05", "Steven11"]
         context = pyblish.api.Context()
-        for name in fake_instances[:self.NUM_INSTANCES]:
+        plugins = []
+
+        for plugin in PLUGINS:
+            plugin.families = ["napoleon.animation.cache"]
+            if plugin == "ConformAsset":
+                plugin.families = ["napoleon.asset.rig"]
+
+            plugin.hosts = ["python"]
+            plugins.append(plugin)
+
+        for name in INSTANCES:
             instance = context.create_instance(name=name)
 
             instance._data = {
@@ -69,19 +63,15 @@ class MockService(pyblish_endpoint.service.EndpointService):
             for node in ["node1", "node2", "node3"]:
                 instance.append(node)
 
-        self.plugins.append(ValidateFailureMock)
-        self.plugins.append(ValidateNamespace)
-        self.plugins = self.sort_plugins(self.plugins)
-
         self.context = context
-        self.processor = None
+        self.plugins = plugins
 
-    def next(self):
-        result = super(MockService, self).next()
-        self.sleep()
+    def advance(self):
+        result = super(MockService, self).advance()
+        self.__sleep()
         return result
 
-    def sleep(self):
+    def __sleep(self):
         if self.SLEEP_DURATION:
             log.info("Pretending it takes %s seconds "
                      "to complete.." % self.SLEEP_DURATION)
@@ -111,9 +101,9 @@ class MockService(pyblish_endpoint.service.EndpointService):
             log.info("Completed successfully!")
 
 
-#
-# Mock classes
-#
+ExtractAsMa = type("ExtractAsMa", (pyblish.api.Extractor,), {})
+ConformAsset = type("ConformAsset", (pyblish.api.Conformer,), {})
+
 
 @pyblish.api.log
 class ValidateNamespace(pyblish.api.Validator):
@@ -145,3 +135,7 @@ class ValidateFailureMock(pyblish.api.Validator):
 
     def process_instance(self, instance):
         raise ValueError("Instance failed")
+
+
+INSTANCES = ["Peter01", "Richard05", "Steven11", "Piraya12", "Marcus"]
+PLUGINS = [ExtractAsMa, ConformAsset, ValidateFailureMock, ValidateNamespace]
