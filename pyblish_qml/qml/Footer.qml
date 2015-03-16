@@ -7,7 +7,7 @@ View {
 
     property alias message: __message
     
-    // 0 = Default; 1 = Publishing
+    // 0 = Default; 1 = Publishing; 2 = Finished
     property int mode: 0
     property bool paused: false
 
@@ -37,22 +37,18 @@ View {
         spacing: 3
 
         Button {
+            elevation: 1
+
             icon: "button-stop"
             visible: mode === 1 ? true : false
             onClicked: footer.stop()
         }
 
-        // Button {
-        //     source: Constant.imagePause
-        //     visible: mode === 1 ? true : false
-        //     onClicked: footer.pause()
-        // }
-
         Button {
             elevation: 1
 
             icon: "button-reset"
-            visible: mode == 0 ? true : false
+            visible: mode == 0 || mode == 2 ? true : false
             onClicked: footer.reset()
         }
 
@@ -70,7 +66,7 @@ View {
                 anchors.fill: parent
                 color: "gray"
                 opacity: 0.5
-                visible: mode === 0 || paused ? false : true
+                visible: mode == 0 ? false : true
 
                 MouseArea {
                     // Steal focus from default button

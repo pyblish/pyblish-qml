@@ -11,12 +11,10 @@ Item {
     states: [
         State {
             name: "publishing"
+        },
 
-            PropertyChanges {
-                target: footer
-
-                mode: 1
-            }
+        State {
+            name: "finished"
         }
     ]
 
@@ -104,6 +102,8 @@ Item {
     Footer {
         id: footer
 
+        mode: overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
+
         width: parent.width
         anchors.bottom: parent.bottom
 
@@ -113,12 +113,14 @@ Item {
         }
 
         onReset: {
+            overview.state = ""
             setMessage("Resetting..")
             terminal.clear()
             app.reset()
         }
 
         onStop: {
+            overview.state = "finished"
             setMessage("Stopping..")
             app.stop()
         }
@@ -131,6 +133,7 @@ Item {
          * Print results of publish in Terminal
         */
         onProcessed: {
+            // app.log.info(JSON.stringify(data))
             if (typeof data.instance === "undefined")
                 return
 
@@ -188,7 +191,7 @@ Item {
         }
 
         onFinished: {
-            overview.state = "default"
+            overview.state = "finished"
             setMessage("Finished")
         }
 
@@ -201,8 +204,5 @@ Item {
     }
 
     Component.onCompleted: {
-        Object.keys(app.system).sort().forEach(function (key) {
-            terminal.echo(key + ": " + app.system[key]);
-        });
     }
 }
