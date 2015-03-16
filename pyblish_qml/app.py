@@ -5,6 +5,7 @@ import os
 import sys
 import json
 import time
+import logging
 import threading
 
 # Dependencies
@@ -109,7 +110,6 @@ class Application(QtCore.QObject):
         self.window = window
         self.engine = engine
         self.controller = controller
-        self.threads = list()
 
         self.shown.connect(self.on_shown)
         self.server_unresponsive.connect(self.on_server_unresponsive)
@@ -128,7 +128,7 @@ class Application(QtCore.QObject):
         window = self.window
 
         if not window.isVisible():
-            self.controller.reload()
+            self.controller.reset()
 
         window.requestActivate()
         window.showNormal()
@@ -200,14 +200,12 @@ class Application(QtCore.QObject):
             while True:
                 try:
                     response = request("POST", "/client").json()
-                except IOError as e:
+                except Exception as e:
                     util.echo(getattr(e, "msg", str(e)))
                     self.server_unresponsive.emit()
                     break
 
                 message = response.get("message")
-
-                util.echo("Incoming message from server: \"%s\"" % message)
 
                 if message == "heartbeat":
                     timer["value"] = time.time()
@@ -226,9 +224,9 @@ class Application(QtCore.QObject):
                     os._exit(1)
 
                 else:
-                    message_ = "Unhandled incoming message: \"%s\"" % message
-                    util.echo(message_)
-                    self.controller.info.emit(message_)
+                    self.controller.info.emit(
+                        "Unhandled incoming message: \"%s\""
+                        % message)
 
                 # NOTE(marcus): If we don't sleep, signals get trapped
                 # TODO(marcus): Find a way around that.
@@ -246,7 +244,6 @@ class Application(QtCore.QObject):
             thread = threading.Thread(target=thread, name=thread.__name__)
             thread.daemon = True
             thread.start()
-            self.threads.append(thread)
 
 
 class Controller(QtCore.QObject):
@@ -258,6 +255,8 @@ class Controller(QtCore.QObject):
         processed (dict): [Signal] Outgoing state from host per process
         finished: [Signal] Upon finished publish
 
+        _changes (dict): Changes made by GUI
+
     """
 
     error = QtCore.pyqtSignal(str, arguments=["message"])
@@ -267,14 +266,6 @@ class Controller(QtCore.QObject):
 
     called = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
 
-    @QtCore.pyqtProperty(QtCore.QVariant)
-    def instances(self):
-        return self._instances
-
-    @QtCore.pyqtProperty(QtCore.QVariant)
-    def plugins(self):
-        return self._plugins
-
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
     def pluginModel(self):
         return self._plugin_model
@@ -282,10 +273,6 @@ class Controller(QtCore.QObject):
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
     def instanceModel(self):
         return self._instance_model
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def system(self):
-        return self._system
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
@@ -304,89 +291,44 @@ class Controller(QtCore.QObject):
         model = self._plugin_model
         item = model.itemFromIndex(index)
 
-        if item.optional:
+        if item.data.get("optional"):
             self.__toggle_item(self._plugin_model, index)
         else:
             self.error.emit("Plug-in is mandatory")
 
     @QtCore.pyqtSlot()
     def reset(self):
-        self.reload()
+        """Request that host re-discovers plug-ins and re-processes selectors
 
-    @QtCore.pyqtSlot()
-    def stop(self):
-        self.is_running = False
-
-    def __item_data(self, model, index):
-        """Return item data as dict"""
-        item = model.itemFromIndex(index)
-        return item.__dict__
-
-    def __toggle_item(self, model, index):
-        if self.is_running:
-            self.error.emit("Cannot untick while publishing")
-        else:
-            item = model.itemFromIndex(index)
-            model.setData(index, "isToggled", not item.isToggled)
-
-    @QtCore.pyqtSlot()
-    def publish(self):
-        """Perform publish
-
-        This is done in stages.
-
-        1. Collect changes
-        2. Update host with changes
-        3. Advance until finished
+        A reset completely flushes the state of the GUI and reverts
+        back to how it was when it first got launched.
 
         """
 
-        # changes = {}
-        # response = request("POST", "/state",
-        #                         data=changes)
-        # if response.status_code != 200:
-        #     message = response.get("message") or "An error occurred"
+        self._changes.clear()
 
-        #     self.error.emit(message)
-        #     self.log.error(message)
+        util.timer("requesting_data")
+        response = request("POST", "/state")
 
-        #     return
+        for attempt in range(2):
+            if response.status_code == 200:
+                break
 
-        self.is_running = True
-        self.__start()
+            self.error.emit("Failed to fetch state; retrying..")
 
-    @QtCore.pyqtProperty(QtCore.QObject)
-    def log(self):
-        return self._log
-
-    def __init__(self, parent=None):
-        """
-        Attributes:
-            _instances
-            _plugins
-            _state: The current state in use during processing
-
-        """
-
-        super(Controller, self).__init__(parent)
-
-        self.is_running = False
-
-        self._instances = list()
-        self._plugins = list()
-        self._system = dict()
-        self._has_errors = False
-        self._log = util.Log()
-        self._state = dict()
-
-        self._instance_model = model.InstanceModel()
-        self._plugin_model = model.PluginModel()
-
-    def reload(self):
-        with util.Timer("Spent %.2f ms requesting data from host.."):
+            time.sleep(0.2)
             response = request("POST", "/state")
-            assert response.status_code == 200, response.status_code
-            response = request("GET", "/state").json()
+
+        if response.status_code != 200:
+            self.error.emit("Could not fetch state; "
+                            "is the server running @ %s?"
+                            "Message: %s" % (REST_PORT, response.text))
+            return
+
+        response = request("GET", "/state").json()
+
+        util.timer_end("requesting_data",
+                       "Spent %.2f ms requesting data from host")
 
         state = response.get("state", {})
 
@@ -400,18 +342,178 @@ class Controller(QtCore.QObject):
 
         for data in instances:
             item = model.Item(**data)
-            item.isToggled = True if item.publish in (True, None) else False
             self._instance_model.addItem(item)
 
         for data in plugins:
-            if data.get("active") is False:
-                continue
+            if data.get("hasCompatible") is True and data.get("order") >= 1:
+                item = model.Item(**data)
+                self._plugin_model.addItem(item)
 
-            if data.get("type") == "Selector":
-                continue
+            else:
+                self._changes["plugins"] = [{
+                    "name": data["name"],
+                    "data": {
+                        "publish": False
+                    }
+                }]
 
-            item = model.Item(**data)
-            self._plugin_model.addItem(item)
+    @QtCore.pyqtSlot()
+    def stop(self):
+        self.is_running = False
+
+    def __item_data(self, model, index):
+        """Return item data as dict"""
+        item = model.itemFromIndex(index)
+        return item.data
+
+    def __toggle_item(self, model, index):
+        if self.is_running:
+            self.error.emit("Cannot untick while publishing")
+        else:
+            item = model.itemFromIndex(index)
+            model.setData(index, "publish", not item.data.get("publish"))
+
+    @QtCore.pyqtSlot()
+    def publish(self):
+        """Perform publish
+
+        This is done in stages.
+
+        1. Collect changes
+        2. Update host with changes
+        3. Advance until finished
+
+        """
+
+        if self._changes:
+            serialised_changes = json.dumps(self._changes, indent=4)
+            response = request("POST", "/state",
+                               data={"state": serialised_changes})
+            if response.status_code != 200:
+                self.error.emit(
+                    response.json().get("message") or "An error occurred")
+
+                return
+        else:
+            util.echo("No changes were made")
+
+        self.is_running = True
+        self.__start()
+
+    @QtCore.pyqtProperty(QtCore.QObject)
+    def log(self):
+        return self._log
+
+    def __init__(self, parent=None):
+        super(Controller, self).__init__(parent)
+
+        self.is_running = False
+
+        self._has_errors = False
+        self._log = util.Log()
+        self._state = dict()
+        self._changes = dict()
+
+        self._instance_model = model.InstanceModel()
+        self._plugin_model = model.PluginModel()
+
+        self.info.connect(self.on_info)
+        self.error.connect(self.on_error)
+        self.finished.connect(self.on_finished, type=QtCore.Qt.BlockingQueuedConnection)
+        self.processed.connect(self.on_processed, type=QtCore.Qt.BlockingQueuedConnection)
+
+        self._instance_model.data_changed.connect(self.on_instance_data_changed)
+        self._plugin_model.data_changed.connect(self.on_plugin_data_changed)
+
+    def parse_advance_state(self, state):
+        """Parse state produced by advancing
+
+        Given a dictionary of current and future items as indexes,
+        return a dictionary with their actual names
+
+        """
+
+        state["plugin"] = state["current_plugin"]
+        state["instance"] = state["current_instance"]
+
+    def on_instance_data_changed(self, *args, **kwargs):
+        self.on_data_changed(self._instance_model, *args, **kwargs)
+
+    def on_plugin_data_changed(self, *args):
+        self.on_data_changed(self._plugin_model, *args)
+
+    def on_data_changed(self, model_, index, role, old, new):
+        """Handler for changes to data within `model`
+
+        Changes include toggling instances along with any
+        arbitrary change to members of items within `model`.
+
+        Example dictionary of changes:
+            {
+                "context": {
+                    "children": [
+                        {
+                            "name": "Peter01",
+                            "publish": false,
+                            "data": {
+                                "destination": "/server/published/assets",
+                            },
+                        }
+                    ]
+                },
+                "plugins": [
+                    {
+                        "name": "ExtractAsMa",
+                        "publish": False
+                    }
+                ]
+            }
+
+        """
+
+        if role not in model.Item.defaults:
+            return
+
+        if isinstance(model_, model.PluginModel):
+            if "plugins" not in self._changes:
+                self._changes["plugins"] = list()
+            items = self._changes["plugins"]
+
+        else:
+            if "context" not in self._changes:
+                self._changes["context"] = {"children": list()}
+            items = self._changes["context"]["children"]
+
+        key = role
+        value = new
+
+        item = None
+        name = model_.itemFromIndex(index).data["name"]
+        for i in items:
+            if i.get("name") == name:
+                item = i
+                break
+
+        if item is None:
+            item = {"name": name, "data": {key: value}}
+            items.append(item)
+
+        else:
+            item["data"][key] = value
+
+    def on_processed(self, state):
+        """Handler for processed events"""
+        self.update_models_with_state(state)
+
+    def on_finished(self):
+        """Handler for finished events"""
+        self.reset_status()
+
+    def on_error(self, message):
+        util.echo(message)
+
+    def on_info(self, message):
+        util.echo(message)
 
     def __start(self):
         """Start processing-loop"""
@@ -426,13 +528,11 @@ class Controller(QtCore.QObject):
             response = request("PUT", "/state")
 
             while self.is_running and response.status_code == 200:
-                state = response.json()
-                self.update_models_with_state(state)
+                state = response.json().get("state", {})
+                self.parse_advance_state(state)
                 self.processed.emit(state)
-
                 response = request("PUT", "/state")
 
-            self.reset_status()
             self.finished.emit()
 
         self.reset_state()
@@ -452,49 +552,52 @@ class Controller(QtCore.QObject):
 
         """
 
-        print json.dumps(state, indent=4)
+        name = state["current_instance"]
+        if name is not None:
+            model_ = self._instance_model
+            for item in model_.items:
+                index = model_.itemIndex(item)
 
-        # with util.Timer("Spent %.2f ms processing item"):
-        #     model_ = self._instance_model
-        #     for item in model_.items:
-        #         index = model_.itemIndex(item)
-        #         current_item = state.get("instance")
+                if name == item.data["name"]:
+                    model_.setData(index, "isProcessing", True)
+                    model_.setData(index, "currentProgress", 1)
 
-        #         if current_item == item.name:
-        #             model_.setData(index, "isProcessing", True)
-        #             model_.setData(index, "currentProgress", 1)
+                    if state.get("error"):
+                        model_.setData(index, "hasError", True)
+                    else:
+                        model_.setData(index, "succeeded", True)
 
-        #             if state.get("error"):
-        #                 model_.setData(index, "hasError", True)
-        #             else:
-        #                 model_.setData(index, "succeeded", True)
+                else:
+                    model_.setData(index, "isProcessing", False)
+        else:
+            print "Updating model, but instance was None: %s" % state
 
-        #         else:
-        #             model_.setData(index, "isProcessing", False)
+        name = state["current_plugin"]
+        if name is not None:
+            model_ = self._plugin_model
+            for item in model_.items:
+                index = model_.itemIndex(item)
 
-        #     model_ = self._plugin_model
-        #     for item in model_.items:
-        #         index = model_.itemIndex(item)
-        #         current_item = state.get("plugin")
+                if name == item.data["name"]:
+                    if self._has_errors:
+                        if item.data["type"] == "Extractor":
+                            self.info.emit("Stopped due to failed vaildation")
+                            self.is_running = False
+                            return
 
-        #         if current_item == item.name:
-        #             if self._has_errors:
-        #                 if item.type == "Extractor":
-        #                     self.info.emit("Stopped due to failed vaildation")
-        #                     self.is_running = False
-        #                     return
+                    model_.setData(index, "isProcessing", True)
+                    model_.setData(index, "currentProgress", 1)
 
-        #             model_.setData(index, "isProcessing", True)
-        #             model_.setData(index, "currentProgress", 1)
+                    if state.get("error"):
+                        model_.setData(index, "hasError", True)
+                        self._has_errors = True
+                    else:
+                        model_.setData(index, "succeeded", True)
 
-        #             if state.get("error"):
-        #                 model_.setData(index, "hasError", True)
-        #                 self._has_errors = True
-        #             else:
-        #                 model_.setData(index, "succeeded", True)
-
-        #         else:
-        #             model_.setData(index, "isProcessing", False)
+                else:
+                    model_.setData(index, "isProcessing", False)
+        else:
+            print "Updating model, but plugin was None: %s" % state
 
     def reset_status(self):
         """Reset progress bars"""
@@ -557,6 +660,21 @@ See below message for more information.
 
     global REST_PORT
     REST_PORT = port
+
+    # Initialise logger for Endpoint
+    formatter = logging.Formatter(
+        '%(levelname)s - '
+        '%(name)s: '
+        '%(message)s',
+        '%H:%M:%S')
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    for logger in ("endpoint",):
+        log = logging.getLogger(logger)
+        log.handlers[:] = []
+        log.addHandler(stream_handler)
+        # log.setLevel(logging.DEBUG)
 
     if debug:
         import mocking
