@@ -4,9 +4,24 @@ import logging
 
 from PyQt5 import QtCore
 
+_timers = {}
+
 
 def echo(text=""):
     print text
+
+
+def timer(name):
+    if name in _timers:
+        return
+    _timers[name] = time.time()
+
+
+def timer_end(name, format=None):
+    _time = _timers.pop(name, None)
+    format = format or name + ": %.3f ms"
+    if _time is not None:
+        echo(format % (time.time() - _time))
 
 
 class Timer(object):
