@@ -4,52 +4,91 @@ from PyQt5 import QtCore
 
 
 class Item(object):
-    def __init__(self, **kwargs):
-        self.name = "default"
-        self.objName = "default"
-        self.family = "default"
-        self.families = "default"
-        self.isToggled = True
-        self.active = True
-        self.isSelected = False
-        self.currentProgress = 0
-        self.isProcessing = False
-        self.isCompatible = True
-        self.hasError = False
-        self.hasWarning = False
-        self.hasMessage = False
-        self.optional = True
-        self.succeeded = False
-        self.errors = list()
-        self.warnings = list()
-        self.messages = list()
-        self.doc = None
-        self.order = None
-        self.families = list()
-        self.type = None
+    defaults = {
+        "publish": True,
+    }
 
-        for key, value in kwargs.iteritems():
-            setattr(self, key, value)
+    defaults_gui = {
+        "name": "default",
+        "objName": "default",
+        "family": "default",
+        "families": "default",
+        "isSelected": False,
+        "currentProgress": 0,
+        "isProcessing": False,
+        "hasCompatible": False,
+        "hasError": False,
+        "hasWarning": False,
+        "hasMessage": False,
+        "optional": True,
+        "succeeded": False,
+        "errors": list(),
+        "warnings": list(),
+        "messages": list(),
+        "doc": None,
+        "order": None,
+        "families": list(),
+        "type": None,
+    }
+
+    def __str__(self):
+        return self.data["name"]
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __init__(self, **kwargs):
+        data = self.defaults.copy()
+        data.update(self.defaults_gui)
+        data.update(kwargs)
+        self.data = data
 
 
 class Model(QtCore.QAbstractListModel):
     _roles = dict()
 
+    data_changed = QtCore.pyqtSignal(
+        int, str, object, object,
+        arguments=["index", "role", "old", "new"])
+
+    def __new__(cls, *args, **kwargs):
+        instance = super(Model, cls).__new__(cls, *args, **kwargs)
+
+        index = 0
+        for key in Item.defaults.keys() + Item.defaults_gui.keys():
+            role = QtCore.Qt.UserRole + index
+            instance._roles[role] = key
+            index += 1
+
+        return instance
+
     def __init__(self, parent=None):
         super(Model, self).__init__(parent)
         self.items = list()
+        self.item_dict = dict()
 
     def addItem(self, item):
         self.beginInsertRows(QtCore.QModelIndex(),
                              self.rowCount(),
                              self.rowCount())
+
         self.items.append(item)
+        self.item_dict[item.data.get("name")] = item
+
         self.endInsertRows()
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self.items)
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
+        try:
+            item = self.items[index.row()]
+        except IndexError:
+            return QtCore.QVariant()
+
+        if role in self._roles:
+            return item.data.get(self._roles[role])
+
         return QtCore.QVariant()
 
     def roleNames(self):
@@ -58,14 +97,17 @@ class Model(QtCore.QAbstractListModel):
     @QtCore.pyqtSlot(int, str, str)
     def setData(self, index, role, value):
         item = self.items[index]
-        setattr(item, role, value)
+        old = item.data.get(role)
+
+        item.data[role] = value
 
         qindex = self.createIndex(index, 0)
         self.dataChanged.emit(qindex, qindex)
+        self.data_changed.emit(index, role, old, value)
 
     def itemFromName(self, name):
         for item in self.items:
-            if item.name == name:
+            if item.data.get("name") == name:
                 return item
 
     def itemFromIndex(self, index):
@@ -82,7 +124,7 @@ class Model(QtCore.QAbstractListModel):
     def serialized(self):
         serialized = list()
         for item in self.items:
-            serialized.append(item.__dict__)
+            serialized.append(item.data)
         return serialized
 
     def reset(self):
@@ -92,71 +134,15 @@ class Model(QtCore.QAbstractListModel):
 
 
 class InstanceModel(Model):
-
-    NameRole = QtCore.Qt.UserRole + 3
-    FamilyRole = QtCore.Qt.UserRole + 4
-    IsToggledRole = QtCore.Qt.UserRole + 5
-    ActiveRole = QtCore.Qt.UserRole + 6
-    CurrentProgressRole = QtCore.Qt.UserRole + 7
-    IsSelectedRole = QtCore.Qt.UserRole + 8
-    IsProcessingRole = QtCore.Qt.UserRole + 9
-    IsCompatibleRole = QtCore.Qt.UserRole + 10
-    HasErrorRole = QtCore.Qt.UserRole + 11
-    HasWarningRole = QtCore.Qt.UserRole + 12
-    HasMessageRole = QtCore.Qt.UserRole + 13
-    OptionalRole = QtCore.Qt.UserRole + 14
-    SucceededRole = QtCore.Qt.UserRole + 15
-    ErrorsRole = QtCore.Qt.UserRole + 16
-    WarningsRole = QtCore.Qt.UserRole + 17
-    MessagesRole = QtCore.Qt.UserRole + 18
-    HelpRole = QtCore.Qt.UserRole + 19
-    CategoryRole = QtCore.Qt.UserRole + 20
-
-    _roles = {
-        NameRole: "name",
-        FamilyRole: "family",
-        IsToggledRole: "isToggled",
-        ActiveRole: "active",
-        CurrentProgressRole: "currentProgress",
-        IsSelectedRole: "isSelected",
-        IsProcessingRole: "isProcessing",
-        IsCompatibleRole: "isCompatible",
-        HasErrorRole: "hasError",
-        HasWarningRole: "hasWarning",
-        HasMessageRole: "hasMessage",
-        OptionalRole: "optional",
-        SucceededRole: "succeeded",
-        ErrorsRole: "errors",
-        WarningsRole: "warnings",
-        MessagesRole: "messages",
-        HelpRole: "help",
-        CategoryRole: "category"
-    }
-
-    def data(self, index, role=QtCore.Qt.DisplayRole):
-        try:
-            item = self.items[index.row()]
-        except IndexError:
-            return QtCore.QVariant()
-
-        if role in self._roles:
-            return getattr(item, self._roles[role])
-
-        return QtCore.QVariant()
+    pass
 
 
-class PluginModel(InstanceModel):
-    OrderRole = QtCore.Qt.UserRole + 30
-    FamiliesRole = QtCore.Qt.UserRole + 31
-    TypeRole = QtCore.Qt.UserRole + 32
-
-    _roles = InstanceModel._roles
-    _roles[OrderRole] = "order"
-    _roles[FamiliesRole] = "families"
-    _roles[TypeRole] = "type"
+class PluginModel(Model):
+    pass
 
 
 if __name__ == '__main__':
-    model = Model()
-    model.addItem(Item("test"))
+    model = InstanceModel()
+    model.addItem(Item(name="test"))
     print model.children()
+    print model.items
