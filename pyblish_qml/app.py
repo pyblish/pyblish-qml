@@ -314,30 +314,36 @@ class Controller(QtCore.QObject):
             if response.status_code == 200:
                 break
 
-            self.error.emit("Failed to fetch state; retrying..")
+            self.error.emit("Failed to post state; retrying..")
 
             time.sleep(0.2)
             response = request("POST", "/state")
 
         if response.status_code != 200:
-            self.error.emit("Could not fetch state; "
+            self.error.emit("Could not post state; "
                             "is the server running @ %s?"
                             "Message: %s" % (REST_PORT, response.text))
             return
 
-        response = request("GET", "/state").json()
+        response = request("GET", "/state")
 
         util.timer_end("requesting_data",
                        "Spent %.2f ms requesting data from host")
 
-        state = response.get("state", {})
+        if response.status_code != 200:
+            self.error.emit("Could not get state")
+            return
+
+        response = response.json()
+
+        state = response["state"]
 
         # Remove existing items from model
         self._instance_model.reset()
         self._plugin_model.reset()
 
         context = state.get("context", {})
-        instances = context["children"]
+        instances = context.get("children", [])
         plugins = state.get("plugins", [])
 
         for data in instances:
@@ -345,17 +351,17 @@ class Controller(QtCore.QObject):
             self._instance_model.addItem(item)
 
         for data in plugins:
-            if data.get("hasCompatible") is True and data.get("order") >= 1:
-                item = model.Item(**data)
-                self._plugin_model.addItem(item)
-
-            else:
+            if data.get("hasCompatible") is False or data.get("order") < 1:
                 self._changes["plugins"] = [{
                     "name": data["name"],
                     "data": {
                         "publish": False
                     }
                 }]
+
+            else:
+                item = model.Item(**data)
+                self._plugin_model.addItem(item)
 
     @QtCore.pyqtSlot()
     def stop(self):
@@ -390,8 +396,9 @@ class Controller(QtCore.QObject):
             response = request("POST", "/state",
                                data={"state": serialised_changes})
             if response.status_code != 200:
-                self.error.emit(
+                self.info.emit(
                     response.json().get("message") or "An error occurred")
+                self.error.emit("Could not publish; see Terminal")
 
                 return
         else:
@@ -527,10 +534,16 @@ class Controller(QtCore.QObject):
         def worker():
             response = request("PUT", "/state")
 
-            while self.is_running and response.status_code == 200:
+            while response.status_code == 200:
                 state = response.json().get("state", {})
                 self.parse_advance_state(state)
                 self.processed.emit(state)
+
+                # Updated by `on_processed`
+                print "Processed: %s" % json.dumps(state, indent=4)
+                if not self.is_running:
+                    break
+
                 response = request("PUT", "/state")
 
             self.finished.emit()
@@ -570,7 +583,8 @@ class Controller(QtCore.QObject):
                 else:
                     model_.setData(index, "isProcessing", False)
         else:
-            print "Updating model, but instance was None: %s" % state
+            util.echo("Updating model, but instance was None: %s"
+                      % json.dumps(state, indent=4))
 
         name = state["current_plugin"]
         if name is not None:
@@ -580,15 +594,15 @@ class Controller(QtCore.QObject):
 
                 if name == item.data["name"]:
                     if self._has_errors:
-                        if item.data["type"] == "Extractor":
+                        if item.data["order"] >= 2:
+                            # Extractor
                             self.info.emit("Stopped due to failed vaildation")
                             self.is_running = False
-                            return
 
                     model_.setData(index, "isProcessing", True)
                     model_.setData(index, "currentProgress", 1)
 
-                    if state.get("error"):
+                    if state["error"] is not None:
                         model_.setData(index, "hasError", True)
                         self._has_errors = True
                     else:
@@ -670,11 +684,11 @@ See below message for more information.
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
 
-    for logger in ("endpoint",):
+    for logger in ("endpoint", "werkzeug"):
         log = logging.getLogger(logger)
         log.handlers[:] = []
         log.addHandler(stream_handler)
-        # log.setLevel(logging.DEBUG)
+        log.setLevel(logging.DEBUG)
 
     if debug:
         import mocking
