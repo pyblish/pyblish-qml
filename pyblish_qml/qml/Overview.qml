@@ -124,6 +124,11 @@ Item {
             setMessage("Stopping..")
             app.stop()
         }
+
+        onSave: {
+            setMessage("Saving..")
+            app.save()
+        }
     }
 
     Connections {

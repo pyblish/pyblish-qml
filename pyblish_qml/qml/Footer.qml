@@ -15,6 +15,7 @@ View {
     signal pause
     signal stop
     signal reset
+    signal save
 
     width: 200
     height: 40
@@ -35,6 +36,13 @@ View {
         }
 
         spacing: 3
+
+        Button {
+            elevation: 1
+
+            icon: "button-save"
+            onClicked: footer.save()
+        }
 
         Button {
             elevation: 1

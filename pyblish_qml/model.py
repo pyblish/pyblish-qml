@@ -48,8 +48,8 @@ class Model(QtCore.QAbstractListModel):
     _roles = dict()
 
     data_changed = QtCore.pyqtSignal(
-        int, str, object, object,
-        arguments=["index", "role", "old", "new"])
+        str, str, object, object,
+        arguments=["name", "key", "old", "new"])
 
     def __new__(cls, *args, **kwargs):
         instance = super(Model, cls).__new__(cls, *args, **kwargs)
@@ -103,22 +103,23 @@ class Model(QtCore.QAbstractListModel):
 
         qindex = self.createIndex(index, 0)
         self.dataChanged.emit(qindex, qindex)
-        self.data_changed.emit(index, role, old, value)
+        self.data_changed.emit(item.data.get("name"), role, old, value)
 
     def itemFromName(self, name):
         for item in self.items:
             if item.data.get("name") == name:
                 return item
+        raise KeyError("%s not in dict" % name)
 
     def itemFromIndex(self, index):
         return self.items[index]
 
-    def itemIndex(self, item):
-        return self.items.index(item)
-
     def itemIndexFromName(self, name):
         item = self.itemFromName(name)
-        return self.itemIndex(item) if item else None
+        return self.itemIndexFromItem(item)
+
+    def itemIndexFromItem(self, item):
+        return self.items.index(item)
 
     @property
     def serialized(self):
@@ -134,11 +135,26 @@ class Model(QtCore.QAbstractListModel):
 
 
 class InstanceModel(Model):
-    pass
+    def next_instance(self, index, families):
+        try:
+            item = self.items[index + 1]
+            while item.data["family"] not in families:
+                index += 1
+                item = self.items[index]
+        except IndexError:
+            return None
+
+        return item
 
 
 class PluginModel(Model):
-    pass
+    def next_plugin(self, index):
+        try:
+            item = self.items[index + 1]
+        except IndexError:
+            return None
+
+        return item
 
 
 if __name__ == '__main__':

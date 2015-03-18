@@ -9,6 +9,7 @@ import logging
 import threading
 
 # Dependencies
+from pyblish_endpoint import format
 from PyQt5 import QtCore, QtGui, QtQml
 
 # Local libraries
@@ -351,21 +352,31 @@ class Controller(QtCore.QObject):
             self._instance_model.addItem(item)
 
         for data in plugins:
-            if data.get("hasCompatible") is False or data.get("order") < 1:
-                self._changes["plugins"] = [{
-                    "name": data["name"],
-                    "data": {
-                        "publish": False
-                    }
-                }]
-
-            else:
+            if data.get("hasCompatible") is True and data.get("order") >= 1:
                 item = model.Item(**data)
                 self._plugin_model.addItem(item)
 
     @QtCore.pyqtSlot()
-    def stop(self):
+    def stop(self, message=None):
+        if message:
+            self.info.emit(message)
         self.is_running = False
+
+    @QtCore.pyqtSlot()
+    def save(self):
+        serialised_changes = json.dumps(self._changes, indent=4)
+
+        response = request("POST", "/state",
+                           data={"changes": serialised_changes})
+
+        if response.status_code == 200:
+            changes = json.dumps(response.json(), indent=4)
+            self.info.emit("Changes saved successfully: %s" % changes)
+
+        else:
+            message = response.json().get("message") or "An error occurred"
+            self.info.emit(message)
+            self.error.emit("Could not save changes; see Terminal")
 
     def __item_data(self, model, index):
         """Return item data as dict"""
@@ -391,21 +402,17 @@ class Controller(QtCore.QObject):
 
         """
 
-        if self._changes:
-            serialised_changes = json.dumps(self._changes, indent=4)
-            response = request("POST", "/state",
-                               data={"state": serialised_changes})
-            if response.status_code != 200:
-                self.info.emit(
-                    response.json().get("message") or "An error occurred")
-                self.error.emit("Could not publish; see Terminal")
+        # pair = {
+        #     "instance": "Richard05",
+        #     "plugin": "ValidateNamespace"
+        # }
 
-                return
-        else:
-            util.echo("No changes were made")
+        # response = request("PUT", "/state", data=pair)
+        # if response.status_code == 200:
+        #     print json.dumps(response.json(), indent=4)
 
         self.is_running = True
-        self.__start()
+        self.start()
 
     @QtCore.pyqtProperty(QtCore.QObject)
     def log(self):
@@ -419,7 +426,7 @@ class Controller(QtCore.QObject):
         self._has_errors = False
         self._log = util.Log()
         self._state = dict()
-        self._changes = dict()
+        self._changes = format.Changes()
 
         self._instance_model = model.InstanceModel()
         self._plugin_model = model.PluginModel()
@@ -432,85 +439,52 @@ class Controller(QtCore.QObject):
         self._instance_model.data_changed.connect(self.on_instance_data_changed)
         self._plugin_model.data_changed.connect(self.on_plugin_data_changed)
 
-    def parse_advance_state(self, state):
-        """Parse state produced by advancing
-
-        Given a dictionary of current and future items as indexes,
-        return a dictionary with their actual names
-
-        """
-
-        state["plugin"] = state["current_plugin"]
-        state["instance"] = state["current_instance"]
-
     def on_instance_data_changed(self, *args, **kwargs):
         self.on_data_changed(self._instance_model, *args, **kwargs)
 
     def on_plugin_data_changed(self, *args):
         self.on_data_changed(self._plugin_model, *args)
 
-    def on_data_changed(self, model_, index, role, old, new):
+    def on_data_changed(self, model_, name, key, old, new):
         """Handler for changes to data within `model`
 
         Changes include toggling instances along with any
         arbitrary change to members of items within `model`.
 
-        Example dictionary of changes:
-            {
-                "context": {
-                    "children": [
-                        {
-                            "name": "Peter01",
-                            "publish": false,
-                            "data": {
-                                "destination": "/server/published/assets",
-                            },
-                        }
-                    ]
-                },
-                "plugins": [
-                    {
-                        "name": "ExtractAsMa",
-                        "publish": False
-                    }
-                ]
-            }
-
         """
 
-        if role not in model.Item.defaults:
+        if key not in model.Item.defaults:
             return
 
         if isinstance(model_, model.PluginModel):
-            if "plugins" not in self._changes:
-                self._changes["plugins"] = list()
-            items = self._changes["plugins"]
-
+            changes = self._changes["plugins"]
         else:
-            if "context" not in self._changes:
-                self._changes["context"] = {"children": list()}
-            items = self._changes["context"]["children"]
+            changes = self._changes["context"]
 
-        key = role
-        value = new
+        if name not in changes:
+            changes[name] = {}
 
-        item = None
-        name = model_.itemFromIndex(index).data["name"]
-        for i in items:
-            if i.get("name") == name:
-                item = i
-                break
+        if key in changes[name]:
 
-        if item is None:
-            item = {"name": name, "data": {key: value}}
-            items.append(item)
+            # If the new value equals the old one,
+            # we can assume that there was no change.
+            if changes[name][key]["old"] == new:
+                changes[name].pop(key)
 
+                # It's possible that this discarded change
+                # was the only change made to this item.
+                # If so, discard the item entirely.
+                if not changes[name]:
+                    changes.pop(name)
+
+            else:
+                changes[name][key]["new"] = new
         else:
-            item["data"][key] = value
+            changes[name][key] = {"new": new, "old": old}
 
-    def on_processed(self, state):
+    def on_processed(self, result):
         """Handler for processed events"""
-        self.update_models_with_state(state)
+        self.update_models_with_result(result)
 
     def on_finished(self):
         """Handler for finished events"""
@@ -522,7 +496,7 @@ class Controller(QtCore.QObject):
     def on_info(self, message):
         util.echo(message)
 
-    def __start(self):
+    def start(self):
         """Start processing-loop"""
 
         if hasattr(self, "__pt") and getattr(self, "__pt").is_alive():
@@ -531,33 +505,18 @@ class Controller(QtCore.QObject):
 
             delattr(self, "__pt")
 
-        def worker():
-            response = request("PUT", "/state")
-
-            while response.status_code == 200:
-                state = response.json().get("state", {})
-                self.parse_advance_state(state)
-                self.processed.emit(state)
-
-                # Updated by `on_processed`
-                print "Processed: %s" % json.dumps(state, indent=4)
-                if not self.is_running:
-                    break
-
-                response = request("PUT", "/state")
-
-            self.finished.emit()
-
         self.reset_state()
 
-        thread = threading.Thread(target=worker, name="publisher")
+        thread = threading.Thread(target=processor,
+                                  args=[self],
+                                  name="processor")
         thread.daemon = True
         thread.start()
 
         setattr(self, "__pt", thread)
 
-    def update_models_with_state(self, state):
-        """Update item-model with state of host
+    def update_models_with_result(self, result):
+        """Update item-model with result from host
 
         State is sent from host after processing had taken place
         and represents the events that took place; including
@@ -565,72 +524,120 @@ class Controller(QtCore.QObject):
 
         """
 
-        name = state["current_instance"]
-        if name is not None:
-            model_ = self._instance_model
-            for item in model_.items:
-                index = model_.itemIndex(item)
+        for m in (self._instance_model, self._plugin_model):
+            for index in range(m.rowCount()):
+                m.setData(index, "isProcessing", False)
 
-                if name == item.data["name"]:
-                    model_.setData(index, "isProcessing", True)
-                    model_.setData(index, "currentProgress", 1)
+        if result["error"] is not None:
+            self._has_errors = True
 
-                    if state.get("error"):
-                        model_.setData(index, "hasError", True)
-                    else:
-                        model_.setData(index, "succeeded", True)
+        self.update_model_with_result("instance", result)
+        self.update_model_with_result("plugin", result)
 
-                else:
-                    model_.setData(index, "isProcessing", False)
+        # Logic
+
+        plugin_name = result["plugin"]
+        plugin_item = self._plugin_model.itemFromName(plugin_name)
+        plugin_index = self._plugin_model.itemIndexFromName(plugin_name)
+
+        instance_name = result["instance"]
+        instance_index = self._instance_model.itemIndexFromName(instance_name)
+
+        next_instance = self._instance_model.next_instance(
+            instance_index, plugin_item.data["families"])
+
+        if not next_instance:
+            print "Last instance %s" % instance_name
+
+            next_plugin = self._plugin_model.next_plugin(plugin_index)
+            if next_plugin:
+                print "Next plug-in: %s" % next_plugin.data["name"]
+
+                if self._has_errors and next_plugin.data["order"] >= 2:
+                    self.stop("Stopped due to failed vaildation")
+
+    def update_model_with_result(self, model, result):
+        name = result[model]
+        model = {"instance": self._instance_model,
+                 "plugin": self._plugin_model}[model]
+        item = model.itemFromName(name)
+        index = model.itemIndexFromItem(item)
+
+        model.setData(index, "isProcessing", True)
+        model.setData(index, "currentProgress", 1)
+
+        if result["error"]:
+            model.setData(index, "hasError", True)
         else:
-            util.echo("Updating model, but instance was None: %s"
-                      % json.dumps(state, indent=4))
-
-        name = state["current_plugin"]
-        if name is not None:
-            model_ = self._plugin_model
-            for item in model_.items:
-                index = model_.itemIndex(item)
-
-                if name == item.data["name"]:
-                    if self._has_errors:
-                        if item.data["order"] >= 2:
-                            # Extractor
-                            self.info.emit("Stopped due to failed vaildation")
-                            self.is_running = False
-
-                    model_.setData(index, "isProcessing", True)
-                    model_.setData(index, "currentProgress", 1)
-
-                    if state["error"] is not None:
-                        model_.setData(index, "hasError", True)
-                        self._has_errors = True
-                    else:
-                        model_.setData(index, "succeeded", True)
-
-                else:
-                    model_.setData(index, "isProcessing", False)
-        else:
-            print "Updating model, but plugin was None: %s" % state
+            model.setData(index, "succeeded", True)
 
     def reset_status(self):
         """Reset progress bars"""
         self._has_errors = False
         self.is_running = False
 
-        for model_ in (self._instance_model, self._plugin_model):
-            for item in model_.items:
-                index = model_.itemIndex(item)
-                model_.setData(index, "isProcessing", False)
-                model_.setData(index, "currentProgress", 0)
+        for m in (self._instance_model, self._plugin_model):
+            for item in m.items:
+                index = m.itemIndexFromItem(item)
+                m.setData(index, "isProcessing", False)
+                m.setData(index, "currentProgress", 0)
 
     def reset_state(self):
         """Reset data from last publish"""
-        for model_ in (self._instance_model, self._plugin_model):
-            for item in model_.items:
-                index = model_.itemIndex(item)
-                model_.setData(index, "hasError", False)
-                model_.setData(index, "succeeded", False)
+        for m in (self._instance_model, self._plugin_model):
+            for item in m.items:
+                index = m.itemIndexFromItem(item)
+                m.setData(index, "hasError", False)
+                m.setData(index, "succeeded", False)
+
+
+def processor(controller):
+    """Publishing processor; executing in a separate thread
+
+    Logic:
+        - Do not process plug-ins without compatible instance
+        - Run all validator
+        - If any validator fails, do not continue with extractors
+    """
+
+    for plugin in controller._plugin_model.items:
+
+        # Updated by `on_processed`
+        if not controller.is_running:
+            break
+
+        if plugin.data["publish"] is False:
+            continue
+
+        for instance in controller._instance_model.items:
+
+            # Updated by `on_processed`
+            if not controller.is_running:
+                break
+
+            if instance.data["publish"] is False:
+                continue
+
+            family = instance.data["family"]
+            if not any(x in plugin.data["families"] for x in (family, "*")):
+                continue
+
+            pair = {
+                "instance": instance.data["name"],
+                "plugin": plugin.data["name"]
+            }
+
+            print "Processing: ({plugin}, {instance})".format(**pair)
+
+            response = request("PUT", "/state", data=pair)
+
+            if response.status_code == 200:
+                result = response.json()["result"]
+                controller.processed.emit(result)
+            else:
+                print json.dumps(response.json(), indent=4)
+
+    controller.finished.emit()
 
 
 def main(port, pid=None, preload=False, debug=False, validate=True):
@@ -684,11 +691,12 @@ See below message for more information.
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
 
-    for logger in ("endpoint", "werkzeug"):
+    for logger in ("pyblish", "endpoint", "werkzeug"):
         log = logging.getLogger(logger)
         log.handlers[:] = []
         log.addHandler(stream_handler)
-        log.setLevel(logging.DEBUG)
+        # log.setLevel(logging.DEBUG)
+        log.setLevel(logging.INFO)
 
     if debug:
         import mocking
