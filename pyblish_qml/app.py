@@ -256,16 +256,13 @@ class Controller(QtCore.QObject):
         processed (dict): [Signal] Outgoing state from host per process
         finished: [Signal] Upon finished publish
 
-        _changes (dict): Changes made by GUI
-
     """
 
     error = QtCore.pyqtSignal(str, arguments=["message"])
     info = QtCore.pyqtSignal(str, arguments=["message"])
     processed = QtCore.pyqtSignal(QtCore.QVariant, arguments=["data"])
     finished = QtCore.pyqtSignal()
-
-    called = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
+    saved = QtCore.pyqtSignal()
 
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
     def pluginModel(self):
@@ -292,7 +289,7 @@ class Controller(QtCore.QObject):
         model = self._plugin_model
         item = model.itemFromIndex(index)
 
-        if item.data.get("optional"):
+        if item.optional:
             self.__toggle_item(self._plugin_model, index)
         else:
             self.error.emit("Plug-in is mandatory")
@@ -332,7 +329,8 @@ class Controller(QtCore.QObject):
                        "Spent %.2f ms requesting data from host")
 
         if response.status_code != 200:
-            self.error.emit("Could not get state")
+            self.error.emit("Could not get state; see Terminal")
+            self.info.emit(response.json()["message"])
             return
 
         response = response.json()
@@ -347,14 +345,27 @@ class Controller(QtCore.QObject):
         instances = context.get("children", [])
         plugins = state.get("plugins", [])
 
-        for data in instances:
-            item = model.Item(**data)
+        for instance in instances:
+            if instance["data"].get("publish") is False:
+                instance["data"]["isToggled"] = False
+
+            item = model.InstanceItem(name=instance["name"],
+                                      data=instance["data"])
             self._instance_model.addItem(item)
 
-        for data in plugins:
-            if data.get("hasCompatible") is True and data.get("order") >= 1:
-                item = model.Item(**data)
-                self._plugin_model.addItem(item)
+        for plugin in plugins:
+            if plugin["data"].get("order") < 1:
+                continue
+
+            if plugin["data"].get("hasCompatible") is False:
+                continue
+
+            item = model.PluginItem(name=plugin["name"],
+                                    data=plugin["data"])
+            self._plugin_model.addItem(item)
+
+        for key, value in context["data"].iteritems():
+            self.info.emit("%s=%s" % (key, value))
 
     @QtCore.pyqtSlot()
     def stop(self, message=None):
@@ -364,14 +375,19 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def save(self):
+        if not any([self._changes["context"], self._changes["plugins"]]):
+            self.error.emit("Nothing to save")
+            return
+
         serialised_changes = json.dumps(self._changes, indent=4)
 
         response = request("POST", "/state",
                            data={"changes": serialised_changes})
 
         if response.status_code == 200:
-            changes = json.dumps(response.json(), indent=4)
+            changes = json.dumps(response.json()["changes"], indent=4)
             self.info.emit("Changes saved successfully: %s" % changes)
+            self.saved.emit()
 
         else:
             message = response.json().get("message") or "An error occurred"
@@ -381,14 +397,21 @@ class Controller(QtCore.QObject):
     def __item_data(self, model, index):
         """Return item data as dict"""
         item = model.itemFromIndex(index)
-        return item.data
+
+        data = {
+            "name": item.name,
+            "data": item.data,
+            "doc": getattr(item, "doc", None)
+        }
+
+        return data
 
     def __toggle_item(self, model, index):
         if self.is_running:
             self.error.emit("Cannot untick while publishing")
         else:
             item = model.itemFromIndex(index)
-            model.setData(index, "publish", not item.data.get("publish"))
+            model.setData(index, "isToggled", not item.isToggled)
 
     @QtCore.pyqtSlot()
     def publish(self):
@@ -402,16 +425,8 @@ class Controller(QtCore.QObject):
 
         """
 
-        # pair = {
-        #     "instance": "Richard05",
-        #     "plugin": "ValidateNamespace"
-        # }
-
-        # response = request("PUT", "/state", data=pair)
-        # if response.status_code == 200:
-        #     print json.dumps(response.json(), indent=4)
-
         self.is_running = True
+        self.save()
         self.start()
 
     @QtCore.pyqtProperty(QtCore.QObject)
@@ -453,8 +468,14 @@ class Controller(QtCore.QObject):
 
         """
 
-        if key not in model.Item.defaults:
+        if key not in ("isToggled",):
             return
+
+        remap = {
+            "isToggled": "publish"
+        }
+
+        key = remap.get(key) or key
 
         if isinstance(model_, model.PluginModel):
             changes = self._changes["plugins"]
@@ -535,6 +556,8 @@ class Controller(QtCore.QObject):
         self.update_model_with_result("plugin", result)
 
         # Logic
+        # Do not continue if there are errors
+        # and next plug-in is an extractor.
 
         plugin_name = result["plugin"]
         plugin_item = self._plugin_model.itemFromName(plugin_name)
@@ -547,12 +570,8 @@ class Controller(QtCore.QObject):
             instance_index, plugin_item.data["families"])
 
         if not next_instance:
-            print "Last instance %s" % instance_name
-
             next_plugin = self._plugin_model.next_plugin(plugin_index)
             if next_plugin:
-                print "Next plug-in: %s" % next_plugin.data["name"]
-
                 if self._has_errors and next_plugin.data["order"] >= 2:
                     self.stop("Stopped due to failed vaildation")
 
@@ -606,7 +625,7 @@ def processor(controller):
         if not controller.is_running:
             break
 
-        if plugin.data["publish"] is False:
+        if plugin.isToggled is False:
             continue
 
         for instance in controller._instance_model.items:
@@ -615,7 +634,7 @@ def processor(controller):
             if not controller.is_running:
                 break
 
-            if instance.data["publish"] is False:
+            if instance.isToggled is False:
                 continue
 
             family = instance.data["family"]
@@ -623,8 +642,8 @@ def processor(controller):
                 continue
 
             pair = {
-                "instance": instance.data["name"],
-                "plugin": plugin.data["name"]
+                "instance": instance.name,
+                "plugin": plugin.name
             }
 
             print "Processing: ({plugin}, {instance})".format(**pair)
@@ -691,7 +710,7 @@ See below message for more information.
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
 
-    for logger in ("pyblish", "endpoint", "werkzeug"):
+    for logger in ("endpoint", "werkzeug"):
         log = logging.getLogger(logger)
         log.handlers[:] = []
         log.addHandler(stream_handler)

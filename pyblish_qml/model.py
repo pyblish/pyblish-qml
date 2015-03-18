@@ -3,45 +3,79 @@
 from PyQt5 import QtCore
 
 
-class Item(object):
-    defaults = {
-        "publish": True,
-    }
+defaults = {
+    "name": "default",
+    "isSelected": False,
+    "isProcessing": False,
+    "isToggled": True,
+    "optional": True,
+    "hasError": False,
+    "hasWarning": False,
+    "hasMessage": False,
+    "succeeded": False,
+    "currentProgress": 0,
+    "errors": list(),
+    "warnings": list(),
+    "messages": list(),
+}
 
-    defaults_gui = {
-        "name": "default",
-        "objName": "default",
-        "family": "default",
-        "families": "default",
-        "isSelected": False,
-        "currentProgress": 0,
-        "isProcessing": False,
-        "hasCompatible": False,
-        "hasError": False,
-        "hasWarning": False,
-        "hasMessage": False,
-        "optional": True,
-        "succeeded": False,
-        "errors": list(),
-        "warnings": list(),
-        "messages": list(),
-        "doc": None,
-        "order": None,
-        "families": list(),
-        "type": None,
-    }
+plugin_defaults = {
+    "optional": False,
+    "doc": None,
+    "hasRepair": False,
+    "hasCompatible": False,
+    "families": [],
+    "hosts": [],
+    "type": "unknown",
+}
+
+instance_defaults = {
+    "family": "default",
+    "niceName": "default"
+}
+
+
+class Item(object):
+    default_data = {}
 
     def __str__(self):
-        return self.data["name"]
+        return self.name
 
     def __repr__(self):
         return self.__str__()
 
-    def __init__(self, **kwargs):
-        data = self.defaults.copy()
-        data.update(self.defaults_gui)
-        data.update(kwargs)
+    def __init__(self, name, data):
+        for key, value in defaults.iteritems():
+            if data.get(key) is not None:
+                value = data[key]
+            setattr(self, key, value)
+
+        self.name = name
         self.data = data
+
+
+class InstanceItem(Item):
+    def __init__(self, *args, **kwargs):
+        super(InstanceItem, self).__init__(*args, **kwargs)
+
+        for key, value in instance_defaults.iteritems():
+            if self.data.get(key) is not None:
+                value = self.data[key]
+            setattr(self, key, value)
+
+
+class PluginItem(Item):
+    def __init__(self, *args, **kwargs):
+        super(PluginItem, self).__init__(*args, **kwargs)
+
+        for key, value in plugin_defaults.iteritems():
+            if self.data.get(key) is not None:
+                value = self.data[key]
+            setattr(self, key, value)
+
+        doc = self.data["doc"]
+        if doc and len(doc) > 30:
+            self.data["doc"] = doc[:30] + "..."
 
 
 class Model(QtCore.QAbstractListModel):
@@ -55,7 +89,9 @@ class Model(QtCore.QAbstractListModel):
         instance = super(Model, cls).__new__(cls, *args, **kwargs)
 
         index = 0
-        for key in Item.defaults.keys() + Item.defaults_gui.keys():
+        for key in (defaults.keys() +
+                    instance_defaults.keys() +
+                    plugin_defaults.keys()):
             role = QtCore.Qt.UserRole + index
             instance._roles[role] = key
             index += 1
@@ -73,7 +109,7 @@ class Model(QtCore.QAbstractListModel):
                              self.rowCount())
 
         self.items.append(item)
-        self.item_dict[item.data.get("name")] = item
+        self.item_dict[item.name] = item
 
         self.endInsertRows()
 
@@ -87,7 +123,7 @@ class Model(QtCore.QAbstractListModel):
             return QtCore.QVariant()
 
         if role in self._roles:
-            return item.data.get(self._roles[role])
+            return getattr(item, self._roles[role])
 
         return QtCore.QVariant()
 
@@ -95,19 +131,24 @@ class Model(QtCore.QAbstractListModel):
         return self._roles
 
     @QtCore.pyqtSlot(int, str, str)
-    def setData(self, index, role, value):
+    def setData(self, index, key, value):
         item = self.items[index]
-        old = item.data.get(role)
 
-        item.data[role] = value
+        try:
+            old = getattr(item, key)
+        except AttributeError:
+            print "%s did not exist"
+            return
+
+        setattr(item, key, value)
 
         qindex = self.createIndex(index, 0)
         self.dataChanged.emit(qindex, qindex)
-        self.data_changed.emit(item.data.get("name"), role, old, value)
+        self.data_changed.emit(item.name, key, old, value)
 
     def itemFromName(self, name):
         for item in self.items:
-            if item.data.get("name") == name:
+            if item.name == name:
                 return item
         raise KeyError("%s not in dict" % name)
 
@@ -138,7 +179,7 @@ class InstanceModel(Model):
     def next_instance(self, index, families):
         try:
             item = self.items[index + 1]
-            while item.data["family"] not in families:
+            while item.data.get("family") not in families:
                 index += 1
                 item = self.items[index]
         except IndexError:

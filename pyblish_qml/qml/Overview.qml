@@ -5,6 +5,8 @@ import Pyblish 0.1
 Item {
     id: overview
 
+    property string __lastPlugin
+
     signal instanceDoubleClicked(int index)
     signal pluginDoubleClicked(int index)
 
@@ -126,7 +128,6 @@ Item {
         }
 
         onSave: {
-            setMessage("Saving..")
             app.save()
         }
     }
@@ -142,11 +143,13 @@ Item {
             if (typeof data.instance === "undefined")
                 return
 
-            terminal.echo("<p>-----------------------------------------------</p>")
-            
-            terminal.echo()
+            if (overview.__lastPlugin != data.plugin) {
+                terminal.echo("<p>-----------------------------------------------</p>")
+                terminal.echo()
+                terminal.echo("<b style='font-size: 15px'>" + data.plugin + "</b>")
 
-            terminal.echo("<b style='font-size: 15px'>" + data.plugin + "</b>")
+                overview.__lastPlugin = data.plugin
+            }
 
             data.records.forEach(function (record) {
                 /* 
@@ -204,10 +207,16 @@ Item {
             setMessage(message)
         }
 
-        onInfo:
+        onInfo: {
             terminal.echo(message)
+        }
+
+        onSaved: {
+            setMessage("Saved")
+        }
     }
 
     Component.onCompleted: {
+        terminal.clear()
     }
 }

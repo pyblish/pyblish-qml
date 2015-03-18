@@ -19,7 +19,7 @@ ListView {
     delegate: ListItem.Standard {
         text: name
         active: optional
-        checked: publish
+        checked: isToggled
 
         height: 20
         width: parent.width

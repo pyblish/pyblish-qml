@@ -11,10 +11,7 @@ Item {
         var sourceData,
             data = []
 
-        if (typeof itemData.data == "undefined")
-            var sourceData = itemData
-        else
-            var sourceData = itemData.data
+        var sourceData = itemData.data
         
         Object.keys(sourceData).forEach(function (key) {
             data.push({"value": key, "column": 0})
