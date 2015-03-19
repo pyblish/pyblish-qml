@@ -130,7 +130,6 @@ class Model(QtCore.QAbstractListModel):
     def roleNames(self):
         return self._roles
 
-    @QtCore.pyqtSlot(int, str, str)
     def setData(self, index, key, value):
         item = self.items[index]
 

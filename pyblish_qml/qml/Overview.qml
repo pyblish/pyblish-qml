@@ -111,7 +111,7 @@ Item {
 
         onPublish: {
             overview.state = "publishing"
-            app.publish()
+            app.start()
         }
 
         onReset: {

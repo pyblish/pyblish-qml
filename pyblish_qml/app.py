@@ -260,7 +260,10 @@ class Controller(QtCore.QObject):
 
     error = QtCore.pyqtSignal(str, arguments=["message"])
     info = QtCore.pyqtSignal(str, arguments=["message"])
+
+    about_to_process = QtCore.pyqtSignal(QtCore.QVariant, arguments=["pair"])
     processed = QtCore.pyqtSignal(QtCore.QVariant, arguments=["data"])
+
     finished = QtCore.pyqtSignal()
     saved = QtCore.pyqtSignal()
 
@@ -368,12 +371,6 @@ class Controller(QtCore.QObject):
             self.info.emit("%s=%s" % (key, value))
 
     @QtCore.pyqtSlot()
-    def stop(self, message=None):
-        if message:
-            self.info.emit(message)
-        self.is_running = False
-
-    @QtCore.pyqtSlot()
     def save(self):
         if not any([self._changes["context"], self._changes["plugins"]]):
             self.error.emit("Nothing to save")
@@ -448,11 +445,14 @@ class Controller(QtCore.QObject):
 
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
-        self.finished.connect(self.on_finished, type=QtCore.Qt.BlockingQueuedConnection)
+        self.finished.connect(self.on_finished)
         self.processed.connect(self.on_processed, type=QtCore.Qt.BlockingQueuedConnection)
+        self.about_to_process.connect(self.on_about_to_process, type=QtCore.Qt.BlockingQueuedConnection)
 
         self._instance_model.data_changed.connect(self.on_instance_data_changed)
         self._plugin_model.data_changed.connect(self.on_plugin_data_changed)
+
+    # Event handlers
 
     def on_instance_data_changed(self, *args, **kwargs):
         self.on_data_changed(self._instance_model, *args, **kwargs)
@@ -503,30 +503,44 @@ class Controller(QtCore.QObject):
         else:
             changes[name][key] = {"new": new, "old": old}
 
+    def on_about_to_process(self, pair):
+        """A pair is about to be processed"""
+        self.update_models_with_result(pair)
+
     def on_processed(self, result):
-        """Handler for processed events"""
+        """A pair has just been processed"""
         self.update_models_with_result(result)
 
     def on_finished(self):
-        """Handler for finished events"""
+        """Processing has finished"""
         self.reset_status()
 
     def on_error(self, message):
+        """An error has occurred"""
         util.echo(message)
 
     def on_info(self, message):
+        """A message was sent"""
         util.echo(message)
 
+    # Data wranglers
+
+    @QtCore.pyqtSlot()
     def start(self):
         """Start processing-loop"""
 
-        if hasattr(self, "__pt") and getattr(self, "__pt").is_alive():
-            self.error.emit("Previous processing still active..")
+        if not any(i.isToggled for i in self._instance_model.items):
+            self.error.emit("Must select at least one instance")
             return
 
-            delattr(self, "__pt")
+        if not any(i.isToggled for i in self._plugin_model.items):
+            self.error.emit("Must select at least one plug-in")
+            return
 
+        self.save()
+        self.start()
         self.reset_state()
+        self.is_running = True
 
         thread = threading.Thread(target=processor,
                                   args=[self],
@@ -534,7 +548,11 @@ class Controller(QtCore.QObject):
         thread.daemon = True
         thread.start()
 
-        setattr(self, "__pt", thread)
+    @QtCore.pyqtSlot()
+    def stop(self, message=None):
+        if message:
+            self.info.emit(message)
+        self.is_running = False
 
     def update_models_with_result(self, result):
         """Update item-model with result from host
@@ -549,7 +567,7 @@ class Controller(QtCore.QObject):
             for index in range(m.rowCount()):
                 m.setData(index, "isProcessing", False)
 
-        if result["error"] is not None:
+        if result.get("error") is not None:
             self._has_errors = True
 
         self.update_model_with_result("instance", result)
@@ -585,7 +603,7 @@ class Controller(QtCore.QObject):
         model.setData(index, "isProcessing", True)
         model.setData(index, "currentProgress", 1)
 
-        if result["error"]:
+        if result.get("error"):
             model.setData(index, "hasError", True)
         else:
             model.setData(index, "succeeded", True)
@@ -647,6 +665,7 @@ def processor(controller):
             }
 
             print "Processing: ({plugin}, {instance})".format(**pair)
+            controller.about_to_process.emit(pair)
 
             response = request("PUT", "/state", data=pair)
 
