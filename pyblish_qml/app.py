@@ -9,7 +9,6 @@ import logging
 import threading
 
 # Dependencies
-from pyblish_endpoint import format
 from PyQt5 import QtCore, QtGui, QtQml
 
 # Local libraries
@@ -307,6 +306,10 @@ class Controller(QtCore.QObject):
         """
 
         self._changes.clear()
+        self._changes.update({
+            "context": {},
+            "plugins": {}
+        })
 
         util.timer("requesting_data")
         response = request("POST", "/state")
@@ -438,7 +441,10 @@ class Controller(QtCore.QObject):
         self._has_errors = False
         self._log = util.Log()
         self._state = dict()
-        self._changes = format.Changes()
+        self._changes = {
+            "context": {},
+            "plugins": {}
+        }
 
         self._instance_model = model.InstanceModel()
         self._plugin_model = model.PluginModel()
@@ -538,7 +544,6 @@ class Controller(QtCore.QObject):
             return
 
         self.save()
-        self.start()
         self.reset_state()
         self.is_running = True
 
