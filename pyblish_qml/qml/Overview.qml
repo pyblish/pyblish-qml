@@ -5,18 +5,18 @@ import Pyblish 0.1
 Item {
     id: overview
 
+    property string __lastPlugin
+
     signal instanceDoubleClicked(int index)
     signal pluginDoubleClicked(int index)
 
     states: [
         State {
             name: "publishing"
+        },
 
-            PropertyChanges {
-                target: footer
-
-                mode: 1
-            }
+        State {
+            name: "finished"
         }
     ]
 
@@ -104,23 +104,31 @@ Item {
     Footer {
         id: footer
 
+        mode: overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
+
         width: parent.width
         anchors.bottom: parent.bottom
 
         onPublish: {
             overview.state = "publishing"
-            app.publish()
+            app.start()
         }
 
         onReset: {
+            overview.state = ""
             setMessage("Resetting..")
             terminal.clear()
             app.reset()
         }
 
         onStop: {
+            overview.state = "finished"
             setMessage("Stopping..")
             app.stop()
+        }
+
+        onSave: {
+            app.save()
         }
     }
 
@@ -131,14 +139,17 @@ Item {
          * Print results of publish in Terminal
         */
         onProcessed: {
+            // app.log.info(JSON.stringify(data))
             if (typeof data.instance === "undefined")
                 return
 
-            terminal.echo("<p>-----------------------------------------------</p>")
-            
-            terminal.echo()
+            if (overview.__lastPlugin != data.plugin) {
+                terminal.echo("<p>-----------------------------------------------</p>")
+                terminal.echo()
+                terminal.echo("<b style='font-size: 15px'>" + data.plugin + "</b>")
 
-            terminal.echo("<b style='font-size: 15px'>" + data.plugin + "</b>")
+                overview.__lastPlugin = data.plugin
+            }
 
             data.records.forEach(function (record) {
                 /* 
@@ -188,7 +199,7 @@ Item {
         }
 
         onFinished: {
-            overview.state = "default"
+            overview.state = "finished"
             setMessage("Finished")
         }
 
@@ -196,13 +207,16 @@ Item {
             setMessage(message)
         }
 
-        onInfo:
+        onInfo: {
             terminal.echo(message)
+        }
+
+        onSaved: {
+            setMessage("Saved")
+        }
     }
 
     Component.onCompleted: {
-        Object.keys(app.system).sort().forEach(function (key) {
-            terminal.echo(key + ": " + app.system[key]);
-        });
+        terminal.clear()
     }
 }

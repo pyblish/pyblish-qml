@@ -6,6 +6,8 @@ Version 0.2.6
 
 - Process now properly dies when parent dies
 - Known issue from  0.2.5 resolved; showing an already shown GUI
+- State 1.0 (See #60)
+- Refactoring
 
 Version 0.2.5
 -------------

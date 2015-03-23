@@ -5,6 +5,7 @@ import os
 import sys
 import json
 import time
+import logging
 import threading
 
 # Dependencies
@@ -12,22 +13,38 @@ from PyQt5 import QtCore, QtGui, QtQml
 
 # Local libraries
 import util
-import rest
 import model
 import compat
 import safety
 
-try:
-    import psutil
-    HAS_PSUTIL = True
-except:
-    HAS_PSUTIL = False
-
+# Vendor libraries
+from vendor import requests
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
 APP_PATH = os.path.join(MODULE_DIR, "qml", "main.qml")
 ICON_PATH = os.path.join(MODULE_DIR, "icon.ico")
+
+REST_ADDRESS = "http://127.0.0.1:{port}/pyblish/v1{endpoint}"
+REST_PORT = 6000
+
+
+def request(verb, endpoint, data=None, **kwargs):
+    """Make a request to Endpoint
+
+    Attributes:
+        verb (str): GET, PUT, POST or DELETE request
+        endpoint (str): Tail of endpoint; e.g. /client
+        data (dict, optional): Data used for POST or PUT requests
+
+    """
+
+    endpoint = REST_ADDRESS.format(port=REST_PORT, endpoint=endpoint)
+
+    request = getattr(requests, verb.lower())
+    response = request(endpoint, data=data, **kwargs)
+
+    return response
 
 
 class CloseEventHandler(QtCore.QObject):
@@ -43,9 +60,15 @@ class CloseEventHandler(QtCore.QObject):
             modifiers = self.app.qapp.queryKeyboardModifiers()
             shift_pressed = QtCore.Qt.ShiftModifier & modifiers
 
-            if not self.app.keep_alive or shift_pressed:
+            if shift_pressed:
+                util.echo("Shift pressed, accepting close event")
+                event.accept()
+
+            elif not self.app.keep_alive:
+                util.echo("Not keeping alive, accepting close event")
                 event.accept()
             else:
+                util.echo("Ignoring close event")
                 event.ignore()
                 self.app.hide()
 
@@ -61,6 +84,7 @@ class Application(QtCore.QObject):
     """
 
     shown = QtCore.pyqtSignal()
+    server_unresponsive = QtCore.pyqtSignal()
     keep_alive = False
 
     def __init__(self, parent=None):
@@ -88,6 +112,7 @@ class Application(QtCore.QObject):
         self.controller = controller
 
         self.shown.connect(self.on_shown)
+        self.server_unresponsive.connect(self.on_server_unresponsive)
 
         self.__close_event_handler = CloseEventHandler(self)
         window.installEventFilter(self.__close_event_handler)
@@ -103,7 +128,7 @@ class Application(QtCore.QObject):
         window = self.window
 
         if not window.isVisible():
-            self.controller.reload()
+            self.controller.reset()
 
         window.requestActivate()
         window.showNormal()
@@ -118,16 +143,27 @@ class Application(QtCore.QObject):
     def hide(self):
         """Hide GUI
 
-        Process remains active and may be shown via a call to `show()`
+        Process remains active and may be shown
+        via a call to `show()`
 
         """
 
         self.window.hide()
 
+    def quit(self):
+        """Quit the application"""
+        sys.exit()
+
     def on_shown(self):
         """Handle show events"""
-
         self.show()
+
+    def on_server_unresponsive(self):
+        """Handle server unresponsive events"""
+
+        util.echo("Server unresponsive; shutting down")
+
+        self.quit()
 
     def exec_(self):
         """Wrapper around QApplication.exec_()"""
@@ -135,76 +171,79 @@ class Application(QtCore.QObject):
         return self.qapp.exec_()
 
     def listen(self):
-        """Listen on incoming requests from host
+        """Listen on incoming messages from host
+
+        Two types of messages are handled here;
+            1. Heartbeat
+            2. Not heartbeat
+
+        In the event of a heartbeat not being received on-time,
+        the application is notified that the server might be
+        unresponsive.
+
+        Any other event is handled separately.
 
         Usage:
             >> from pyblish_endpoint import client
-            >> client.request("show")
+            >> client.request("show")  # Show a hidden GUI
+            >> client.request("close")  # Close GUI permanently
+            >> client.request("kill")  # Close GUI forcefully (careful)
 
         """
 
-        def worker():
-            while True:
-                resp = rest.request("POST", "/dispatch").json()
+        timer = {"time": 0,
+                 "count": 0,
+                 "interval": 1,
+                 "intervals_before_death": 2}
 
-                if resp.get("show"):
+        def message_monitor():
+            while True:
+                try:
+                    response = request("POST", "/client").json()
+                except Exception as e:
+                    util.echo(getattr(e, "msg", str(e)))
+                    self.server_unresponsive.emit()
+                    break
+
+                message = response.get("message")
+
+                if message == "heartbeat":
+                    timer["value"] = time.time()
+                    timer["count"] += 1
+
+                elif message == "show":
                     self.shown.emit()
+
+                elif message == "close":
+                    self.quit()
+
+                elif message == "kill":
+                    util.echo(
+                        "Kill message received from "
+                        "server, shutting down NOW!")
+                    os._exit(1)
+
                 else:
                     self.controller.info.emit(
-                        "Unhandled incoming message: %s" % resp)
+                        "Unhandled incoming message: \"%s\""
+                        % message)
 
                 # NOTE(marcus): If we don't sleep, signals get trapped
                 # TODO(marcus): Find a way around that.
                 time.sleep(0.1)
 
-        thread = threading.Thread(target=worker, name="listener")
-        thread.daemon = True
-        thread.start()
+        def heartbeat_monitor():
+            while True:
+                time.sleep(timer["interval"])
+                if timer["time"] > (timer["interval"] *
+                                    timer["intervals_before_death"]):
+                    util.echo("Timer interval elapsed")
+                    self.server_unresponsive.emit()
 
-        util.echo("Listening..")
-
-    def run_production(self):
-        """Launch production-version of GUI
-
-        A production-version is dependent on an externally
-        available instance of Pyblish Endpoint at rest.PORT
-
-        """
-
-        util.echo("Running production app on port: %s" % rest.PORT)
-
-        self.show()
-        self.listen()
-
-    def run_debug(self):
-        """Launch debug-version of GUI
-
-        The debug-version does not require an independent
-        instance of Pyblish Endpoint, but rather instantiates
-        a mock to simulate it's responses.
-
-        See mocking.py for more details.
-
-        """
-
-        import mocking
-        import pyblish_endpoint.server
-
-        endpoint_app, _ = pyblish_endpoint.server.create_app()
-        endpoint_app.config["TESTING"] = True
-        endpoint_client = endpoint_app.test_client()
-        endpoint_client.testing = True
-
-        rest.MOCK = endpoint_client
-
-        Service = mocking.MockService
-        Service.SLEEP_DURATION = 0.5
-        Service.PERFORMANCE = Service.FAST
-        pyblish_endpoint.service.register_service(Service, force=True)
-
-        util.echo("Running debug app on port: %s" % rest.PORT)
-
-        self.show()
+        for thread in (message_monitor, heartbeat_monitor):
+            thread = threading.Thread(target=thread, name=thread.__name__)
+            thread.daemon = True
+            thread.start()
 
 
 class Controller(QtCore.QObject):
@@ -220,18 +259,12 @@ class Controller(QtCore.QObject):
 
     error = QtCore.pyqtSignal(str, arguments=["message"])
     info = QtCore.pyqtSignal(str, arguments=["message"])
+
+    about_to_process = QtCore.pyqtSignal(QtCore.QVariant, arguments=["pair"])
     processed = QtCore.pyqtSignal(QtCore.QVariant, arguments=["data"])
+
     finished = QtCore.pyqtSignal()
-
-    called = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
-
-    @QtCore.pyqtProperty(QtCore.QVariant)
-    def instances(self):
-        return self._instances
-
-    @QtCore.pyqtProperty(QtCore.QVariant)
-    def plugins(self):
-        return self._plugins
+    saved = QtCore.pyqtSignal()
 
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
     def pluginModel(self):
@@ -240,10 +273,6 @@ class Controller(QtCore.QObject):
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
     def instanceModel(self):
         return self._instance_model
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def system(self):
-        return self._system
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
@@ -269,19 +298,116 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def reset(self):
-        self.reload()
+        """Request that host re-discovers plug-ins and re-processes selectors
+
+        A reset completely flushes the state of the GUI and reverts
+        back to how it was when it first got launched.
+
+        """
+
+        self._changes.clear()
+        self._changes.update({
+            "context": {},
+            "plugins": {}
+        })
+
+        util.timer("requesting_data")
+        response = request("POST", "/state")
+
+        for attempt in range(2):
+            if response.status_code == 200:
+                break
+
+            self.error.emit("Failed to post state; retrying..")
+
+            time.sleep(0.2)
+            response = request("POST", "/state")
+
+        if response.status_code != 200:
+            self.error.emit("Could not post state; "
+                            "is the server running @ %s?"
+                            "Message: %s" % (REST_PORT, response.text))
+            return
+
+        response = request("GET", "/state")
+
+        util.timer_end("requesting_data",
+                       "Spent %.2f ms requesting data from host")
+
+        if response.status_code != 200:
+            self.error.emit("Could not get state; see Terminal")
+            self.info.emit(response.json()["message"])
+            return
+
+        response = response.json()
+
+        state = response["state"]
+
+        # Remove existing items from model
+        self._instance_model.reset()
+        self._plugin_model.reset()
+
+        context = state.get("context", {})
+        instances = context.get("children", [])
+        plugins = state.get("plugins", [])
+
+        for instance in instances:
+            if instance["data"].get("publish") is False:
+                instance["data"]["isToggled"] = False
+
+            item = model.InstanceItem(name=instance["name"],
+                                      data=instance["data"])
+            self._instance_model.addItem(item)
+
+        for plugin in plugins:
+            if plugin["data"].get("order") < 1:
+                continue
+
+            if plugin["data"].get("hasCompatible") is False:
+                continue
+
+            item = model.PluginItem(name=plugin["name"],
+                                    data=plugin["data"])
+            self._plugin_model.addItem(item)
+
+        for key, value in context["data"].iteritems():
+            self.info.emit("%s=%s" % (key, value))
 
     @QtCore.pyqtSlot()
-    def stop(self):
-        self._is_running = False
+    def save(self):
+        if not any([self._changes["context"], self._changes["plugins"]]):
+            self.error.emit("Nothing to save")
+            return
+
+        serialised_changes = json.dumps(self._changes, indent=4)
+
+        response = request("POST", "/state",
+                           data={"changes": serialised_changes})
+
+        if response.status_code == 200:
+            changes = json.dumps(response.json()["changes"], indent=4)
+            self.info.emit("Changes saved successfully: %s" % changes)
+            self.saved.emit()
+
+        else:
+            message = response.json().get("message") or "An error occurred"
+            self.info.emit(message)
+            self.error.emit("Could not save changes; see Terminal")
 
     def __item_data(self, model, index):
         """Return item data as dict"""
         item = model.itemFromIndex(index)
-        return item.__dict__
+
+        data = {
+            "name": item.name,
+            "data": item.data,
+            "doc": getattr(item, "doc", None)
+        }
+
+        return data
 
     def __toggle_item(self, model, index):
-        if self._is_running:
+        if self.is_running:
             self.error.emit("Cannot untick while publishing")
         else:
             item = model.itemFromIndex(index)
@@ -289,196 +415,288 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def publish(self):
-        context = list()
-        for instance in self._instance_model.serialized:
-            if instance.get("isToggled"):
-                context.append(instance["name"])
+        """Perform publish
 
-        plugins = list()
-        for plugin in self._plugin_model.serialized:
-            if plugin.get("isToggled"):
-                plugins.append(plugin["name"])
+        This is done in stages.
 
-        if not all([context, plugins]):
-            msg = "Must specify an instance and plug-in"
-            self.finished.emit()
-            self.error.emit(msg)
-            self.log.error(msg)
-            return
+        1. Collect changes
+        2. Update host with changes
+        3. Advance until finished
 
-        message = "Instances:"
-        for instance in context:
-            message += "\n  - %s" % instance
+        """
 
-        message += "\n\nPlug-ins:"
-        for plugin in plugins:
-            message += "\n  - %s" % plugin
-
-        message += "\n"
-        self.info.emit(message)
-
-        state = json.dumps({"context": context,
-                            "plugins": plugins})
-
-        try:
-            response = rest.request("POST", "/state",
-                                    data={"state": state})
-            if response.status_code != 200:
-                raise Exception(response.get("message") or "An error occurred")
-
-        except Exception as e:
-            self.error.emit(e.msg)
-            self.log.error(e.msg)
-            return
-
-        self._is_running = True
-        self.__start()
+        self.is_running = True
+        self.save()
+        self.start()
 
     @QtCore.pyqtProperty(QtCore.QObject)
     def log(self):
         return self._log
 
     def __init__(self, parent=None):
-        """
-        Attributes:
-            _instances
-            _plugins
-            _state: The current state in use during processing
-
-        """
-
         super(Controller, self).__init__(parent)
 
-        self._instances = list()
-        self._plugins = list()
-        self._system = dict()
+        self.is_running = False
+
         self._has_errors = False
         self._log = util.Log()
-        self._is_running = False
         self._state = dict()
+        self._changes = {
+            "context": {},
+            "plugins": {}
+        }
 
         self._instance_model = model.InstanceModel()
         self._plugin_model = model.PluginModel()
 
-        self.finished.connect(self.__on_finished)
+        self.info.connect(self.on_info)
+        self.error.connect(self.on_error)
+        self.finished.connect(self.on_finished)
+        self.processed.connect(self.on_processed, type=QtCore.Qt.BlockingQueuedConnection)
+        self.about_to_process.connect(self.on_about_to_process, type=QtCore.Qt.BlockingQueuedConnection)
 
-    def reload(self):
-        with util.Timer("Spent %.2f ms requesting data host.."):
-            rest.request("POST", "/session")
-            system = rest.request("GET", "/application").json()
-            instances = rest.request("GET", "/instances").json()
-            plugins = rest.request("GET", "/plugins").json()
+        self._instance_model.data_changed.connect(self.on_instance_data_changed)
+        self._plugin_model.data_changed.connect(self.on_plugin_data_changed)
 
-        # Remove existing items from model
-        self._instance_model.reset()
-        self._plugin_model.reset()
+    # Event handlers
 
-        for data in instances:
-            item = model.Item(**data)
-            item.isToggled = True if item.publish in (True, None) else False
-            self._instance_model.addItem(item)
+    def on_instance_data_changed(self, *args, **kwargs):
+        self.on_data_changed(self._instance_model, *args, **kwargs)
 
-        for data in plugins:
-            if data.get("active") is False:
-                continue
+    def on_plugin_data_changed(self, *args):
+        self.on_data_changed(self._plugin_model, *args)
 
-            if data.get("type") == "Selector":
-                continue
+    def on_data_changed(self, model_, name, key, old, new):
+        """Handler for changes to data within `model`
 
-            item = model.Item(**data)
-            self._plugin_model.addItem(item)
+        Changes include toggling instances along with any
+        arbitrary change to members of items within `model`.
 
-        self._system = system
+        """
 
-    def __start(self):
+        if key not in ("isToggled",):
+            return
+
+        remap = {
+            "isToggled": "publish"
+        }
+
+        key = remap.get(key) or key
+
+        if isinstance(model_, model.PluginModel):
+            changes = self._changes["plugins"]
+        else:
+            changes = self._changes["context"]
+
+        if name not in changes:
+            changes[name] = {}
+
+        if key in changes[name]:
+
+            # If the new value equals the old one,
+            # we can assume that there was no change.
+            if changes[name][key]["old"] == new:
+                changes[name].pop(key)
+
+                # It's possible that this discarded change
+                # was the only change made to this item.
+                # If so, discard the item entirely.
+                if not changes[name]:
+                    changes.pop(name)
+
+            else:
+                changes[name][key]["new"] = new
+        else:
+            changes[name][key] = {"new": new, "old": old}
+
+    def on_about_to_process(self, pair):
+        """A pair is about to be processed"""
+        self.update_models_with_result(pair)
+
+    def on_processed(self, result):
+        """A pair has just been processed"""
+        self.update_models_with_result(result)
+
+    def on_finished(self):
+        """Processing has finished"""
+        self.reset_status()
+
+    def on_error(self, message):
+        """An error has occurred"""
+        util.echo(message)
+
+    def on_info(self, message):
+        """A message was sent"""
+        util.echo(message)
+
+    # Data wranglers
+
+    @QtCore.pyqtSlot()
+    def start(self):
         """Start processing-loop"""
 
-        def worker():
-            response = rest.request("POST", "/next")
-            while self._is_running and response.status_code == 200:
-                self.__on_processed(response.json())
-                self.processed.emit(response.json())
-                response = rest.request("POST", "/next")
-            self.finished.emit()
+        if not any(i.isToggled for i in self._instance_model.items):
+            self.error.emit("Must select at least one instance")
+            return
 
-        self.__reset_state()
+        if not any(i.isToggled for i in self._plugin_model.items):
+            self.error.emit("Must select at least one plug-in")
+            return
 
-        thread = threading.Thread(target=worker, name="publisher")
+        self.save()
+        self.reset_state()
+        self.is_running = True
+
+        thread = threading.Thread(target=processor,
+                                  args=[self],
+                                  name="processor")
         thread.daemon = True
         thread.start()
 
-    def __on_finished(self):
-        self.__reset_status()
+    @QtCore.pyqtSlot()
+    def stop(self, message=None):
+        if message:
+            self.info.emit(message)
+        self.is_running = False
 
-    def __on_processed(self, data):
-        self.__update_instances(data)
-        self.__update_plugins(data)
+    def update_models_with_result(self, result):
+        """Update item-model with result from host
 
-    def __update_instances(self, data):
-        model_ = self._instance_model
-        for item in model_.items:
-            index = model_.itemIndex(item)
-            current_item = data.get("instance")
+        State is sent from host after processing had taken place
+        and represents the events that took place; including
+        log messages and completion status.
 
-            if current_item == item.name:
-                model_.setData(index, "isProcessing", True)
-                model_.setData(index, "currentProgress", 1)
+        """
 
-                if data.get("error"):
-                    model_.setData(index, "hasError", True)
-                else:
-                    model_.setData(index, "succeeded", True)
+        for m in (self._instance_model, self._plugin_model):
+            for index in range(m.rowCount()):
+                m.setData(index, "isProcessing", False)
 
-            else:
-                model_.setData(index, "isProcessing", False)
+        if result.get("error") is not None:
+            self._has_errors = True
 
-    def __update_plugins(self, data):
-        model_ = self._plugin_model
-        for item in model_.items:
-            index = model_.itemIndex(item)
-            current_item = data.get("plugin")
+        self.update_model_with_result("instance", result)
+        self.update_model_with_result("plugin", result)
 
-            if current_item == item.name:
-                if self._has_errors:
-                    if item.type == "Extractor":
-                        self.info.emit("Stopped due to failed vaildation")
-                        self._is_running = False
-                        return
+        # Logic
+        # Do not continue if there are errors
+        # and next plug-in is an extractor.
 
-                model_.setData(index, "isProcessing", True)
-                model_.setData(index, "currentProgress", 1)
+        plugin_name = result["plugin"]
+        plugin_item = self._plugin_model.itemFromName(plugin_name)
+        plugin_index = self._plugin_model.itemIndexFromName(plugin_name)
 
-                if data.get("error"):
-                    model_.setData(index, "hasError", True)
-                    self._has_errors = True
-                else:
-                    model_.setData(index, "succeeded", True)
+        instance_name = result["instance"]
+        instance_index = self._instance_model.itemIndexFromName(instance_name)
 
-            else:
-                model_.setData(index, "isProcessing", False)
+        next_instance = self._instance_model.next_instance(
+            instance_index, plugin_item.data["families"])
 
-    def __reset_status(self):
+        if not next_instance:
+            next_plugin = self._plugin_model.next_plugin(plugin_index)
+            if next_plugin:
+                if self._has_errors and next_plugin.data["order"] >= 2:
+                    self.stop("Stopped due to failed vaildation")
+
+    def update_model_with_result(self, model, result):
+        name = result[model]
+        model = {"instance": self._instance_model,
+                 "plugin": self._plugin_model}[model]
+        item = model.itemFromName(name)
+        index = model.itemIndexFromItem(item)
+
+        model.setData(index, "isProcessing", True)
+        model.setData(index, "currentProgress", 1)
+
+        if result.get("error"):
+            model.setData(index, "hasError", True)
+        else:
+            model.setData(index, "succeeded", True)
+
+    def reset_status(self):
         """Reset progress bars"""
-        rest.request("POST", "/session").json()
         self._has_errors = False
-        self._is_running = False
+        self.is_running = False
 
-        for model_ in (self._instance_model, self._plugin_model):
-            for item in model_.items:
-                index = model_.itemIndex(item)
-                model_.setData(index, "isProcessing", False)
-                model_.setData(index, "currentProgress", 0)
+        for m in (self._instance_model, self._plugin_model):
+            for item in m.items:
+                index = m.itemIndexFromItem(item)
+                m.setData(index, "isProcessing", False)
+                m.setData(index, "currentProgress", 0)
 
-    def __reset_state(self):
+    def reset_state(self):
         """Reset data from last publish"""
-        for model_ in (self._instance_model, self._plugin_model):
-            for item in model_.items:
-                index = model_.itemIndex(item)
-                model_.setData(index, "hasError", False)
-                model_.setData(index, "succeeded", False)
+        for m in (self._instance_model, self._plugin_model):
+            for item in m.items:
+                index = m.itemIndexFromItem(item)
+                m.setData(index, "hasError", False)
+                m.setData(index, "succeeded", False)
 
 
-def main(port, pid=None, preload=False, validate=True):
+def processor(controller):
+    """Publishing processor; executing in a separate thread
+
+    Logic:
+        - Do not process plug-ins without compatible instance
+        - Run all validator
+        - If any validator fails, do not continue with extractors
+    """
+
+    for plugin in controller._plugin_model.items:
+
+        # Updated by `on_processed`
+        if not controller.is_running:
+            break
+
+        if plugin.isToggled is False:
+            continue
+
+        for instance in controller._instance_model.items:
+
+            # Updated by `on_processed`
+            if not controller.is_running:
+                break
+
+            if instance.isToggled is False:
+                continue
+
+            family = instance.data["family"]
+            if not any(x in plugin.data["families"] for x in (family, "*")):
+                continue
+
+            pair = {
+                "instance": instance.name,
+                "plugin": plugin.name
+            }
+
+            print "Processing: ({plugin}, {instance})".format(**pair)
+            controller.about_to_process.emit(pair)
+
+            response = request("PUT", "/state", data=pair)
+
+            if response.status_code == 200:
+                result = response.json()["result"]
+                controller.processed.emit(result)
+            else:
+                print json.dumps(response.json(), indent=4)
+
+    controller.finished.emit()
+
+
+def main(port, pid=None, preload=False, debug=False, validate=True):
+    """Start the Qt-runtime and show the window
+
+    Arguments:
+        port (int): Port through which to communicate
+        pid (int, optional): Process id of parent process. Defaults to
+            None, thus not being parented to a process and must thus
+            be killed manually.
+        debug (bool, optional): Whether or not to run in debug-mode.
+            Defaults to False
+        validate (bool, optional): Whether the environment should be validated
+            prior to launching. Defaults to True
+
+    """
 
     try:
         safety.validate()
@@ -490,8 +708,7 @@ Pass validate=False to pyblish_qml.app:main
 in order to bypass validation.
 
 See below message for more information.
-"""
-        )
+""")
 
         util.echo("Environment:")
         util.echo("-" * 32)
@@ -505,33 +722,51 @@ See below message for more information.
         util.echo(e)
         return 255
 
-    rest.PORT = port
+    global REST_PORT
+    REST_PORT = port
+
+    # Initialise logger for Endpoint
+    formatter = logging.Formatter(
+        '%(levelname)s - '
+        '%(name)s: '
+        '%(message)s',
+        '%H:%M:%S')
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    for logger in ("endpoint", "werkzeug"):
+        log = logging.getLogger(logger)
+        log.handlers[:] = []
+        log.addHandler(stream_handler)
+        # log.setLevel(logging.DEBUG)
+        log.setLevel(logging.INFO)
+
+    if debug:
+        import mocking
+        import threading
+        import pyblish_endpoint.server
+
+        Service = mocking.MockService
+        Service.SLEEP_DURATION = 0.1
+        Service.PERFORMANCE = Service.FAST
+
+        endpoint = threading.Thread(
+            target=pyblish_endpoint.server.start_production_server,
+            kwargs={"port": port, "service": Service})
+
+        endpoint.daemon = True
+        endpoint.start()
+
+        util.echo("Running debug app on port: %s" % REST_PORT)
 
     with util.Timer("Spent %.2f ms creating the application"):
         app = Application()
 
-        if preload:
-            app.keep_alive = True
-            app.listen()
+        app.keep_alive = not debug
+        app.listen()
 
-        elif port == 6000:
-            app.run_debug()
-
-        else:
-            app.keep_alive = True
-            app.run_production()
-
-    if pid and HAS_PSUTIL:
-        util.echo("%s parented to pid: %s" % (os.getpid(), pid))
-
-        def monitor():
-            psutil.Process(pid).wait()
-            util.echo("Force quitting.. (parent killed)")
-            os._exit(1)
-
-        t = threading.Thread(target=monitor, name="psutilMonitor")
-        t.daemon = True
-        t.start()
+        if not preload:
+            app.show()
 
     return app.exec_()
 
@@ -555,14 +790,22 @@ def cli():
     parser.add_argument("--port", type=int, default=6000)
     parser.add_argument("--pid", type=int, default=None)
     parser.add_argument("--preload", action="store_true")
+    parser.add_argument("--debug", action="store_true")
 
     kwargs = parser.parse_args()
     port = kwargs.port
     pid = kwargs.pid
     preload = kwargs.preload
+    debug = kwargs.debug
 
-    return main(port, pid, preload)
+    return main(port=port,
+                pid=pid,
+                debug=debug,
+                preload=preload)
 
 
 if __name__ == "__main__":
-    sys.exit(cli())
+    main(port=6000,
+         pid=os.getpid(),
+         preload=False,
+         debug=True)
