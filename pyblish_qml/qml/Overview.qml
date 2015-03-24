@@ -20,12 +20,6 @@ Item {
         }
     ]
 
-    onStateChanged: {
-        if (state === "publishing") {
-            terminal.clear()
-        }
-    }
-
     function setMessage(message) {
         footer.message.text = message
         footer.message.animation.restart()
@@ -69,7 +63,7 @@ Item {
             anchors.margins: parent.margins
 
             List {
-                model: app.instanceModel
+                model: app.instanceProxy
                 width: parent.width / 2
                 height: parent.height
 
@@ -80,7 +74,7 @@ Item {
             }
 
             List {
-                model: app.pluginModel
+                model: app.pluginProxy
                 width: parent.width / 2
                 height: parent.height
 
@@ -117,7 +111,6 @@ Item {
         onReset: {
             overview.state = ""
             setMessage("Resetting..")
-            terminal.clear()
             app.reset()
         }
 
@@ -139,63 +132,6 @@ Item {
          * Print results of publish in Terminal
         */
         onProcessed: {
-            // app.log.info(JSON.stringify(data))
-            if (typeof data.instance === "undefined")
-                return
-
-            if (overview.__lastPlugin != data.plugin) {
-                terminal.echo("<p>-----------------------------------------------</p>")
-                terminal.echo()
-                terminal.echo("<b style='font-size: 15px'>" + data.plugin + "</b>")
-
-                overview.__lastPlugin = data.plugin
-            }
-
-            data.records.forEach(function (record) {
-                /* 
-                 * Available fields
-                 *  .args
-                 *  .created
-                 *  .filename
-                 *  .funcName
-                 *  .levelname
-                 *  .levelno
-                 *  .lineno
-                 *  .message
-                 *  .module
-                 *  .msecs
-                 *  .msg
-                 *  .name
-                 *  .pathname
-                 *  .process
-                 *  .processName
-                 *  .relativeCreated
-                 *  .thread
-                 *  .threadName
-                */
-                terminal.echo("<p>%1</p".arg(record.levelname + " - " + record.msg))
-            })
-
-
-            if (data.error) {
-                /*
-                 * Available fields
-                 *  .traceback[0] (filename)
-                 *  .traceback[1] (lineNo)
-                 *  .traceback[2] (funcName)
-                 *  .traceback[3] (code)
-                 *  .message
-                */
-                terminal.echo()
-                terminal.echo("<p style='color: rgb(255, 100, 100)'>Validation failed</p>")
-                terminal.echo("<p style='color: rgb(255, 100, 100)'>%1</p>".arg(data.error.message))
-                // terminal.echo("    File: " + data.error.traceback[0])
-                // terminal.echo("    Line Number: " + data.error.traceback[1])
-                // terminal.echo("    Function Name: " + data.error.traceback[2])
-            }
-
-            // terminal.echo("-----------------------------------------------")
-            terminal.echo()  // Newline
         }
 
         onFinished: {
@@ -208,15 +144,10 @@ Item {
         }
 
         onInfo: {
-            terminal.echo(message)
         }
 
         onSaved: {
             setMessage("Saved")
         }
-    }
-
-    Component.onCompleted: {
-        terminal.clear()
     }
 }

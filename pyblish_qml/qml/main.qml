@@ -69,7 +69,7 @@ Window {
 
         Component.onCompleted: {
             loader.sourceComponent = Qt.createComponent(
-                Qt.resolvedUrl("Pyblish.qml"),
+                Qt.resolvedUrl("app.qml"),
                 Component.Asynchronous)
         }
     }

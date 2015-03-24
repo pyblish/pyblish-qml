@@ -1,46 +1,60 @@
 import QtQuick 2.3
+import QtQuick.Controls 1.3 as Controls
+import QtQuick.Controls.Styles 1.3 as ControlStyle
 import Pyblish 0.1
+import "utils.js" as Util
 
 
-Flickable {
-    id: terminal
+Column {
+    ListView {
+        id: listView
 
-    property alias color: textEdit.color
+        width: parent.width
+        height: parent.height - filter.height
 
-    function echo(line) {
-        terminal.contentY = terminal.contentHeight
-        textEdit.append(line);
+        clip: true
+
+        model: app.terminalProxy
+
+        delegate: Loader {
+            width: ListView.view.width
+            source: "delegates/" + Util.toTitleCase(type) + "Delegate.qml"
+        }
     }
 
-    function clear() {
-        textEdit.text = "Logging started %1\n".arg(new Date());
-    }
+    // Row {
+    //     id: toolBar
 
-    anchors.fill: parent
-    anchors.margins: 5
+    //     Button {
+    //         text: "A"
+    //     }
+    //     Button {
+    //         text: "B"
+    //     }
+    //     Button {
+    //         text: "C"
+    //     }
+    //     Button {
+    //         text: "D"
+    //     }
+    // }
 
-    contentWidth: textEdit.paintedWidth
-    contentHeight: textEdit.paintedHeight
+    Controls.TextField {
+        id: filter
 
-    boundsBehavior: Flickable.DragOverBounds
-    flickableDirection: Flickable.VerticalFlick
-    clip: true
+        width: parent.width
+        height: 30
 
-    TextEdit {
-        id: textEdit
+        placeholderText: "Filter.."
 
-        width: terminal.width
-        height: terminal.height
-        
-        readOnly: true
+        style: ControlStyle.TextFieldStyle {
+            background: Rectangle {
+                color: Qt.darker(Theme.backgroundColor, 1.4)
+            }
+            textColor: "white"
+            placeholderTextColor: Qt.darker(textColor, 1.5)
+        }
 
-        color: "white"
-
-        font.family: "Consolas"
-
-        wrapMode: TextEdit.Wrap
-        textFormat: TextEdit.AutoText
-
-        onLinkActivated: Qt.openUrlExternally(link)
+        onTextChanged: app.terminalProxy.setFilterFixedString(text)
     }
 }

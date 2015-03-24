@@ -267,32 +267,53 @@ class Controller(QtCore.QObject):
     saved = QtCore.pyqtSignal()
 
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def pluginModel(self):
-        return self._plugin_model
+    def instanceProxy(self):
+        return self._instance_proxy
 
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def instanceModel(self):
-        return self._instance_model
+    def pluginProxy(self):
+        return self._plugin_proxy
+
+    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
+    def terminalProxy(self):
+        return self._terminal_proxy
+
+    @QtCore.pyqtSlot(int)
+    def toggleItem(self, index):
+        self.__toggle_item(self._item_model, index)
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
-        self.__toggle_item(self._instance_model, index)
+        qindex = self._instance_proxy.index(index, 0, QtCore.QModelIndex())
+        source_qindex = self._instance_proxy.mapToSource(qindex)
+        source_index = source_qindex.row()
+        self.__toggle_item(self._item_model, source_index)
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def pluginData(self, index):
-        return self.__item_data(self._plugin_model, index)
+        qindex = self._plugin_proxy.index(index, 0, QtCore.QModelIndex())
+        source_qindex = self._plugin_proxy.mapToSource(qindex)
+        source_index = source_qindex.row()
+        return self.__item_data(self._item_model, source_index)
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def instanceData(self, index):
-        return self.__item_data(self._instance_model, index)
+        qindex = self._instance_proxy.index(index, 0, QtCore.QModelIndex())
+        source_qindex = self._instance_proxy.mapToSource(qindex)
+        source_index = source_qindex.row()
+        return self.__item_data(self._item_model, source_index)
 
     @QtCore.pyqtSlot(int)
     def togglePlugin(self, index):
-        model = self._plugin_model
-        item = model.itemFromIndex(index)
+        qindex = self._plugin_proxy.index(index, 0, QtCore.QModelIndex())
+        source_qindex = self._plugin_proxy.mapToSource(qindex)
+        source_index = source_qindex.row()
+
+        model = self._item_model
+        item = model.itemFromIndex(source_index)
 
         if item.optional:
-            self.__toggle_item(self._plugin_model, index)
+            self.__toggle_item(self._item_model, source_index)
         else:
             self.error.emit("Plug-in is mandatory")
 
@@ -304,6 +325,8 @@ class Controller(QtCore.QObject):
         back to how it was when it first got launched.
 
         """
+
+        self._terminal_model.reset()
 
         self._changes.clear()
         self._changes.update({
@@ -344,8 +367,7 @@ class Controller(QtCore.QObject):
         state = response["state"]
 
         # Remove existing items from model
-        self._instance_model.reset()
-        self._plugin_model.reset()
+        self._item_model.reset()
 
         context = state.get("context", {})
         instances = context.get("children", [])
@@ -357,7 +379,7 @@ class Controller(QtCore.QObject):
 
             item = model.InstanceItem(name=instance["name"],
                                       data=instance["data"])
-            self._instance_model.addItem(item)
+            self._item_model.addItem(item)
 
         for plugin in plugins:
             if plugin["data"].get("order") < 1:
@@ -368,10 +390,17 @@ class Controller(QtCore.QObject):
 
             item = model.PluginItem(name=plugin["name"],
                                     data=plugin["data"])
-            self._plugin_model.addItem(item)
+            self._item_model.addItem(item)
 
-        for key, value in context["data"].iteritems():
-            self.info.emit("%s=%s" % (key, value))
+        # Log context information
+        context_ = {}
+        context_["type"] = "context"
+        context_["name"] = "Pyblish"
+        context_["filter"] = context_["name"]
+        context_.update(context["data"])
+        context_["pythonVersion"] = context_["pythonVersion"].split("(")[0]
+
+        self.echo(context_)
 
     @QtCore.pyqtSlot()
     def save(self):
@@ -385,8 +414,8 @@ class Controller(QtCore.QObject):
                            data={"changes": serialised_changes})
 
         if response.status_code == 200:
-            changes = json.dumps(response.json()["changes"], indent=4)
-            self.info.emit("Changes saved successfully: %s" % changes)
+            # changes = json.dumps(response.json()["changes"], indent=4)
+            self.info.emit("Changes saved successfully.")
             self.saved.emit()
 
         else:
@@ -413,28 +442,34 @@ class Controller(QtCore.QObject):
             item = model.itemFromIndex(index)
             model.setData(index, "isToggled", not item.isToggled)
 
-    @QtCore.pyqtSlot()
-    def publish(self):
-        """Perform publish
-
-        This is done in stages.
-
-        1. Collect changes
-        2. Update host with changes
-        3. Advance until finished
-
-        """
-
-        self.is_running = True
-        self.save()
-        self.start()
-
     @QtCore.pyqtProperty(QtCore.QObject)
     def log(self):
         return self._log
 
+    def echo(self, data):
+        """Append `data` to terminal model"""
+        self._terminal_model.addItem(data)
+
     def __init__(self, parent=None):
         super(Controller, self).__init__(parent)
+
+        item_model = model.Model()
+        terminal_model = model.TerminalModel()
+
+        instance_proxy = QtCore.QSortFilterProxyModel()
+        instance_proxy.setSourceModel(item_model)
+        instance_proxy.setFilterRole(999)
+        instance_proxy.setFilterFixedString("InstanceItem")
+
+        plugin_proxy = QtCore.QSortFilterProxyModel()
+        plugin_proxy.setSourceModel(item_model)
+        plugin_proxy.setFilterRole(999)
+        plugin_proxy.setFilterFixedString("PluginItem")
+
+        terminal_proxy = QtCore.QSortFilterProxyModel()
+        terminal_proxy.setSourceModel(terminal_model)
+        terminal_proxy.setFilterRole(terminal_model.names["filter"])  # msg
+        terminal_proxy.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
 
         self.is_running = False
 
@@ -446,27 +481,26 @@ class Controller(QtCore.QObject):
             "plugins": {}
         }
 
-        self._instance_model = model.InstanceModel()
-        self._plugin_model = model.PluginModel()
+        self._item_model = item_model
+        self._terminal_model = terminal_model
+
+        self._instance_proxy = instance_proxy
+        self._plugin_proxy = plugin_proxy
+        self._terminal_proxy = terminal_proxy
 
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
         self.finished.connect(self.on_finished)
-        self.processed.connect(self.on_processed, type=QtCore.Qt.BlockingQueuedConnection)
-        self.about_to_process.connect(self.on_about_to_process, type=QtCore.Qt.BlockingQueuedConnection)
+        self.processed.connect(
+            self.on_processed, type=QtCore.Qt.BlockingQueuedConnection)
+        self.about_to_process.connect(
+            self.on_about_to_process, type=QtCore.Qt.BlockingQueuedConnection)
 
-        self._instance_model.data_changed.connect(self.on_instance_data_changed)
-        self._plugin_model.data_changed.connect(self.on_plugin_data_changed)
+        self._item_model.data_changed.connect(self.on_data_changed)
 
     # Event handlers
 
-    def on_instance_data_changed(self, *args, **kwargs):
-        self.on_data_changed(self._instance_model, *args, **kwargs)
-
-    def on_plugin_data_changed(self, *args):
-        self.on_data_changed(self._plugin_model, *args)
-
-    def on_data_changed(self, model_, name, key, old, new):
+    def on_data_changed(self, item, key, old, new):
         """Handler for changes to data within `model`
 
         Changes include toggling instances along with any
@@ -483,11 +517,12 @@ class Controller(QtCore.QObject):
 
         key = remap.get(key) or key
 
-        if isinstance(model_, model.PluginModel):
+        if isinstance(item, model.PluginItem):
             changes = self._changes["plugins"]
         else:
             changes = self._changes["context"]
 
+        name = item.name
         if name not in changes:
             changes[name] = {}
 
@@ -517,9 +552,45 @@ class Controller(QtCore.QObject):
         """A pair has just been processed"""
         self.update_models_with_result(result)
 
+        if getattr(self, "_last_plugin", None) != result["plugin"]:
+            self._last_plugin = result["plugin"]
+
+            plugin_name = result["plugin"]
+            plugin_item = self._item_model.itemFromName(plugin_name)
+
+            self.echo({
+                "type": "plugin",
+                "message": result["plugin"],
+                "filter": result["plugin"],
+                "doc": plugin_item.doc
+            })
+
+        self.echo({
+            "type": "instance",
+            "message": result["instance"],
+            "filter": result["instance"]
+        })
+
+        for record in result["records"]:
+            record["type"] = "record"
+            record["filter"] = record["msg"]
+            self.echo(record)
+
+        if result["error"] is not None:
+            error = result["error"]
+            error["type"] = "error"
+            record["filter"] = record["message"]
+            self.echo(error)
+
     def on_finished(self):
         """Processing has finished"""
+        if hasattr(self, "_last_plugin"):
+            delattr(self, "_last_plugin")
         self.reset_status()
+        self.echo({
+            "type": "message",
+            "message": "Finished"
+        })
 
     def on_error(self, message):
         """An error has occurred"""
@@ -529,18 +600,28 @@ class Controller(QtCore.QObject):
         """A message was sent"""
         util.echo(message)
 
+        self.echo({
+            "type": "message",
+            "message": message
+        })
+
     # Data wranglers
 
     @QtCore.pyqtSlot()
     def start(self):
         """Start processing-loop"""
 
-        if not any(i.isToggled for i in self._instance_model.items):
-            self.error.emit("Must select at least one instance")
-            return
+        plugin_toggled = False
+        instance_toggled = False
+        for item in self._item_model.items:
+            if item.isToggled:
+                if isinstance(item, model.PluginItem):
+                    plugin_toggled = True
+                if isinstance(item, model.InstanceItem):
+                    instance_toggled = True
 
-        if not any(i.isToggled for i in self._plugin_model.items):
-            self.error.emit("Must select at least one plug-in")
+        if not any([plugin_toggled, instance_toggled]):
+            self.error.emit("Must select at least one instance")
             return
 
         self.save()
@@ -568,69 +649,76 @@ class Controller(QtCore.QObject):
 
         """
 
-        for m in (self._instance_model, self._plugin_model):
-            for index in range(m.rowCount()):
-                m.setData(index, "isProcessing", False)
+        model = self._item_model
+
+        for index in range(model.rowCount()):
+            model.setData(index, "isProcessing", False)
 
         if result.get("error") is not None:
             self._has_errors = True
 
-        self.update_model_with_result("instance", result)
-        self.update_model_with_result("plugin", result)
+        for type in ("instance", "plugin"):
+            name = result[type]
+            item = model.itemFromName(name)
+            index = model.itemIndexFromItem(item)
+
+            model.setData(index, "isProcessing", True)
+            model.setData(index, "currentProgress", 1)
+
+            if result.get("error"):
+                model.setData(index, "hasError", True)
+            else:
+                model.setData(index, "succeeded", True)
 
         # Logic
         # Do not continue if there are errors
         # and next plug-in is an extractor.
 
         plugin_name = result["plugin"]
-        plugin_item = self._plugin_model.itemFromName(plugin_name)
-        plugin_index = self._plugin_model.itemIndexFromName(plugin_name)
-
         instance_name = result["instance"]
-        instance_index = self._instance_model.itemIndexFromName(instance_name)
 
-        next_instance = self._instance_model.next_instance(
-            instance_index, plugin_item.data["families"])
+        plugins = model.plugins
+        instances = model.instances
 
-        if not next_instance:
-            next_plugin = self._plugin_model.next_plugin(plugin_index)
-            if next_plugin:
+        plugin_item = [p for p in plugins if p.name == plugin_name][0]
+        plugin_index = plugins.index(plugin_item)
+
+        instance_item = [i for i in instances if i.name == instance_name][0]
+        instance_index = instances.index(instance_item)
+
+        families = plugin_item.data["families"]
+        try:
+            next_instance = instances[instance_index + 1]
+
+            while next_instance.data.get("family") not in families:
+                instance_index += 1
+                next_instance = instances[instance_index]
+
+        except IndexError:
+            try:
+                next_plugin = model.plugins[plugin_index + 1]
+            except IndexError:
+                return
+            else:
                 if self._has_errors and next_plugin.data["order"] >= 2:
                     self.stop("Stopped due to failed vaildation")
-
-    def update_model_with_result(self, model, result):
-        name = result[model]
-        model = {"instance": self._instance_model,
-                 "plugin": self._plugin_model}[model]
-        item = model.itemFromName(name)
-        index = model.itemIndexFromItem(item)
-
-        model.setData(index, "isProcessing", True)
-        model.setData(index, "currentProgress", 1)
-
-        if result.get("error"):
-            model.setData(index, "hasError", True)
-        else:
-            model.setData(index, "succeeded", True)
 
     def reset_status(self):
         """Reset progress bars"""
         self._has_errors = False
         self.is_running = False
 
-        for m in (self._instance_model, self._plugin_model):
-            for item in m.items:
-                index = m.itemIndexFromItem(item)
-                m.setData(index, "isProcessing", False)
-                m.setData(index, "currentProgress", 0)
+        for item in self._item_model.items:
+            index = self._item_model.itemIndexFromItem(item)
+            self._item_model.setData(index, "isProcessing", False)
+            self._item_model.setData(index, "currentProgress", 0)
 
     def reset_state(self):
         """Reset data from last publish"""
-        for m in (self._instance_model, self._plugin_model):
-            for item in m.items:
-                index = m.itemIndexFromItem(item)
-                m.setData(index, "hasError", False)
-                m.setData(index, "succeeded", False)
+        for item in self._item_model.items:
+            index = self._item_model.itemIndexFromItem(item)
+            self._item_model.setData(index, "hasError", False)
+            self._item_model.setData(index, "succeeded", False)
 
 
 def processor(controller):
@@ -642,7 +730,7 @@ def processor(controller):
         - If any validator fails, do not continue with extractors
     """
 
-    for plugin in controller._plugin_model.items:
+    for plugin in controller._item_model.plugins:
 
         # Updated by `on_processed`
         if not controller.is_running:
@@ -651,7 +739,7 @@ def processor(controller):
         if plugin.isToggled is False:
             continue
 
-        for instance in controller._instance_model.items:
+        for instance in controller._item_model.instances:
 
             # Updated by `on_processed`
             if not controller.is_running:
@@ -738,13 +826,15 @@ See below message for more information.
         log = logging.getLogger(logger)
         log.handlers[:] = []
         log.addHandler(stream_handler)
-        # log.setLevel(logging.DEBUG)
-        log.setLevel(logging.INFO)
+        log.setLevel(logging.DEBUG)
+        # log.setLevel(logging.INFO)
 
     if debug:
         import mocking
         import threading
         import pyblish_endpoint.server
+
+        os.environ["ENDPOINT_PORT"] = str(port)
 
         Service = mocking.MockService
         Service.SLEEP_DURATION = 0.1

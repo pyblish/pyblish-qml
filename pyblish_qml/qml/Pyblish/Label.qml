@@ -7,6 +7,8 @@ Text {
 
     property string style: "body1"
 
+    property color backgroundColor: "transparent"
+
     property var fontStyles: {
         "display4": {
             "size": 112,
@@ -94,6 +96,12 @@ Text {
     font.capitalization: style == "button" ? Font.AllUppercase : Font.MixedCase
 
     color: Theme.dark.textColor
+
+    Rectangle {
+        id: background
+        color: backgroundColor
+        anchors.fill: parent
+    }
 
     Component.onCompleted: {
         if (typeof fontInfo == "undefined")

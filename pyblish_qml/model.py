@@ -79,11 +79,10 @@ class PluginItem(Item):
 
 
 class Model(QtCore.QAbstractListModel):
-    _roles = dict()
+    roles = dict()
 
-    data_changed = QtCore.pyqtSignal(
-        str, str, object, object,
-        arguments=["name", "key", "old", "new"])
+    data_changed = QtCore.pyqtSignal(object, str, object, object,
+                                     arguments=["name", "key", "old", "new"])
 
     def __new__(cls, *args, **kwargs):
         instance = super(Model, cls).__new__(cls, *args, **kwargs)
@@ -93,8 +92,10 @@ class Model(QtCore.QAbstractListModel):
                     instance_defaults.keys() +
                     plugin_defaults.keys()):
             role = QtCore.Qt.UserRole + index
-            instance._roles[role] = key
+            instance.roles[role] = key
             index += 1
+
+        instance.roles[999] = "itemType"
 
         return instance
 
@@ -102,6 +103,24 @@ class Model(QtCore.QAbstractListModel):
         super(Model, self).__init__(parent)
         self.items = list()
         self.item_dict = dict()
+
+    @property
+    def plugins(self):
+        items = []
+        for item in self.items:
+            if isinstance(item, PluginItem):
+                items.append(item)
+
+        return items
+
+    @property
+    def instances(self):
+        items = []
+        for item in self.items:
+            if isinstance(item, InstanceItem):
+                items.append(item)
+
+        return items
 
     def addItem(self, item):
         self.beginInsertRows(QtCore.QModelIndex(),
@@ -122,13 +141,16 @@ class Model(QtCore.QAbstractListModel):
         except IndexError:
             return QtCore.QVariant()
 
-        if role in self._roles:
-            return getattr(item, self._roles[role])
+        if role == 999:
+            return type(item).__name__
+
+        if role in self.roles:
+            return getattr(item, self.roles[role])
 
         return QtCore.QVariant()
 
     def roleNames(self):
-        return self._roles
+        return self.roles
 
     def setData(self, index, key, value):
         item = self.items[index]
@@ -143,7 +165,7 @@ class Model(QtCore.QAbstractListModel):
 
         qindex = self.createIndex(index, 0)
         self.dataChanged.emit(qindex, qindex)
-        self.data_changed.emit(item.name, key, old, value)
+        self.data_changed.emit(item, key, old, value)
 
     def itemFromName(self, name):
         for item in self.items:
@@ -195,6 +217,98 @@ class PluginModel(Model):
             return None
 
         return item
+
+
+class TerminalModel(QtCore.QAbstractListModel):
+    roles = [
+        "type",
+        "filter",
+        "message",
+
+        # LogRecord
+        "threadName",
+        "name",
+        "thread",
+        "created",
+        "process",
+        "processName",
+        "args",
+        "module",
+        "filename",
+        "levelno",
+        "exc_text",
+        "pathname",
+        "lineno",
+        "msg",
+        "exc_info",
+        "funcName",
+        "relativeCreated",
+        "levelname",
+        "msecs",
+
+        # Exception
+        "fname",
+        "line_number",
+        "func",
+        "exc",
+
+        # Context
+        "port",
+        "host",
+        "user",
+        "connectTime",
+        "pythonVersion",
+        "pyblishVersion",
+        "endpointVersion",
+
+        # Plugin
+        "doc",
+        "instance",
+        "plugin"
+    ]
+
+    def __new__(cls, *args, **kwargs):
+        roles = dict()
+        for index in range(len(cls.roles)):
+            role = cls.roles[index]
+            roles[QtCore.Qt.UserRole + index] = role
+        cls.roles = roles
+        cls.names = dict((v, k) for k, v in roles.iteritems())
+        return super(TerminalModel, cls).__new__(cls, *args, **kwargs)
+
+    def __init__(self, parent=None):
+        super(TerminalModel, self).__init__(parent)
+        self.items = []
+
+    def addItem(self, item):
+        self.beginInsertRows(QtCore.QModelIndex(),
+                             self.rowCount(),
+                             self.rowCount())
+
+        self.items.append(item)
+        self.endInsertRows()
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return len(self.items)
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        try:
+            item = self.items[index.row()]
+        except IndexError:
+            return QtCore.QVariant()
+
+        if role in self.roles:
+            return item.get(self.roles[role], QtCore.QVariant())
+
+        return QtCore.QVariant()
+
+    def roleNames(self):
+        return self.roles
+
+    def reset(self):
+        self.beginResetModel()
+        self.items[:] = []
+        self.endResetModel()
 
 
 if __name__ == '__main__':
