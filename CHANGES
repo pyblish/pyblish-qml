@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.2.7
+-------------
+
+- Terminal 2.0
+- Selectors are now part of the GUI
+- Performance enhancement; GUI shows up before processing selectors.
+- Added Pyblish.AwesomeIcon
+- Added util.invoke
+
 Version 0.2.6
 -------------
 

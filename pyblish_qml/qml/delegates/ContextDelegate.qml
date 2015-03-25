@@ -30,7 +30,7 @@ BaseDelegate {
                 model: [
                 {
                     "key": "Python",
-                    "value": pythonVersion
+                    "value": pythonVersion.split(" ")[0]
                 },
                 {
                     "key": "Endpoint",

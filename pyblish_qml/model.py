@@ -103,24 +103,8 @@ class Model(QtCore.QAbstractListModel):
         super(Model, self).__init__(parent)
         self.items = list()
         self.item_dict = dict()
-
-    @property
-    def plugins(self):
-        items = []
-        for item in self.items:
-            if isinstance(item, PluginItem):
-                items.append(item)
-
-        return items
-
-    @property
-    def instances(self):
-        items = []
-        for item in self.items:
-            if isinstance(item, InstanceItem):
-                items.append(item)
-
-        return items
+        self.instances = list()
+        self.plugins = list()
 
     def addItem(self, item):
         self.beginInsertRows(QtCore.QModelIndex(),
@@ -128,7 +112,13 @@ class Model(QtCore.QAbstractListModel):
                              self.rowCount())
 
         self.items.append(item)
+
+        # Performance buffers
         self.item_dict[item.name] = item
+        if isinstance(item, PluginItem):
+            self.plugins.append(item)
+        elif isinstance(item, InstanceItem):
+            self.instances.append(item)
 
         self.endInsertRows()
 
@@ -168,10 +158,7 @@ class Model(QtCore.QAbstractListModel):
         self.data_changed.emit(item, key, old, value)
 
     def itemFromName(self, name):
-        for item in self.items:
-            if item.name == name:
-                return item
-        raise KeyError("%s not in dict" % name)
+        return self.item_dict.get(name)
 
     def itemFromIndex(self, index):
         return self.items[index]
@@ -193,6 +180,12 @@ class Model(QtCore.QAbstractListModel):
     def reset(self):
         self.beginResetModel()
         self.items[:] = []
+
+        # Clear caches too
+        self.item_dict.clear()
+        self.instances[:] = []
+        self.plugins[:] = []
+
         self.endResetModel()
 
 

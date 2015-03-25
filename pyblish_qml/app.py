@@ -265,6 +265,11 @@ class Controller(QtCore.QObject):
 
     finished = QtCore.pyqtSignal()
     saved = QtCore.pyqtSignal()
+    selected = QtCore.pyqtSignal()
+
+    # Thread-safe signals
+    about_to_process_blocking = QtCore.pyqtSignal(QtCore.QVariant, arguments=["pair"])
+    processed_blocking = QtCore.pyqtSignal(QtCore.QVariant, arguments=["data"])
 
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
     def instanceProxy(self):
@@ -327,8 +332,7 @@ class Controller(QtCore.QObject):
         """
 
         self._terminal_model.reset()
-
-        self._changes.clear()
+        self._item_model.reset()
         self._changes.update({
             "context": {},
             "plugins": {}
@@ -359,20 +363,71 @@ class Controller(QtCore.QObject):
 
         if response.status_code != 200:
             self.error.emit("Could not get state; see Terminal")
-            self.info.emit(response.json()["message"])
+            self.echo({
+                "type": "message",
+                "message": response.json()["message"]
+            })
             return
 
-        response = response.json()
+        state = response.json()["state"]
 
-        state = response["state"]
+        plugins = state.get("plugins", [])
+        context = state.get("context", [])
 
-        # Remove existing items from model
-        self._item_model.reset()
+        for plugin in plugins:
+            if plugin["data"].get("order") < 1:
+                plugin["data"]["isToggled"] = False
 
+            item = model.PluginItem(name=plugin["name"],
+                                    data=plugin["data"])
+            self._item_model.addItem(item)
+
+        # Log context information
+        context_ = {
+            "type": "context",
+            "name": "Pyblish",
+            "filter": "Pyblish"
+        }
+
+        context_.update(context["data"])
+
+        self.echo(context_)
+
+        util.invoke(self.select, callback=self.add_instances)
+
+    def select(self):
+        for plugin in self._item_model.plugins:
+            if not plugin.data.get("order") < 1:
+                continue
+
+            pair = {
+                "instance": None,
+                "plugin": plugin.name
+            }
+
+            self.about_to_process_blocking.emit(pair)
+
+            response = request("PUT", "/state", data=pair)
+
+            if response.status_code == 200:
+                result = response.json()["result"]
+                self.processed_blocking.emit(result)
+            else:
+                assert False
+
+        self.selected.emit()
+
+        # Selection is done, refresh state
+        response = request("GET", "/state")
+        assert response.status_code == 200
+
+        state = response.json()["state"]
         context = state.get("context", {})
         instances = context.get("children", [])
-        plugins = state.get("plugins", [])
 
+        return instances
+
+    def add_instances(self, instances):
         for instance in instances:
             if instance["data"].get("publish") is False:
                 instance["data"]["isToggled"] = False
@@ -380,27 +435,6 @@ class Controller(QtCore.QObject):
             item = model.InstanceItem(name=instance["name"],
                                       data=instance["data"])
             self._item_model.addItem(item)
-
-        for plugin in plugins:
-            if plugin["data"].get("order") < 1:
-                continue
-
-            if plugin["data"].get("hasCompatible") is False:
-                continue
-
-            item = model.PluginItem(name=plugin["name"],
-                                    data=plugin["data"])
-            self._item_model.addItem(item)
-
-        # Log context information
-        context_ = {}
-        context_["type"] = "context"
-        context_["name"] = "Pyblish"
-        context_["filter"] = context_["name"]
-        context_.update(context["data"])
-        context_["pythonVersion"] = context_["pythonVersion"].split("(")[0]
-
-        self.echo(context_)
 
     @QtCore.pyqtSlot()
     def save(self):
@@ -491,12 +525,16 @@ class Controller(QtCore.QObject):
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
         self.finished.connect(self.on_finished)
-        self.processed.connect(
-            self.on_processed, type=QtCore.Qt.BlockingQueuedConnection)
-        self.about_to_process.connect(
-            self.on_about_to_process, type=QtCore.Qt.BlockingQueuedConnection)
-
+        self.processed.connect(self.on_processed)
+        self.selected.connect(self.on_selected)
+        self.about_to_process.connect(self.on_about_to_process)
         self._item_model.data_changed.connect(self.on_data_changed)
+
+        # Blocking signals called from threads.
+        self.processed_blocking.connect(
+            self.on_processed, type=QtCore.Qt.BlockingQueuedConnection)
+        self.about_to_process_blocking.connect(
+            self.on_about_to_process, type=QtCore.Qt.BlockingQueuedConnection)
 
     # Event handlers
 
@@ -543,6 +581,9 @@ class Controller(QtCore.QObject):
                 changes[name][key]["new"] = new
         else:
             changes[name][key] = {"new": new, "old": old}
+
+    def on_selected(self):
+        self.reset_status()
 
     def on_about_to_process(self, pair):
         """A pair is about to be processed"""
@@ -608,7 +649,7 @@ class Controller(QtCore.QObject):
     # Data wranglers
 
     @QtCore.pyqtSlot()
-    def start(self):
+    def start(self, order=None):
         """Start processing-loop"""
 
         plugin_toggled = False
@@ -660,6 +701,12 @@ class Controller(QtCore.QObject):
         for type in ("instance", "plugin"):
             name = result[type]
             item = model.itemFromName(name)
+
+            if not item:
+                assert type == "instance"
+                # No instance were processed.
+                continue
+
             index = model.itemIndexFromItem(item)
 
             model.setData(index, "isProcessing", True)
@@ -677,22 +724,19 @@ class Controller(QtCore.QObject):
         plugin_name = result["plugin"]
         instance_name = result["instance"]
 
-        plugins = model.plugins
-        instances = model.instances
-
-        plugin_item = [p for p in plugins if p.name == plugin_name][0]
-        plugin_index = plugins.index(plugin_item)
-
-        instance_item = [i for i in instances if i.name == instance_name][0]
-        instance_index = instances.index(instance_item)
+        plugin_item = [p for p in model.plugins if p.name == plugin_name][0]
+        plugin_index = model.plugins.index(plugin_item)
 
         families = plugin_item.data["families"]
+
         try:
-            next_instance = instances[instance_index + 1]
+            instance_item = [i for i in model.instances if i.name == instance_name][0]
+            instance_index = model.instances.index(instance_item)
+            next_instance = model.instances[instance_index + 1]
 
             while next_instance.data.get("family") not in families:
                 instance_index += 1
-                next_instance = instances[instance_index]
+                next_instance = model.instances[instance_index]
 
         except IndexError:
             try:
@@ -724,14 +768,20 @@ class Controller(QtCore.QObject):
 def processor(controller):
     """Publishing processor; executing in a separate thread
 
+    Arguments:
+        controller (Controller): Instance of controller to be used
+            for processing.
+        order (tuple): Range of orders to process. E.g. (0, 1) == between
+            0 and 1, including 0 but not 1.
+
     Logic:
         - Do not process plug-ins without compatible instance
         - Run all validator
         - If any validator fails, do not continue with extractors
+
     """
 
     for plugin in controller._item_model.plugins:
-
         # Updated by `on_processed`
         if not controller.is_running:
             break
@@ -758,13 +808,13 @@ def processor(controller):
             }
 
             print "Processing: ({plugin}, {instance})".format(**pair)
-            controller.about_to_process.emit(pair)
+            controller.about_to_process_blocking.emit(pair)
 
             response = request("PUT", "/state", data=pair)
 
             if response.status_code == 200:
                 result = response.json()["result"]
-                controller.processed.emit(result)
+                controller.processed_blocking.emit(result)
             else:
                 print json.dumps(response.json(), indent=4)
 
@@ -890,7 +940,7 @@ def cli():
 
     return main(port=port,
                 pid=pid,
-                debug=debug,
+                debug=debug or port == 6000,
                 preload=preload)
 
 
