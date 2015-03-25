@@ -11,7 +11,7 @@ BaseDelegate {
 
     expandable: hasLongMessage
 
-    height: messageLabel.paintedHeight
+    height: bodyItem.__height
 
     property var levelColors: {
         "DEBUG": Qt.lighter("steelblue", 1.3),
@@ -23,30 +23,16 @@ BaseDelegate {
 
     color: levelColors[levelname]
 
-    Row {
+    body: Row {
         id: content
 
-        anchors.fill: parent
+        property real __height: messageLabel.paintedHeight
 
         spacing: 10
 
-        Icon {
-            id: toggle
-
-            name: expanded ? "chevron-up-white-16x16" : "chevron-down-white-16x16"
-            opacity: expandable ? 1 : 0
-
-            width: 10
-            height: 10
-
-            y: 2
-
-            anchors.verticalCenter: parent.verticalCenter
-
-        }
-
         Label {
             id: levelLabel
+
             text: levelname
             color: root.color
             backgroundColor: Theme.alpha(root.color, 0.1)
@@ -59,7 +45,7 @@ BaseDelegate {
             elide: Text.ElideRight
             wrapMode: expanded ? Text.WordWrap : Text.NoWrap
 
-            width: root.width - levelLabel.paintedWidth - toggle.width - content.spacing
+            width: root.width - levelLabel.paintedWidth - spacing
         }
     }
 }

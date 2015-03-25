@@ -3,13 +3,10 @@ import Pyblish 0.1
 
 
 BaseDelegate {
+    height: bodyItem.height
 
-    height: delegate.height + 10
-
-    Row {
+    body: Row {
         id: delegate
-
-        width: parent.width
 
         spacing: 5
 

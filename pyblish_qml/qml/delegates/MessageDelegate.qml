@@ -5,10 +5,12 @@ import Pyblish 0.1
 BaseDelegate {
     id: root
 
-    height: label.paintedHeight
+    height: bodyItem.__height
 
-    Row {
+    body: Row {
         id: content
+
+        property real __height: label.paintedHeight
 
         spacing: 10
         anchors.verticalCenter: parent.verticalCenter
@@ -16,11 +18,9 @@ BaseDelegate {
         Icon {
             id: toggle
         
-            name: expanded ? "chevron-up-white-16x16" : "chevron-down-white-16x16"
+            name: "button-publish"
             opacity: expandable ? 1 : 0
-
-            width: 10
-            height: 10
+            rotation: expanded ? 90 : 0
 
             anchors.verticalCenter: parent.verticalCenter
 

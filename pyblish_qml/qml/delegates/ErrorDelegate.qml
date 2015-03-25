@@ -7,9 +7,9 @@ BaseDelegate {
 
     expandable: true
 
-    height: content.height + 10
+    height: bodyItem.height + 10
 
-    Row {
+    body: Row {
         id: content
 
         spacing: 10
@@ -19,20 +19,6 @@ BaseDelegate {
         anchors.verticalCenter: parent.verticalCenter
 
         clip: true
-
-        Icon {
-            id: toggle
-
-            name: expanded ? "chevron-up-white-16x16" : "chevron-down-white-16x16"
-            opacity: expandable ? 1 : 0
-
-            width: 10
-            height: 10
-
-            y: 2
-
-            anchors.verticalCenter: parent.verticalCenter
-        }
 
         Icon {
             id: icon
@@ -48,7 +34,7 @@ BaseDelegate {
 
             spacing: 10
 
-            width: root.width - icon.width - toggle.width - content.spacing
+            width: root.width - icon.width - content.spacing
 
             property bool hasLongMessage: message.indexOf("\n") != -1 ? true : false
             property string shortMessage: message.split("\n")[0]
