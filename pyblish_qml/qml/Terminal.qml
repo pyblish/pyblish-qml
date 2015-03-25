@@ -6,21 +6,44 @@ import "utils.js" as Util
 
 
 Column {
-    ListView {
-        id: listView
+
+    Item {
 
         width: parent.width
         height: parent.height - filter.height
 
-        clip: true
+        Rectangle {
+            color: Theme.backgroundColor
 
-        model: app.terminalProxy
+            width: icon.width
 
-        delegate: Loader {
-            width: ListView.view.width
-            source: "delegates/" + Util.toTitleCase(type) + "Delegate.qml"
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+
+            Icon {
+                id: icon
+                name: "button-expand"
+                visible: false
+            }
         }
+
+        ListView {
+            id: listView
+
+            anchors.fill: parent
+
+            clip: true
+
+            model: app.terminalProxy
+
+            delegate: Loader {
+                width: ListView.view.width
+                source: "delegates/" + Util.toTitleCase(type) + "Delegate.qml"
+            }
+        }
+
     }
+
 
     // Row {
     //     id: toolBar

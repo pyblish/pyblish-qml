@@ -88,7 +88,7 @@ Item {
         Terminal {
             id: terminal
             anchors.fill: parent
-            anchors.margins: parent.margins
+            anchors.margins: 2
             
             visible: tabBar.currentIndex == 1
         }
