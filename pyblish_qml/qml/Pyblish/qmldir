@@ -4,6 +4,7 @@ singleton Theme 0.1 Theme.qml
 
 Action 0.1 Action.qml
 ActionBar 0.1 ActionBar.qml
+AwesomeIcon 0.1 AwesomeIcon.qml
 Button 0.1 Button.qml
 CheckBox 0.1 CheckBox.qml
 Ink 0.1 Ink.qml
