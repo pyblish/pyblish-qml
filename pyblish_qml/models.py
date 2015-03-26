@@ -267,6 +267,8 @@ class TerminalModel(QtCore.QAbstractListModel):
         "plugin"
     ]
 
+    added = QtCore.pyqtSignal()
+
     def __new__(cls, *args, **kwargs):
         obj = super(TerminalModel, cls).__new__(cls, *args, **kwargs)
 
@@ -291,6 +293,7 @@ class TerminalModel(QtCore.QAbstractListModel):
 
         self.items.append(item)
         self.endInsertRows()
+        self.added.emit()
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self.items)

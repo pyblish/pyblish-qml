@@ -280,6 +280,10 @@ class Controller(QtCore.QObject):
         return self._plugin_proxy
 
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
+    def terminalModel(self):
+        return self._terminal_model
+
+    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
     def terminalProxy(self):
         return self._terminal_proxy
 
@@ -946,7 +950,7 @@ See below message for more information.
         os.environ["ENDPOINT_PORT"] = str(port)
 
         Service = mocking.MockService
-        Service.SLEEP_DURATION = 0.1
+        Service.SLEEP_DURATION = 0.05
         Service.PERFORMANCE = Service.FAST
 
         endpoint = threading.Thread(

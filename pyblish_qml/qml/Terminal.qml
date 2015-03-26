@@ -6,7 +6,6 @@ import "utils.js" as Util
 
 
 Column {
-
     Item {
 
         width: parent.width
@@ -83,5 +82,13 @@ Column {
         }
 
         onTextChanged: app.terminalProxy.setFilterFixedString(text)
+    }
+
+    Connections {
+        target: app.terminalModel
+
+        onAdded: {
+            listView.contentY = listView.contentHeight
+        }
     }
 }
