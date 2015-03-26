@@ -326,6 +326,31 @@ class Controller(QtCore.QObject):
         else:
             self.error.emit("Plug-in is mandatory")
 
+    @QtCore.pyqtSlot(str, str, str, str)
+    def exclude(self, target, operation, role, value):
+        """Exclude a `role` of `value` at `target`
+
+        Arguments:
+            target (str): Destination proxy model
+            operation (str): "add" or "remove" exclusion
+            role (str): Role to exclude
+            value (str): Value of `role` to exclude
+
+        """
+
+        target = {"terminal": self._terminal_proxy,
+                  "instance": self._instance_proxy,
+                  "plugin": self._plugin_proxy}[target]
+
+        if operation == "add":
+            target.addExclusion(role, value)
+
+        elif operation == "remove":
+            target.removeExclusion(role)
+
+        else:
+            raise TypeError("operation must be either `add` or `remove`")
+
     @QtCore.pyqtSlot()
     def reset(self):
         """Request that host re-discovers plug-ins and re-processes selectors
@@ -523,10 +548,12 @@ class Controller(QtCore.QObject):
         plugin_proxy.addExclusion("type", "Selector")
         plugin_proxy.addExclusion("hasCompatible", False)
 
-        terminal_proxy = QtCore.QSortFilterProxyModel()
+        terminal_proxy = models.ProxyModel()
         terminal_proxy.setSourceModel(terminal_model)
+        terminal_proxy.names = terminal_model.names
         terminal_proxy.setFilterRole(terminal_model.names["filter"])  # msg
         terminal_proxy.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        terminal_proxy.addExclusion("levelname", "DEBUG")
 
         self.is_running = False
 
@@ -638,6 +665,7 @@ class Controller(QtCore.QObject):
         for record in result["records"]:
             record["type"] = "record"
             record["filter"] = record["msg"]
+            record["msg"] = util.format_docstring(record["msg"])
             self.echo(record)
 
         if result["error"] is not None:
@@ -950,8 +978,8 @@ See below message for more information.
         os.environ["ENDPOINT_PORT"] = str(port)
 
         Service = mocking.MockService
-        Service.SLEEP_DURATION = 0.05
-        Service.PERFORMANCE = Service.FAST
+        Service.SLEEP_DURATION = 0.1
+        # Service.PERFORMANCE = Service.FAST
 
         endpoint = threading.Thread(
             target=pyblish_endpoint.server.start_production_server,

@@ -1,73 +1,125 @@
 import QtQuick 2.3
-import QtGraphicalEffects 1.0
 import Pyblish 0.1
 
 
 BaseDelegate {
     id: root
 
-    property bool hasLongMessage: msg.indexOf("\n") != -1 ? true : false
     property string shortMessage: msg.split("\n")[0]
     property string longMessage: msg
 
-    expandable: hasLongMessage
+    expandable: true
 
-    height: bodyItem.__height + 5
+    height: bodyItem.height + 5
 
-    property var levelColors: {
-        "DEBUG":      Qt.lighter("steelblue", 1.3),
-        "INFO":       Qt.lighter("steelblue", 1.5),
-        "WARNING":    Qt.lighter("red", 1.6),
-        "ERROR":      Qt.lighter("red", 1.4),
-        "CRITICAL":   Qt.lighter("red", 1.2)
+    property var levels: {
+        "DEBUG":  {
+            "color": Qt.lighter("steelblue", 1.3),
+            "icon": "log-debug-16x16"
+        },
+        "INFO": {
+            "color": Qt.lighter("steelblue", 1.5),
+            "icon": "log-info-16x16"
+        },
+        "WARNING": {
+            "color": Qt.lighter("red", 1.6),
+            "icon": "log-warning-16x16"
+        },
+        "ERROR": {
+            "color": Qt.lighter("red", 1.4),
+            "icon": "log-error-16x16"
+        },
+        "CRITICAL": {
+            "color": Qt.lighter("red", 1.2),
+            "icon": "log-critical-16x16"
+        }
     }
 
-    color: levelColors[levelname]
+    color: levels[levelname].color
 
     body: Row {
-        id: content
-
-        property real __height: mask.height
+        // property real __height: Math.max(mask.height, messageLabel.paintedHeight, 
+        property alias icon: mask.name
 
         spacing: 10
 
-        Item {
-            width: mask.width
-            height: mask.height
-
-            Rectangle {
-                id: rect
-
-                color: root.color
-                anchors.fill: parent
-
-                visible: false
-            }
-
-            Icon {
-                id: mask
-
-                name: "log-white-16x16"
-
-                visible: false
-            }
-
-            OpacityMask {
-                id: opacityMask
-                anchors.fill: parent
-                source: rect
-                maskSource: mask
-            }
+        Icon {
+            id: mask
+            name: levels[levelname].icon
         }
 
-        Label {
-            id: messageLabel
+        Column {
+            spacing: 10
 
-            text: expanded ? longMessage : shortMessage
-            elide: Text.ElideRight
-            wrapMode: expanded ? Text.WordWrap : Text.NoWrap
+            Label {
+                id: messageLabel
 
-            width: root.width - mask.paintedWidth - spacing
+                text: expanded ? longMessage : shortMessage
+                elide: Text.ElideRight
+                wrapMode: expanded ? Text.WordWrap : Text.NoWrap
+
+                width: root.width -
+                       mask.paintedWidth -
+                       spacing -
+                       root.toggle.width -
+                       10
+            }
+
+            Column {
+                visible: expanded
+
+                Repeater {
+
+                    model: [
+                        {
+                            "key": "Levelname",
+                            "value": levelname
+                        },
+                        {
+                            "key": "Object",
+                            "value": name
+                        },
+                        {
+                            "key": "Filename",
+                            "value": filename
+                        },
+                        {
+                            "key": "Path",
+                            "value": pathname
+                        },
+                        {
+                            "key": "Line number",
+                            "value": lineno
+                        },
+                        {
+                            "key": "Function name",
+                            "value": funcName
+                        },
+                        {
+                            "key": "Thread",
+                            "value": threadName
+                        },
+                        {
+                            "key": "Milliseconds",
+                            "value": msecs
+                        },
+                    ]
+
+                    Row {
+                        spacing: 5
+                        opacity: 0.5
+
+                        Label {
+                            text: modelData.key
+                            backgroundColor: Theme.alpha("white", 0.1)
+                        }
+
+                        Label {
+                            text: typeof modelData.value != "object" ? modelData.value : JSON.stringify(modelData.value)
+                        }
+                    }
+                }
+            }
         }
     }
 }

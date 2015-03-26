@@ -16,13 +16,12 @@ BaseDelegate {
 
         width: parent.width
 
-        anchors.verticalCenter: parent.verticalCenter
-
         clip: true
 
         Icon {
             id: icon
             name: "error-red-16x16"
+            anchors.verticalCenter: parent.verticalCenter
         }
 
         Column {
@@ -30,14 +29,15 @@ BaseDelegate {
 
             spacing: 10
 
-            width: root.width - icon.width - content.spacing
+            width: root.width -
+                   icon.width -
+                   content.spacing -
+                   root.toggle.width -
+                   10
 
             property bool hasLongMessage: message.indexOf("\n") != -1 ? true : false
             property string shortMessage: message.split("\n")[0]
             property string longMessage: message
-
-            y: 5  // Center text to icon
-            height: implicitHeight + 5
 
             Label {
                 text: root.expanded ? body.longMessage : body.shortMessage

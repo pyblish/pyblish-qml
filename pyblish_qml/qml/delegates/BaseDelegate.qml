@@ -11,6 +11,7 @@ Item {
 
     property Component body
     property alias bodyItem: loader.item
+    property alias toggle: toggle
 
     property bool expandable
     property bool expanded

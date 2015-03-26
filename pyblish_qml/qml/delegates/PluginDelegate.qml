@@ -26,7 +26,11 @@ BaseDelegate {
         Column {
             spacing: 5
 
-            width: root.width - icon.width - content.spacing
+            width: root.width - 
+                   icon.width -
+                   content.spacing -
+                   root.toggle.width -
+                   10
 
             Label {
                 text: message

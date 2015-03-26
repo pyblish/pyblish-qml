@@ -350,6 +350,23 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         self.excludes[role] = value
         self.invalidate()
 
+    def removeExclusion(self, role):
+        """Remove exclusion rule
+
+        TODO(marcus): Should we allow for multiple excluded
+            *values* for each role? For example, if a role
+            matches *any* or *all* of the excluded values
+            it could get excluded. How should the logic look
+            for something like that?
+
+        """
+
+        if not isinstance(role, int):
+            role = self.names[role]
+
+        self.excludes.pop(role, None)
+        self.invalidate()
+
     def addInclusion(self, role, value):
         """Include item if `role` equals `value`
 
