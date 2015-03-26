@@ -82,24 +82,26 @@ class PluginItem(Item):
 
 class Model(QtCore.QAbstractListModel):
     roles = dict()
+    names = dict()
 
     data_changed = QtCore.pyqtSignal(object, str, object, object,
                                      arguments=["name", "key", "old", "new"])
 
     def __new__(cls, *args, **kwargs):
-        instance = super(Model, cls).__new__(cls, *args, **kwargs)
+        obj = super(Model, cls).__new__(cls, *args, **kwargs)
 
         index = 0
         for key in (defaults.keys() +
                     instance_defaults.keys() +
                     plugin_defaults.keys()):
             role = QtCore.Qt.UserRole + index
-            instance.roles[role] = key
+            obj.roles[role] = key
             index += 1
 
-        instance.roles[999] = "itemType"
+        obj.names = dict((v, k) for k, v in obj.roles.iteritems())
+        obj.roles[999] = "itemType"
 
-        return instance
+        return obj
 
     def __init__(self, parent=None):
         super(Model, self).__init__(parent)
@@ -266,13 +268,17 @@ class TerminalModel(QtCore.QAbstractListModel):
     ]
 
     def __new__(cls, *args, **kwargs):
+        obj = super(TerminalModel, cls).__new__(cls, *args, **kwargs)
+
         roles = dict()
-        for index in range(len(cls.roles)):
-            role = cls.roles[index]
+        for index in range(len(obj.roles)):
+            role = obj.roles[index]
             roles[QtCore.Qt.UserRole + index] = role
-        cls.roles = roles
-        cls.names = dict((v, k) for k, v in roles.iteritems())
-        return super(TerminalModel, cls).__new__(cls, *args, **kwargs)
+
+        obj.roles = roles
+        obj.names = dict((v, k) for k, v in roles.iteritems())
+
+        return obj
 
     def __init__(self, parent=None):
         super(TerminalModel, self).__init__(parent)
@@ -307,6 +313,69 @@ class TerminalModel(QtCore.QAbstractListModel):
         self.beginResetModel()
         self.items[:] = []
         self.endResetModel()
+
+
+class ProxyModel(QtCore.QSortFilterProxyModel):
+    """A QSortFilterProxyModel with custom exclusion
+
+    Example:
+        >>> # Exclude any item whose role 123 equals "Abc"
+        >>> model = ProxyModel()
+        >>> model.addExclusion(role=123, value="Abc")
+
+    """
+
+    def __init__(self, parent=None):
+        super(ProxyModel, self).__init__(parent)
+
+        self.excludes = dict()
+        self.includes = dict()
+        self.names = dict()
+
+    def addExclusion(self, role, value):
+        """Exclude item if `role` equals `value`
+
+        Attributes:
+            role (int): Qt role to compare `value` to
+            value (object): Value to exclude
+
+        """
+
+        if not isinstance(role, int):
+            role = self.names[role]
+
+        self.excludes[role] = value
+        self.invalidate()
+
+    def addInclusion(self, role, value):
+        """Include item if `role` equals `value`
+
+        Attributes:
+            role (int): Qt role to compare `value` to
+            value (object): Value to exclude
+
+        """
+
+        self.includes[role] = value
+        self.invalidate()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Exclude items in `self.excludes`"""
+        model = self.sourceModel()
+        index = model.index(source_row, 0, QtCore.QModelIndex())
+
+        for role, value in self.includes.iteritems():
+            data = model.data(index, role)
+            if data != value:
+                return False
+
+        for role, value in self.excludes.iteritems():
+            data = model.data(index, role)
+            if data == value:
+                return False
+
+        return super(ProxyModel, self).filterAcceptsRow(
+            source_row, source_parent)
 
 
 if __name__ == '__main__':

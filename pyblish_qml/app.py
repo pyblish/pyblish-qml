@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui, QtQml
 
 # Local libraries
 import util
-import model
+import models
 import compat
 import safety
 
@@ -384,8 +384,8 @@ class Controller(QtCore.QObject):
             if doc is not None:
                 data["doc"] = util.format_docstring(doc)
 
-            item = model.PluginItem(name=plugin["name"],
-                                    data=data)
+            item = models.PluginItem(name=plugin["name"],
+                                     data=data)
             self._item_model.addItem(item)
 
         # Log context information
@@ -438,8 +438,8 @@ class Controller(QtCore.QObject):
             if instance["data"].get("publish") is False:
                 instance["data"]["isToggled"] = False
 
-            item = model.InstanceItem(name=instance["name"],
-                                      data=instance["data"])
+            item = models.InstanceItem(name=instance["name"],
+                                       data=instance["data"])
             self._item_model.addItem(item)
 
         # Determine compatibility
@@ -504,18 +504,20 @@ class Controller(QtCore.QObject):
     def __init__(self, parent=None):
         super(Controller, self).__init__(parent)
 
-        item_model = model.Model()
-        terminal_model = model.TerminalModel()
+        item_model = models.Model()
+        terminal_model = models.TerminalModel()
 
-        instance_proxy = QtCore.QSortFilterProxyModel()
+        instance_proxy = models.ProxyModel()
         instance_proxy.setSourceModel(item_model)
-        instance_proxy.setFilterRole(999)
-        instance_proxy.setFilterFixedString("InstanceItem")
+        instance_proxy.addInclusion(999, "InstanceItem")
 
-        plugin_proxy = QtCore.QSortFilterProxyModel()
+        plugin_proxy = models.ProxyModel()
         plugin_proxy.setSourceModel(item_model)
-        plugin_proxy.setFilterRole(999)
-        plugin_proxy.setFilterFixedString("PluginItem")
+
+        plugin_proxy.names = item_model.names
+        plugin_proxy.addInclusion(999, "PluginItem")
+        plugin_proxy.addExclusion("type", "Selector")
+        plugin_proxy.addExclusion("hasCompatible", False)
 
         terminal_proxy = QtCore.QSortFilterProxyModel()
         terminal_proxy.setSourceModel(terminal_model)
@@ -572,7 +574,7 @@ class Controller(QtCore.QObject):
 
         key = remap.get(key) or key
 
-        if isinstance(item, model.PluginItem):
+        if isinstance(item, models.PluginItem):
             changes = self._changes["plugins"]
         else:
             changes = self._changes["context"]
@@ -671,11 +673,13 @@ class Controller(QtCore.QObject):
 
         plugin_toggled = False
         instance_toggled = False
+
         for item in self._item_model.items:
             if item.isToggled:
-                if isinstance(item, model.PluginItem):
+                if isinstance(item, models.PluginItem):
                     plugin_toggled = True
-                if isinstance(item, model.InstanceItem):
+
+                if isinstance(item, models.InstanceItem):
                     instance_toggled = True
 
         if not any([plugin_toggled, instance_toggled]):
@@ -798,6 +802,8 @@ def processor(controller):
 
     """
 
+    model = controller._item_model
+
     # Process Context
     #   __
     #  |  |
@@ -806,6 +812,13 @@ def processor(controller):
     #  |__|
     #
     for plugin in controller._item_model.plugins:
+
+        # Does the item exist in the proxy?
+        proxy = controller._plugin_proxy
+        source_row = model.items.index(plugin)
+        source_index = model.index(source_row, 0, QtCore.QModelIndex())
+        if proxy.mapFromSource(source_index).row() == -1:
+            continue
 
         # Updated by `on_processed`
         if not controller.is_running:
