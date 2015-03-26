@@ -375,11 +375,17 @@ class Controller(QtCore.QObject):
         context = state.get("context", [])
 
         for plugin in plugins:
-            if plugin["data"].get("order") < 1:
-                plugin["data"]["isToggled"] = False
+            data = plugin["data"]
+
+            if data.get("order") < 1:
+                data["isToggled"] = False
+
+            doc = data.get("doc")
+            if doc is not None:
+                data["doc"] = util.format_docstring(doc)
 
             item = model.PluginItem(name=plugin["name"],
-                                    data=plugin["data"])
+                                    data=data)
             self._item_model.addItem(item)
 
         # Log context information
@@ -435,6 +441,17 @@ class Controller(QtCore.QObject):
             item = model.InstanceItem(name=instance["name"],
                                       data=instance["data"])
             self._item_model.addItem(item)
+
+        # Determine compatibility
+        for plugin in self._item_model.plugins:
+            has_compatible = False
+
+            for instance in self._item_model.instances:
+                if instance.family in plugin.families:
+                    has_compatible = True
+
+            index = self._item_model.itemIndexFromItem(plugin)
+            self._item_model.setData(index, "hasCompatible", has_compatible)
 
     @QtCore.pyqtSlot()
     def save(self):
@@ -781,7 +798,15 @@ def processor(controller):
 
     """
 
+    # Process Context
+    #   __
+    #  |  |
+    #  |  |
+    #  |  |
+    #  |__|
+    #
     for plugin in controller._item_model.plugins:
+
         # Updated by `on_processed`
         if not controller.is_running:
             break
@@ -789,6 +814,28 @@ def processor(controller):
         if plugin.isToggled is False:
             continue
 
+        if plugin.canProcessContext:
+            pair = {
+                "plugin": plugin.name
+            }
+
+            response = request("PUT", "/state", data=pair)
+            if response.status_code == 200:
+                result = response.json()["result"]
+                controller.processed_blocking.emit(result)
+            else:
+                print json.dumps(response.json(), indent=4)
+
+        if not plugin.canProcessInstance:
+            continue
+
+        # Process Instance
+        #
+        #   /\
+        #  /  \
+        #  \  /
+        #   \/
+        #
         for instance in controller._item_model.instances:
 
             # Updated by `on_processed`
@@ -807,7 +854,6 @@ def processor(controller):
                 "plugin": plugin.name
             }
 
-            print "Processing: ({plugin}, {instance})".format(**pair)
             controller.about_to_process_blocking.emit(pair)
 
             response = request("PUT", "/state", data=pair)

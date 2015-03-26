@@ -7,7 +7,7 @@ BaseDelegate {
 
     expandable: true
 
-    height: bodyItem.height + 10
+    height: bodyItem.height + 5
 
     body: Row {
         id: content
@@ -22,11 +22,7 @@ BaseDelegate {
 
         Icon {
             id: icon
-
-            name: "error-red-32x32"
-
-            width: 27
-            height: 27
+            name: "error-red-16x16"
         }
 
         Column {

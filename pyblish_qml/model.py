@@ -27,6 +27,8 @@ plugin_defaults = {
     "families": [],
     "hosts": [],
     "type": "unknown",
+    "canProcessContext": False,
+    "canProcessInstance": False,
 }
 
 instance_defaults = {
@@ -152,6 +154,9 @@ class Model(QtCore.QAbstractListModel):
             return
 
         setattr(item, key, value)
+
+        if key in item.data:
+            item.data[key] = value
 
         qindex = self.createIndex(index, 0)
         self.dataChanged.emit(qindex, qindex)

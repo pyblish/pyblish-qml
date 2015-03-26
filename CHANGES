@@ -4,11 +4,12 @@ Changelog
 Version 0.2.7
 -------------
 
-- Terminal 2.0
-- Selectors are now part of the GUI
-- Performance enhancement; GUI shows up before processing selectors.
-- Added Pyblish.AwesomeIcon
-- Added util.invoke
+- Feature: Terminal 2.0
+- Feature: Selectors are now part of the GUI
+- Performance: GUI shows up before processing selectors.
+- Bugfix: Plug-ins now only processes the Context once
+- API: Added Pyblish.AwesomeIcon
+- API: Added util.invoke
 
 Version 0.2.6
 -------------

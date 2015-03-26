@@ -1,4 +1,5 @@
 import QtQuick 2.3
+import QtGraphicalEffects 1.0
 import Pyblish 0.1
 
 
@@ -11,7 +12,7 @@ BaseDelegate {
 
     expandable: hasLongMessage
 
-    height: bodyItem.__height
+    height: bodyItem.__height + 5
 
     property var levelColors: {
         "DEBUG": Qt.lighter("steelblue", 1.3),
@@ -26,17 +27,53 @@ BaseDelegate {
     body: Row {
         id: content
 
-        property real __height: messageLabel.paintedHeight
+        property real __height: mask.height
 
         spacing: 10
 
-        Label {
-            id: levelLabel
+        Item {
+            width: mask.width
+            height: mask.height
 
-            text: levelname
-            color: root.color
-            backgroundColor: Theme.alpha(root.color, 0.1)
+            Rectangle {
+                id: rect
+
+                color: root.color
+                anchors.fill: parent
+
+                visible: false
+            }
+
+            Icon {
+                id: mask
+
+                name: "log-white-16x16"
+
+                // fillMode: Image.Pad
+                // horizontalAlignment: Image.AlignHCenter
+
+                visible: false
+            }
+
+            OpacityMask {
+                id: opacityMask
+                anchors.fill: parent
+                // anchors.leftMargin: 5
+                // anchors.rightMargin: 5
+                source: rect
+                maskSource: mask
+            }
         }
+
+        // Icon {
+
+        //     name: "log-white-16x16"
+        //     width: 25
+        //     fillMode: Image.Pad
+        //     horizontalAlignment: Image.AlignHCenter
+        //     // color: root.color
+        //     // backgroundColor: Theme.alpha(root.color, 0.1)
+        // }
 
         Label {
             id: messageLabel
@@ -45,7 +82,7 @@ BaseDelegate {
             elide: Text.ElideRight
             wrapMode: expanded ? Text.WordWrap : Text.NoWrap
 
-            width: root.width - levelLabel.paintedWidth - spacing
+            width: root.width - mask.paintedWidth - spacing
         }
     }
 }

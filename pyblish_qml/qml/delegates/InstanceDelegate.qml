@@ -4,7 +4,7 @@ import Pyblish 0.1
 
 BaseDelegate {
 
-    height: 27
+    height: 16 + 5
 
     body: Row {
         spacing: 10
@@ -12,14 +12,12 @@ BaseDelegate {
         anchors.verticalCenter: parent.verticalCenter
 
         Icon {
-            name: "instance-white"
-            width: 27
-            height: 27
+            name: "instance-white-16x16"
         }
 
         Label {
             text: message
-            style: "subheading"
+            style: "body2"
             anchors.verticalCenter: parent.verticalCenter
         }
     }

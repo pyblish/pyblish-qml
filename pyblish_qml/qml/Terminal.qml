@@ -13,6 +13,8 @@ Column {
         height: parent.height - filter.height
 
         Rectangle {
+            id: sidebar
+
             color: Theme.backgroundColor
 
             width: icon.width
@@ -33,6 +35,8 @@ Column {
             anchors.fill: parent
 
             clip: true
+
+            boundsBehavior: Flickable.StopAtBounds
 
             model: app.terminalProxy
 

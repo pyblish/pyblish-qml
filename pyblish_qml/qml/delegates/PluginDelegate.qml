@@ -5,9 +5,9 @@ import Pyblish 0.1
 BaseDelegate {
     id: root
 
-    expandable: doc.indexOf("\n") == -1 ? false : true
+    expandable: doc && doc.indexOf("\n") != -1 ? true : false
 
-    height: bodyItem.height + 20
+    height: bodyItem.height + 5
 
     body: Row {
         id: content
@@ -20,12 +20,7 @@ BaseDelegate {
 
         Icon {
             id: icon
-
-            name: "plugin2-white"
-            width: 27
-            height: 27
-
-            y: 5
+            name: "plugin2-white-27x27"
         }
 
         Column {
@@ -35,7 +30,7 @@ BaseDelegate {
 
             Label {
                 text: message
-                style: "title"
+                // style: "title"
                 width: parent.width
                 elide: Text.ElideRight
             }

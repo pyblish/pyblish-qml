@@ -153,3 +153,13 @@ def where(program):
             full_path = os.path.join(path, program + suffix)
             if os.path.isfile(full_path):
                 return full_path
+
+
+def format_docstring(string):
+    result = ""
+    for paragraph in string.split("\n\n"):
+        result += " ".join(paragraph.split()) + "\n\n"
+
+    result = result.rstrip("\n")  # Remove last newlines
+
+    return result

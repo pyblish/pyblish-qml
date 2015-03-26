@@ -18,6 +18,8 @@ Item {
     Row {
         anchors.fill: parent
 
+        anchors.verticalCenter: parent.verticalCenter
+
         spacing: 5
 
         MouseArea {
@@ -43,6 +45,8 @@ Item {
                 name: "button-expand"
                 opacity: expandable ? 1 : 0
                 rotation: expanded ? 90 : 0
+
+                anchors.verticalCenter: parent.verticalCenter
             }
 
             onClicked: {
