@@ -19,3 +19,6 @@ TabBar 0.1 TabBar.qml
 TabView 0.1 TabView.qml
 TextArea 0.1 TextArea.qml
 TextField 0.1 TextField.qml
+
+Tooltip 0.1 Tooltip.js
+Utils 0.1 Utils.js

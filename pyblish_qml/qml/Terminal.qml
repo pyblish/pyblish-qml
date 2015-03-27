@@ -2,7 +2,6 @@ import QtQuick 2.3
 import QtQuick.Controls 1.3 as Controls
 import QtQuick.Controls.Styles 1.3 as ControlStyle
 import Pyblish 0.1
-import "utils.js" as Util
 
 
 Column {
@@ -40,7 +39,7 @@ Column {
 
             delegate: Loader {
                 width: ListView.view.width
-                source: "delegates/" + Util.toTitleCase(type) + "Delegate.qml"
+                source: "delegates/" + Utils.toTitleCase(type) + "Delegate.qml"
             }
         }
 
@@ -83,40 +82,42 @@ Column {
                 Repeater {
                     model: [
                         {
-                            "name": "DEBUG",
-                            "color": Qt.lighter("steelblue", 1.3),
-                            "icon": "log-debug-16x16",
-                            "toggled": false
+                            name: "DEBUG",
+                            color: Qt.lighter("steelblue", 1.3),
+                            icon: "log-debug-16x16",
+                            toggled: false
                         },
                         {
-                            "name": "INFO",
-                            "color": Qt.lighter("steelblue", 1.5),
-                            "icon": "log-info-16x16",
-                            "toggled": true
+                            name: "INFO",
+                            color: Qt.lighter("steelblue", 1.5),
+                            icon: "log-info-16x16",
+                            toggled: true
                         },
                         {
-                            "name": "WARNING",
-                            "color": Qt.lighter("red", 1.6),
-                            "icon": "log-warning-16x16",
-                            "toggled": true
+                            name: "WARNING",
+                            color: Qt.lighter("red", 1.6),
+                            icon: "log-warning-16x16",
+                            toggled: true
                         },
                         {
-                            "name": "ERROR",
-                            "color": Qt.lighter("red", 1.4),
-                            "icon": "log-error-16x16",
-                            "toggled": true
+                            name: "ERROR",
+                            color: Qt.lighter("red", 1.4),
+                            icon: "log-error-16x16",
+                            toggled: true
                         },
                         {
-                            "name": "CRITICAL",
-                            "color": Qt.lighter("red", 1.2),
-                            "icon": "log-critical-16x16",
-                            "toggled": true
+                            name: "CRITICAL",
+                            color: Qt.lighter("red", 1.2),
+                            icon: "log-critical-16x16",
+                            toggled: true
                         }
                     ]
 
                     Button {
                         width: 16
                         height: 16
+
+                        tooltip: toggled ? "Show " + modelData.name : "Hide " + modelData.name
 
                         property bool toggled: modelData.toggled
 

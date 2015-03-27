@@ -47,6 +47,8 @@ View {
         Button {
             elevation: 1
 
+            tooltip: visible ? "Stop" : ""
+
             icon: "button-stop"
             visible: mode === 1 ? true : false
             onClicked: footer.stop()
@@ -54,6 +56,8 @@ View {
 
         Button {
             elevation: 1
+
+            tooltip: visible ? "Reset" : ""
 
             icon: "button-reset"
             visible: mode == 0 || mode == 2 ? true : false
@@ -64,6 +68,8 @@ View {
             elevation: 1
 
             icon: "button-publish"
+
+            tooltip: visible ? "Publish" : ""
 
             onClicked: footer.publish()
 
