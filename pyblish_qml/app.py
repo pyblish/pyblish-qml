@@ -679,6 +679,7 @@ class Controller(QtCore.QObject):
         if result["error"] is not None:
             error = result["error"]
             error["type"] = "error"
+            error["message"] = util.format_docstring(error["message"])
             error["filter"] = error["message"]
             self.echo(error)
 
