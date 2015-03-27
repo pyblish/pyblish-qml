@@ -8,6 +8,12 @@ Item {
     clip: true
     z: 2
 
+    /*!
+       Optional tooltip to be displayed when
+       hovering this component
+     */
+    property string tooltip
+    property Item __tooltip
     property bool doubleClickEnabled: false
 
     signal clicked(var mouse)
@@ -50,6 +56,7 @@ Item {
 
         onPressed: createTapCircle(mouse.x, mouse.y)
         onCanceled: currentCircle.removeCircle();
+
         onReleased: {
             currentCircle.removeCircle();
 
@@ -61,6 +68,27 @@ Item {
 
             doubleClickTimer.mouse = mouse
             doubleClickTimer.start()
+        }
+
+        onEntered: {
+            if (view.tooltip) {
+                var root = Utils.findRoot(view)
+
+                var local_pos = view.mapToItem(root, 0, 0)
+
+                var tooltip = Tooltip.create(view.tooltip, root, {})
+                tooltip.z = 10
+                tooltip.x = local_pos.x - (tooltip.width - 13) + (view.width / 2)
+                tooltip.y = local_pos.y - tooltip.height - 7
+
+                view.__tooltip = tooltip
+                view.__tooltip.show()
+            }
+        }
+        onExited: {
+            if (view.__tooltip) {
+                view.__tooltip.hide()
+            }
         }
     }
 

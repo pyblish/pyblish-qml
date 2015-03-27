@@ -1,38 +1,67 @@
 import os
 import sys
-import json
+import warnings
 import ConfigParser
+import xml.etree.ElementTree as ElementTree
 
 cwd = os.path.dirname(sys.executable)
 qtconf_path = os.path.join(cwd, "qt.conf")
 
-stats = dict(
-    executable=sys.executable,
-    qtconfpath=None,
-    qtconf=None,
-    x64=False
-)
-
 
 def validate():
-    """Validate compatibility with environment and Pyblish QML
+    """Validate compatibility with environment and Pyblish QML"""
 
-    Raises an exception in the event the system is not compatible.
+    errors = dict()
+    for test in (test_architecture,
+                 test_pyqt_availability,
+                 test_pyblish_availability,
+                 test_qtconf_availability,
+                 test_qtconf_correctness,
+                 test_qt_availability):
+        try:
+            test()
+        except Exception as e:
+            errors[test] = e
 
-    """
+    if not errors:
+        print "=" * 78
+        print
+        print """ - Success!
 
+{exe} is well suited to run Pyblish QML""".format(exe=sys.executable)
+        print
+        print "=" * 78
+        return
+
+    print "=" * 78
+    print
+    print " - Failed"
+    print
+    for test, error in errors.iteritems():
+        print test.__name__
+        print "    %s" % error
+    print
+    print "=" * 78
+
+
+def test_architecture():
+    """Is the Python interpreter 64-bit?"""
     if not sys.maxsize > 2**32:
         raise Exception("32-bit interpreter detected; must be running "
                         "Python x86-64\nE.g. https://www.python.org/ftp"
                         "/python/2.7.9/python-2.7.9.amd64.msi")
-    else:
-        stats["x64"] = True
 
+
+def test_pyqt_availability():
+    """Is PyQt5 available?"""
     try:
         __import__("PyQt5")
     except:
         raise Exception("PyQt5 not found")
 
+
+def test_pyblish_availability():
+    """Is Pyblish available?"""
     try:
         __import__("pyblish")
         __import__("pyblish_qml")
@@ -40,14 +69,17 @@ def validate():
     except:
         raise Exception("Pyblish Suite not found")
 
+
+def test_qtconf_availability():
+    """Is there a qt.conf?"""
     if not os.path.isfile(qtconf_path):
         raise Exception("No qt.conf found at %s" % cwd)
-    else:
-        stats["qtconfpath"] = qtconf_path
 
+
+def test_qtconf_correctness():
+    """Is the qt.conf correctly configured?"""
     config = ConfigParser.ConfigParser()
     config.read(qtconf_path)
-    stats["qtconf"] = json.dumps(config._sections)
 
     try:
         prefix_dir = config.get("Paths", "prefix")
@@ -56,27 +88,48 @@ def validate():
         assert binaries_dir == prefix_dir
         assert os.path.isdir(prefix_dir)
         assert prefix_dir.endswith("PyQt5")
-        assert "designer.exe" in os.listdir(prefix_dir)
+
+        if os.name == "nt":
+            assert "designer.exe" in os.listdir(prefix_dir)
 
     except:
         raise Exception("qt.conf misconfigured")
 
-    return """Success!
 
-{exe} is well suited to run Pyblish QML.
+def test_qt_availability():
+    """If Qt is installed, is it the right version?"""
+    if os.name == "nt" and os.path.exists(r"c:\Qt"):
+        print "Qt detected.."
 
-To test:
-    {exe} -m pyblish_qml
-""".format(exe=sys.executable)
+        path = r"c:\Qt\components.xml"
 
+        try:
+            with open(path) as f:
+                components = xml_to_dict(f.read())
 
-"""Run Pyblish in a clean environment
+            package = None
+            for p in components["Package"]:
+                if p["Name"] == "qt.54":
+                    package = p
 
-Usage:
-    $ generate.py
-    $ run.bat
+            if package is None:
+                raise TypeError("Qt detected; but version != 5.4")
 
-"""
+            PyQt5 = __import__("PyQt5")
+            version = package["Version"].rsplit("-", 1)[0]
+            if not version == PyQt5.qt_version:
+                raise TypeError("Qt detected; but there was a "
+                                "version mismatch: Qt = {qt} | "
+                                "PyQt5 = {pyqt}".format(
+                                    qt=version,
+                                    pyqt=PyQt5.qt_version))
+
+        except TypeError:
+            raise
+
+        except:
+            warnings.warn("Qt detected; ensure it matches the "
+                          "version used to compile PyQt5")
 
 
 def generate_safemode_windows():
@@ -138,6 +191,82 @@ def generate_safemode_windows():
     with open("run.bat", "w") as f:
         print "Writing %s" % template.format(**values)
         f.write(template.format(**values))
+
+
+def xml_to_dict(xml):
+    """Convert XML document into Python dictionary
+
+    Arguments:
+        xml (str): Xml document to convert
+
+    """
+
+    root = ElementTree.XML(xml)
+    return XmlDictConfig(root)
+
+
+class XmlListConfig(list):
+    def __init__(self, aList):
+        for element in aList:
+            if element:
+                # treat like dict
+                if len(element) == 1 or element[0].tag != element[1].tag:
+                    self.append(XmlDictConfig(element))
+                # treat like list
+                elif element[0].tag == element[1].tag:
+                    self.append(XmlListConfig(element))
+            elif element.text:
+                text = element.text.strip()
+                if text:
+                    self.append(text)
+
+
+class XmlDictConfig(dict):
+    """Convert XML to Python dictionary
+
+    Example:
+        >>> tree = ElementTree.parse('your_file.xml')
+        >>> root = tree.getroot()
+        >>> xmldict = XmlDictConfig(root)
+
+        Or, if you want to use an XML string:
+
+        >>> root = ElementTree.XML(xml_string)
+        >>> xmldict = XmlDictConfig(root)
+
+        And then use xmldict for what it is... a dict.
+
+    """
+
+    def __init__(self, parent_element):
+        if parent_element.items():
+            self.updateShim(dict(parent_element.items()))
+        for element in parent_element:
+            if len(element):
+                aDict = XmlDictConfig(element)
+                if element.items():
+                    aDict.updateShim(dict(element.items()))
+                self.updateShim({element.tag: aDict})
+            elif element.items():
+                self.updateShim({element.tag: dict(element.items())})
+            elif element.text is not None:
+                self.updateShim({element.tag: element.text.strip()})
+
+    def updateShim(self, aDict):
+        for key in aDict.keys():
+            if key in self:
+                value = self.pop(key)
+                if type(value) is not list:
+                    listOfDicts = []
+                    listOfDicts.append(value)
+                    listOfDicts.append(aDict[key])
+                    self.update({key: listOfDicts})
+
+                else:
+                    value.append(aDict[key])
+                    self.update({key: value})
+            else:
+                self.update(aDict)
 
 
 if __name__ == '__main__':

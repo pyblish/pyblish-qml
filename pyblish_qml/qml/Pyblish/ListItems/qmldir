@@ -1,3 +1,4 @@
 module ListItems
 BaseListItem 0.1 BaseListItem.qml
+Subtitled 0.1 Subtitled.qml
 Standard 0.1 Standard.qml

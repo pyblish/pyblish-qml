@@ -5,6 +5,7 @@ import logging
 from PyQt5 import QtCore
 
 _timers = {}
+_invokes = []
 
 
 def echo(text=""):
@@ -22,6 +23,53 @@ def timer_end(name, format=None):
     format = format or name + ": %.3f ms"
     if _time is not None:
         echo(format % (time.time() - _time))
+
+
+def invoke(target, callback=None):
+    """Perform operation in thread with callback
+
+    Instances are cached until finished, at which point
+    they are garbage collected. If we didn't do this,
+    Python would step in and garbage collect the thread
+    before having had time to finish, resulting in an
+    exception.
+
+    Arguments:
+        target (callable): Method or function to call
+        callback (callable, optional): Method or function to call
+            once `target` has finished.
+
+    Returns:
+        None
+
+    """
+
+    obj = _Invoke(target, callback)
+    obj.finished.connect(lambda: _invoke_cleanup(obj))
+    obj.start()
+    _invokes.append(obj)
+
+
+class _Invoke(QtCore.QThread):
+
+    done = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
+
+    def __init__(self, target, callback=None):
+        super(_Invoke, self).__init__()
+
+        self.target = target
+
+        if callback:
+            connection = QtCore.Qt.BlockingQueuedConnection
+            self.done.connect(callback, type=connection)
+
+    def run(self, *args, **kwargs):
+        result = self.target(*args, **kwargs)
+        self.done.emit(result)
+
+
+def _invoke_cleanup(obj):
+    _invokes.remove(obj)
 
 
 class Timer(object):
@@ -105,3 +153,13 @@ def where(program):
             full_path = os.path.join(path, program + suffix)
             if os.path.isfile(full_path):
                 return full_path
+
+
+def format_docstring(string):
+    result = ""
+    for paragraph in string.split("\n\n"):
+        result += " ".join(paragraph.split()) + "\n\n"
+
+    result = result.rstrip("\n")  # Remove last newlines
+
+    return result
