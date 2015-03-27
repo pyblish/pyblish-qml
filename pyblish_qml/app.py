@@ -928,7 +928,8 @@ def main(port, pid=None, preload=False, debug=False, validate=True):
     """
 
     try:
-        safety.validate()
+        if validate:
+            safety.validate()
     except Exception as e:
         util.echo(
             """Could not start application due to a misconfigured environment.
@@ -1039,4 +1040,5 @@ if __name__ == "__main__":
     main(port=6000,
          pid=os.getpid(),
          preload=False,
-         debug=True)
+         debug=True,
+         validate=False)
