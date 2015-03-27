@@ -270,4 +270,4 @@ class XmlDictConfig(dict):
 
 
 if __name__ == '__main__':
-    print validate()
+    validate()
