@@ -448,7 +448,15 @@ class Controller(QtCore.QObject):
                 result = response.json()["result"]
                 self.processed_blocking.emit(result)
             else:
-                assert False
+                self.error.emit("Selection failed; see terminal")
+                self.echo({
+                    "type": "message",
+                    "message": ("Server responded with code %s "
+                                "during selection with %s: \n%s" % (
+                                    response.status_code,
+                                    plugin.name,
+                                    response.json()))
+                })
 
         self.selected.emit()
 
@@ -671,7 +679,7 @@ class Controller(QtCore.QObject):
         if result["error"] is not None:
             error = result["error"]
             error["type"] = "error"
-            record["filter"] = record["message"]
+            error["filter"] = error["message"]
             self.echo(error)
 
     def on_finished(self):
@@ -1023,17 +1031,20 @@ def cli():
     parser.add_argument("--pid", type=int, default=None)
     parser.add_argument("--preload", action="store_true")
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--validate", action="store_true")
 
     kwargs = parser.parse_args()
     port = kwargs.port
     pid = kwargs.pid
     preload = kwargs.preload
     debug = kwargs.debug
+    validate = kwargs.validate
 
     return main(port=port,
                 pid=pid,
                 debug=debug or port == 6000,
-                preload=preload)
+                preload=preload,
+                validate=validate)
 
 
 if __name__ == "__main__":
