@@ -117,7 +117,7 @@ Column {
                         width: 16
                         height: 16
 
-                        tooltip: toggled ? "Show " + modelData.name : "Hide " + modelData.name
+                        tooltip: toggled ? "Hide " + modelData.name : "Show " + modelData.name
 
                         property bool toggled: modelData.toggled
 
