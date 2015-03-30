@@ -326,6 +326,46 @@ class Controller(QtCore.QObject):
         else:
             self.error.emit("Plug-in is mandatory")
 
+    @QtCore.pyqtSlot(int)
+    def repairInstance(self, index):
+        print "Repairing %s" % index
+
+    @QtCore.pyqtSlot(int)
+    def repairPlugin(self, index):
+        index = self._plugin_proxy.index(index, 0, QtCore.QModelIndex())
+        index = self._plugin_proxy.mapToSource(index)
+        item = self._item_model.itemFromIndex(index.row())
+
+        self._item_model.setData(index, "hasError", False)
+
+        def _repair(item):
+            for instance in self._item_model.instances:
+                data = {
+                    "plugin": item.name,
+                    "instance": instance.name,
+                    "mode": "repair"
+                }
+
+                # NOTE(marcus): We need to find a better way of separating
+                # this logic as it is currently being reused all over
+                # the place.
+                if instance.family not in item.families:
+                    continue
+
+                response = request("PUT", "/state", data=data)
+                if not response.status_code == 200:
+                    print "Did not make it."
+                    print json.dumps(response.json(), indent=4)
+                    return
+
+                result = response.json()["result"]
+
+                self.processed_blocking.emit(result)
+
+            self.finished.emit()
+
+        util.invoke(_repair, args=[item])
+
     @QtCore.pyqtSlot(str, str, str, str)
     def exclude(self, target, operation, role, value):
         """Exclude a `role` of `value` at `target`
@@ -667,7 +707,8 @@ class Controller(QtCore.QObject):
         self.echo({
             "type": "instance",
             "message": result["instance"],
-            "filter": result["instance"]
+            "filter": result["instance"],
+            "duration": result["duration"]
         })
 
         for record in result["records"]:

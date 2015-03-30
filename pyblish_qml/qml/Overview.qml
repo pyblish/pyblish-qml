@@ -64,24 +64,38 @@ Item {
 
             List {
                 model: app.instanceProxy
-                width: parent.width / 2
+
+                width: Math.floor(parent.width / 2.0)  // To keep checkbox border from collapsing
                 height: parent.height
 
                 section.property: "family"
 
+                onActionTriggered: {
+                    if (action.name == "repair")
+                        app.repairInstance(index)
+                    else if (action.name == "explore")
+                        overview.instanceDoubleClicked(index)
+                }
+
                 onItemClicked: app.toggleInstance(index)
-                onItemDoubleClicked: overview.instanceDoubleClicked(index)
             }
 
             List {
                 model: app.pluginProxy
-                width: parent.width / 2
+
+                width: Math.floor(parent.width / 2.0)
                 height: parent.height
 
                 section.property: "type"
 
+                onActionTriggered: {
+                    if (action.name == "repair")
+                        app.repairPlugin(index)
+                    else if (action.name == "explore")
+                        overview.pluginDoubleClicked(index)
+                }
+
                 onItemClicked: app.togglePlugin(index)
-                onItemDoubleClicked: overview.pluginDoubleClicked(index)
             }
         }
 

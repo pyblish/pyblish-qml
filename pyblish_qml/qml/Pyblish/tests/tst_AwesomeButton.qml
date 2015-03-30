@@ -18,7 +18,7 @@ Rectangle {
                 "angle-right",
                 "angle-double-right"]
 
-        delegate: AwesomeIcon {
+        delegate: AwesomeButton {
             name: modelData
             size: 12
         }

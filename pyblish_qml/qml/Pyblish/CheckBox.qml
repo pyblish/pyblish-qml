@@ -26,7 +26,10 @@ Ink {
     Rectangle {
         id: rectangle
 
-        anchors.fill: parent
+        width: Math.min(parent.width, parent.height)
+        height: width
+
+        anchors.centerIn: parent
 
         color: checkView.statuses[typeof checkView.status !== "undefined" ? checkView.status : "default"]
         opacity: checkView.checked ? 1 : 0
@@ -48,20 +51,13 @@ Ink {
     Rectangle {
         id: glow
 
-        anchors.fill: parent
+        width: Math.min(parent.width, parent.height)
+        height: width
+
+        anchors.centerIn: parent
+
         color: "transparent"
         border.color: rectangle.color
         border.width: 1
-
-        // opacity: 0
-
-        // Behavior on opacity {
-        //     NumberAnimation {
-        //         from: 1
-        //         to: 0
-        //         duration: 2000
-        //         easing.type: Easing.OutQuad
-        //     }
-        // }
     }
 }

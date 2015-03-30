@@ -7,6 +7,8 @@ Button {
 
     signal triggered
 
+    property Action action
+
     style: "body1"
 
     text: action ? action.name : ""
@@ -21,8 +23,6 @@ Button {
     }
 
     opacity: enabled ? 1 : 0.6
-
-    property Action action
 
     onClicked: {
         icon.triggered()
