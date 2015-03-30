@@ -25,7 +25,7 @@ def timer_end(name, format=None):
         echo(format % (time.time() - _time))
 
 
-def invoke(target, callback=None):
+def invoke(target, args=None, callback=None):
     """Perform operation in thread with callback
 
     Instances are cached until finished, at which point
@@ -44,7 +44,7 @@ def invoke(target, callback=None):
 
     """
 
-    obj = _Invoke(target, callback)
+    obj = _Invoke(target, args, callback)
     obj.finished.connect(lambda: _invoke_cleanup(obj))
     obj.start()
     _invokes.append(obj)
@@ -54,9 +54,10 @@ class _Invoke(QtCore.QThread):
 
     done = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
 
-    def __init__(self, target, callback=None):
+    def __init__(self, target, args=None, callback=None):
         super(_Invoke, self).__init__()
 
+        self.args = args or list()
         self.target = target
 
         if callback:
@@ -64,7 +65,7 @@ class _Invoke(QtCore.QThread):
             self.done.connect(callback, type=connection)
 
     def run(self, *args, **kwargs):
-        result = self.target(*args, **kwargs)
+        result = self.target(*self.args)
         self.done.emit(result)
 
 
