@@ -139,7 +139,7 @@ class Model(QtCore.QAbstractListModel):
             return type(item).__name__
 
         if role in self.roles:
-            return getattr(item, self.roles[role])
+            return getattr(item, self.roles[role], None)
 
         return QtCore.QVariant()
 
@@ -147,6 +147,9 @@ class Model(QtCore.QAbstractListModel):
         return self.roles
 
     def setData(self, index, key, value):
+        if isinstance(index, QtCore.QModelIndex):
+            index = index.row()
+
         item = self.items[index]
 
         try:
