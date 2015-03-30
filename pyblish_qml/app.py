@@ -346,6 +346,9 @@ class Controller(QtCore.QObject):
                     "mode": "repair"
                 }
 
+                if not instance.hasError:
+                    continue
+
                 # NOTE(marcus): We need to find a better way of separating
                 # this logic as it is currently being reused all over
                 # the place.
