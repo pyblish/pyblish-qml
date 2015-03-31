@@ -11,13 +11,25 @@ version = version_mod.version
 
 # Collect non-python data as package data
 qml_dir = os.path.abspath('pyblish_qml/qml')
-qml_package_data = list()
+package_data = list()
 for root, dirs, files in os.walk(qml_dir):
-    for suffix in ("ttf", "qml", "js", "txt", "png"):
-        relpath = os.path.relpath(root, qml_dir)
-        relpath = relpath.replace("\\", "/")
-        qml_package_data.append("qml/" + relpath.strip(".") + "/*." + suffix)
+    relpath = os.path.relpath(root, qml_dir)
+    relpath = relpath.replace("\\", "/")
+    qmldir = os.path.join(root, "qmldir")
 
+    if os.path.isfile(qmldir):
+        package_data.append("qml/" + relpath.strip(".") + "/qmldir")
+
+    for suffix in ("ttf", "qml", "js", "txt", "png", "otf"):
+        package_data.append("qml/" + relpath.strip(".") + "/*." + suffix)
+
+package_data.append("*.ico")
+package_data.append("vendor/nose/*.txt")
+package_data.append("vendor/coverage/htmlfiles/*.html")
+package_data.append("vendor/coverage/htmlfiles/*.js")
+package_data.append("vendor/coverage/htmlfiles/*.png")
+package_data.append("vendor/coverage/htmlfiles/*.css")
+package_data.append("vendor/coverage/*.pyd")
 
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -44,7 +56,7 @@ setup(
     zip_safe=False,
     classifiers=classifiers,
     package_data={
-        "pyblish_qml": qml_package_data
+        "pyblish_qml": package_data
     },
     entry_points={},
     install_requires=["pyblish-endpoint>=1.1.7",
