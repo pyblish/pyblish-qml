@@ -15,7 +15,6 @@ from PyQt5 import QtCore, QtGui, QtQml
 import util
 import models
 import compat
-import safety
 
 # Vendor libraries
 from vendor import requests
@@ -935,29 +934,14 @@ def main(port, pid=None, preload=False, debug=False, validate=True):
 
     """
 
-    try:
-        if validate:
-            safety.validate()
-    except Exception as e:
-        util.echo(
-            """Could not start application due to a misconfigured environment.
+    if validate and compat.validate() is False:
+        util.echo("""
+Could not start application due to a misconfigured environment.
 
 Pass validate=False to pyblish_qml.app:main
 in order to bypass validation.
-
-See below message for more information.
 """)
 
-        util.echo("Environment:")
-        util.echo("-" * 32)
-
-        for key, value in safety.stats.iteritems():
-            util.echo("%s = %s" % (key, value))
-
-        util.echo()
-        util.echo("Error:")
-        util.echo("-" * 32)
-        util.echo(e)
         return 255
 
     global REST_PORT
