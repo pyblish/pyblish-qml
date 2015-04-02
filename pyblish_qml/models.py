@@ -10,22 +10,20 @@ defaults = {
     "isToggled": True,
     "optional": True,
     "hasError": False,
-    "hasWarning": False,
-    "hasMessage": False,
     "succeeded": False,
     "currentProgress": 0,
     "errors": list(),
-    "warnings": list(),
-    "messages": list(),
+    "records": list()
 }
 
 plugin_defaults = {
     "optional": False,
     "doc": None,
+    "order": None,
     "hasRepair": False,
     "hasCompatible": False,
-    "families": [],
-    "hosts": [],
+    "families": list(),
+    "hosts": list(),
     "type": "unknown",
     "canProcessContext": False,
     "canProcessInstance": False,
@@ -87,6 +85,48 @@ class Model(QtCore.QAbstractListModel):
     data_changed = QtCore.pyqtSignal(object, str, object, object,
                                      arguments=["name", "key", "old", "new"])
 
+    def pairs(self):
+        for plugin in self.plugins:
+            if not plugin.isToggled:
+                continue
+
+            if not plugin.hasCompatible:
+                continue
+
+            if plugin.canProcessContext:
+                yield plugin, None
+
+            if not plugin.canProcessInstance:
+                continue
+
+            for instance in self.instances:
+                if not instance.isToggled:
+                    continue
+
+                if not any(x in plugin.data["families"] for x in (
+                        instance.data["family"], "*")):
+                    continue
+
+                yield plugin, instance
+
+    def has_failed_validator(self):
+        for validator in self.plugins:
+            if validator.order != 1:
+                continue
+            if validator.hasError:
+                return True
+        return False
+
+    def errors(self):
+        """Parse and return current errors"""
+        errors = dict()
+        for plugin in self.plugins:
+            for error in plugin.errors:
+                if plugin.name not in errors:
+                    errors[plugin] = list()
+                errors[plugin].append(error)
+        return errors
+
     def __new__(cls, *args, **kwargs):
         obj = super(Model, cls).__new__(cls, *args, **kwargs)
 
@@ -130,8 +170,11 @@ class Model(QtCore.QAbstractListModel):
         return len(self.items)
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
+        if isinstance(index, QtCore.QModelIndex):
+            index = index.row()
+
         try:
-            item = self.items[index.row()]
+            item = self.items[index]
         except IndexError:
             return QtCore.QVariant()
 
@@ -197,29 +240,6 @@ class Model(QtCore.QAbstractListModel):
         self.plugins[:] = []
 
         self.endResetModel()
-
-
-class InstanceModel(Model):
-    def next_instance(self, index, families):
-        try:
-            item = self.items[index + 1]
-            while item.data.get("family") not in families:
-                index += 1
-                item = self.items[index]
-        except IndexError:
-            return None
-
-        return item
-
-
-class PluginModel(Model):
-    def next_plugin(self, index):
-        try:
-            item = self.items[index + 1]
-        except IndexError:
-            return None
-
-        return item
 
 
 class TerminalModel(QtCore.QAbstractListModel):
@@ -331,12 +351,16 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 
     """
 
-    def __init__(self, parent=None):
+    @property
+    def names(self):
+        return self.sourceModel().names
+
+    def __init__(self, source, parent=None):
         super(ProxyModel, self).__init__(parent)
+        self.setSourceModel(source)
 
         self.excludes = dict()
         self.includes = dict()
-        self.names = dict()
 
     def addExclusion(self, role, value):
         """Exclude item if `role` equals `value`
@@ -401,8 +425,23 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
             source_row, source_parent)
 
 
-if __name__ == '__main__':
-    model = InstanceModel()
-    model.addItem(Item(name="test"))
-    print model.children()
-    print model.items
+class InstanceProxy(ProxyModel):
+    def __init__(self, *args, **kwargs):
+        super(InstanceProxy, self).__init__(*args, **kwargs)
+        self.addInclusion(999, "InstanceItem")
+
+
+class PluginProxy(ProxyModel):
+    def __init__(self, *args, **kwargs):
+        super(PluginProxy, self).__init__(*args, **kwargs)
+        self.addInclusion(999, "PluginItem")
+        self.addExclusion("type", "Selector")
+        self.addExclusion("hasCompatible", False)
+
+
+class TerminalProxy(ProxyModel):
+    def __init__(self, *args, **kwargs):
+        super(TerminalProxy, self).__init__(*args, **kwargs)
+        self.setFilterRole(self.names["filter"])  # msg
+        self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        self.addExclusion("levelname", "DEBUG")

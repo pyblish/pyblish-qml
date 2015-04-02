@@ -37,12 +37,12 @@ View {
 
         spacing: 3
 
-        // Button {
-        //     elevation: 1
+        Button {
+            elevation: 1
 
-        //     icon: "button-save"
-        //     onClicked: footer.save()
-        // }
+            icon: "button-save"
+            onClicked: footer.save()
+        }
 
         Button {
             elevation: 1
@@ -73,20 +73,22 @@ View {
 
             onClicked: footer.publish()
 
-            /*
-             * Disable publish-button
-            */
-            Rectangle {
-                anchors.fill: parent
-                color: "gray"
-                opacity: 0.5
-                visible: mode == 0 ? false : true
+            visible: mode == 0 ? true : false
 
-                MouseArea {
-                    // Steal focus from default button
-                    anchors.fill: parent
-                }
-            }
+            // /*
+            //  * Disable publish-button
+            // */
+            // Rectangle {
+            //     anchors.fill: parent
+            //     color: "gray"
+            //     opacity: 0.5
+            //     visible: mode == 0 ? false : true
+
+            //     MouseArea {
+            //         // Steal focus from default button
+            //         anchors.fill: parent
+            //     }
+            // }
         }
     }
 }

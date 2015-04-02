@@ -10,7 +10,11 @@ BaseDelegate {
 
     expandable: true
 
-    height: bodyItem.height + 5
+    height: {
+        if (loader.status == Loader.Ready)
+            return loader.item.height + 5
+        return 0
+    }
 
     property var levels: {
         "DEBUG":  {
@@ -38,7 +42,6 @@ BaseDelegate {
     color: levels[levelname].color
 
     body: Row {
-        // property real __height: Math.max(mask.height, messageLabel.paintedHeight, 
         property alias icon: mask.name
 
         spacing: 10

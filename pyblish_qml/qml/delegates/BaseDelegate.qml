@@ -5,12 +5,11 @@ import Pyblish 0.1
 Item {
     id: root
 
-    clip: true
-
     property color color: "white"
 
     property Component body
     property alias bodyItem: loader.item
+    property alias loader: loader
     property alias toggle: toggle
 
     property bool expandable

@@ -42,7 +42,6 @@ Column {
                 source: "delegates/" + Utils.toTitleCase(type) + "Delegate.qml"
             }
         }
-
     }
 
 

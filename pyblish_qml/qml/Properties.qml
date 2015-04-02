@@ -61,8 +61,6 @@ Item {
 
             spacing: 10
 
-            clip: true
-
             anchors.fill: parent
             anchors.margins: 10
 

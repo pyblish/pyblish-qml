@@ -3,11 +3,13 @@ import QtQuick.Window 2.2
 import QtQml.StateMachine 1.0
 
 
-Window {
-    title: "Pyblish"
+Rectangle {
+    // title: "Pyblish"
 
-    width: 400
-    height: 600
+    // width: 400
+    // height: 600
+    // minimumWidth: 300
+    // minimumHeight: 300
 
     color: Qt.rgba(0.3, 0.3, 0.3)
 
@@ -52,6 +54,8 @@ Window {
 
         opacity: running.active ? 1 : 0
 
+        source: "app.qml"
+
         Behavior on opacity {
             NumberAnimation {
                 duration: 200
@@ -65,12 +69,6 @@ Window {
                 console.timeEnd("Polishing")
             if (status == Loader.Error)
                 errored()
-        }
-
-        Component.onCompleted: {
-            loader.sourceComponent = Qt.createComponent(
-                Qt.resolvedUrl("app.qml"),
-                Component.Asynchronous)
         }
     }
 

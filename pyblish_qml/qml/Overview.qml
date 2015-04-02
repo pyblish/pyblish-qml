@@ -17,6 +17,14 @@ Item {
 
         State {
             name: "finished"
+        },
+
+        State {
+            name: "initialising"
+        },
+
+        State {
+            name: "stopping"
         }
     ]
 
@@ -24,7 +32,6 @@ Item {
         footer.message.text = message
         footer.message.animation.restart()
         footer.message.animation.start()
-        app.log.info(message)
     }
 
     TabBar {
@@ -101,10 +108,24 @@ Item {
 
         Terminal {
             id: terminal
+
             anchors.fill: parent
             anchors.margins: 2
             
             visible: tabBar.currentIndex == 1
+        }
+
+        AwesomeIcon {
+            name: "circle-o-notch-rotate"
+            anchors.centerIn: parent
+            opacity: terminal.status == Loader.Loading ? 1.0 : 0.0
+            visible: opacity > 0 ? true : false
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 100
+                }
+            }
         }
     }
 
@@ -117,51 +138,50 @@ Item {
         width: parent.width
         anchors.bottom: parent.bottom
 
-        onPublish: {
-            overview.state = "publishing"
-            app.start()
-        }
-
-        onReset: {
-            overview.state = ""
-            setMessage("Resetting..")
-            app.reset()
-        }
-
-        onStop: {
-            overview.state = "finished"
-            setMessage("Stopping..")
-            app.stop()
-        }
-
-        onSave: {
-            app.save()
-        }
+        onPublish: app.publish()
+        onReset: app.reset()
+        onStop: app.stop()
+        onSave: app.save()
     }
 
     Connections {
         target: app
 
-        /*
-         * Print results of publish in Terminal
-        */
-        onProcessed: {
-        }
+        onError: setMessage(message)
+        onSaved: setMessage("Saved")
 
-        onFinished: {
-            overview.state = "finished"
-            setMessage("Finished")
-        }
+        onStateChanged: {
+            if (state == "ready") {
+                overview.state = ""
+                setMessage("Ready")
+            }
 
-        onError: {
-            setMessage(message)
-        }
+            if (state == "initialising") {
+                setMessage("Initialising..")
+                overview.state = "initialising"
+            }
 
-        onInfo: {
-        }
+            if (state == "publishing") {
+                overview.state = "publishing"
+            }
 
-        onSaved: {
-            setMessage("Saved")
+            if (state == "finished") {
+                overview.state = "finished"
+            }
+
+            if (state == "stopping") {
+                setMessage("Stopping..")
+                overview.state = "stopping"
+            }
+
+            if (state == "stopped") {
+                setMessage("Stopped")
+                overview.state = "finished"
+            }
+
+            if (state == "dirty") {
+                setMessage("Dirty..")
+            }
         }
     }
 }

@@ -1,11 +1,26 @@
 import os
 import time
+import Queue
 import logging
+import threading
 
 from PyQt5 import QtCore
 
 _timers = {}
 _invokes = []
+
+
+class QState(QtCore.QState):
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __init__(self, name, *args, **kwargs):
+        super(QState, self).__init__(*args, **kwargs)
+        self.name = name
+        self.setObjectName(name)
 
 
 def echo(text=""):
@@ -25,7 +40,25 @@ def timer_end(name, format=None):
         echo(format % (time.time() - _time))
 
 
-def invoke(target, args=None, callback=None):
+def chain(*operations):
+    """Run callables one after the other
+
+    Arguments:
+        operations (list): Callables to run
+
+    Returns:
+        Result from last operation
+
+    """
+
+    result = None
+    for operation in operations:
+        result = operation(result)
+
+    return result
+
+
+def invoke(target, args=None, kwargs=None, callback=None):
     """Perform operation in thread with callback
 
     Instances are cached until finished, at which point
@@ -44,20 +77,22 @@ def invoke(target, args=None, callback=None):
 
     """
 
-    obj = _Invoke(target, args, callback)
+    obj = _Invoke(target, args, kwargs, callback)
     obj.finished.connect(lambda: _invoke_cleanup(obj))
     obj.start()
     _invokes.append(obj)
+    return obj
 
 
 class _Invoke(QtCore.QThread):
 
     done = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
 
-    def __init__(self, target, args=None, callback=None):
+    def __init__(self, target, args=None, kwargs=None, callback=None):
         super(_Invoke, self).__init__()
 
         self.args = args or list()
+        self.kwargs = kwargs or dict()
         self.target = target
 
         if callback:
@@ -65,12 +100,16 @@ class _Invoke(QtCore.QThread):
             self.done.connect(callback, type=connection)
 
     def run(self, *args, **kwargs):
-        result = self.target(*self.args)
+        result = self.target(*self.args, **self.kwargs)
         self.done.emit(result)
 
 
 def _invoke_cleanup(obj):
     _invokes.remove(obj)
+
+
+# Alternative
+async = invoke
 
 
 class Timer(object):
@@ -156,9 +195,10 @@ def where(program):
                 return full_path
 
 
-def format_docstring(string):
+def format_text(text):
+    """Remove newlines, but preserve paragraphs"""
     result = ""
-    for paragraph in string.split("\n\n"):
+    for paragraph in text.split("\n\n"):
         result += " ".join(paragraph.split()) + "\n\n"
 
     result = result.rstrip("\n")  # Remove last newlines
