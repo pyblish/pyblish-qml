@@ -65,6 +65,15 @@ class HostMock(object):
 
     def state(self):
         time.sleep(self.delay)
+
+        for plugin in self._state["plugins"]:
+            compatible = plugin["data"].get("compatibleInstances", list())
+
+            for instance in self._state["context"]["children"]:
+                if instance["name"] in compatible:
+                    plugin["data"]["hasCompatible"] = True
+                    break
+
         return self._state
 
     def process(self, pair):

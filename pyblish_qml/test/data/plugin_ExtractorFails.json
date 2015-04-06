@@ -17,6 +17,7 @@
     "data": {
         "families": ["family1"],
         "order": 2,
-        "canProcessInstance": true
+        "canProcessInstance": true,
+        "compatibleInstances": ["Instance1", "Instance2"]
     }
 }

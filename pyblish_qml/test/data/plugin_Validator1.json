@@ -4,6 +4,7 @@
     "data": {
         "families": ["family1"],
         "order": 1,
-        "canProcessInstance": true
+        "canProcessInstance": true,
+        "compatibleInstances": ["Instance1", "Instance2"]
     }
 }
