@@ -281,7 +281,7 @@ in order to bypass validation.
             os.environ["ENDPOINT_PORT"] = str(port)
 
             Service = mocking.MockService
-            # Service.SLEEP_DURATION = 0.1
+            # Service.SLEEP_DURATION = .1
 
             endpoint = threading.Thread(
                 target=pyblish_endpoint.server.start_production_server,

@@ -92,8 +92,23 @@ class Host(object):
         if response.status_code == 200:
             return response.json()["result"]
         else:
+            plugin = pair.get("plugin")
+            instance = pair.get("instance")
+            message = response.json().get(
+                "message", "Could not get state: "
+                "%s" % response)
             return IOError("There was an error whilst "
-                           "repairing: %s" % response)
+                           "repairing (%s, %s): %s" % (
+                            plugin, instance, message))
+
+    def rpc(self, function, **kwargs):
+        response = self.request(
+            "POST", "/rpc/%s" % function,
+            data={"kwargs": json.dumps(kwargs, indent=4)})
+        if response.status_code == 200:
+            return response.json()["result"]
+        else:
+            return IOError("RPC command failed: %s" % response)
 
     def request(self, *args, **kwargs):
         return request("http://127.0.0.1",

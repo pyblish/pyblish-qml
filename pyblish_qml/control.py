@@ -661,8 +661,7 @@ class Controller(QtCore.QObject):
                 if not instance.hasError:
                     continue
 
-                if not any(family in plugin.families for family in (
-                           "*", instance.family)):
+                if instance.name not in plugin.compatibleInstances:
                     continue
 
                 yield plugin, instance

@@ -29,11 +29,13 @@ plugin_defaults = {
     "type": "unknown",
     "canProcessContext": False,
     "canProcessInstance": False,
+    "compatibleInstances": list(),
 }
 
 instance_defaults = {
     "family": "default",
-    "niceName": "default"
+    "niceName": "default",
+    "compatiblePlugins": list(),
 }
 
 
@@ -239,8 +241,7 @@ class ItemModel(QtCore.QAbstractListModel):
                 if not instance.isToggled:
                     continue
 
-                if not any(x in plugin.data["families"] for x in (
-                        instance.data["family"], "*")):
+                if instance.name not in plugin.compatibleInstances:
                     continue
 
                 yield plugin, instance
@@ -278,8 +279,7 @@ class ItemModel(QtCore.QAbstractListModel):
                 if not instance.isToggled:
                     continue
 
-                if any(x in plugin.families for x in (
-                        instance.family, "*")):
+                if instance.name in plugin.compatibleInstances:
                     has_compatible = True
                     break
 
