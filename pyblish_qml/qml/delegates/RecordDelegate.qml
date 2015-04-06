@@ -5,8 +5,8 @@ import Pyblish 0.1
 BaseDelegate {
     id: root
 
-    property string shortMessage: msg.split("\n")[0]
-    property string longMessage: msg
+    property string shortMessage: message.split("\n")[0]
+    property string longMessage: message
 
     expandable: true
 

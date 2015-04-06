@@ -83,7 +83,7 @@ BaseDelegate {
                         }
 
                         Label {
-                            text: modelData.value
+                            text: modelData.value  || ""
                         }
                     }
                 }

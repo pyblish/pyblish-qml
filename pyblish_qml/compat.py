@@ -8,6 +8,14 @@ cwd = os.path.dirname(sys.executable)
 qtconf_path = os.path.join(cwd, "qt.conf")
 
 
+error_message = {
+    "qtquick2plugin.dll": (
+        "Could not load Qt binaries. Make sure you have only"
+        "one copy of the binaries on your PATH"
+    )
+}
+
+
 def validate():
     """Validate compatibility with environment and Pyblish QML"""
 
@@ -228,14 +236,14 @@ class XmlDictConfig(dict):
     """Convert XML to Python dictionary
 
     Example:
-        >>> tree = ElementTree.parse('your_file.xml')
-        >>> root = tree.getroot()
-        >>> xmldict = XmlDictConfig(root)
+        >> tree = ElementTree.parse('your_file.xml')
+        >> root = tree.getroot()
+        >> xmldict = XmlDictConfig(root)
 
         Or, if you want to use an XML string:
 
-        >>> root = ElementTree.XML(xml_string)
-        >>> xmldict = XmlDictConfig(root)
+        >> root = ElementTree.XML(xml_string)
+        >> xmldict = XmlDictConfig(root)
 
         And then use xmldict for what it is... a dict.
 

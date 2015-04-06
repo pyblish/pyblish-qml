@@ -148,7 +148,8 @@ Item {
         target: app
 
         onError: setMessage(message)
-        onSaved: setMessage("Saved")
+        onInfo: setMessage(message)
+        // onSaved: setMessage("Saved")
 
         onStateChanged: {
             if (state == "ready") {
@@ -157,26 +158,27 @@ Item {
             }
 
             if (state == "initialising") {
-                setMessage("Initialising..")
                 overview.state = "initialising"
+                setMessage("Initialising..")
             }
 
             if (state == "publishing") {
                 overview.state = "publishing"
+                setMessage("Publishing..")
             }
 
             if (state == "finished") {
                 overview.state = "finished"
+                setMessage("Finished..")
             }
 
             if (state == "stopping") {
                 setMessage("Stopping..")
-                overview.state = "stopping"
             }
 
             if (state == "stopped") {
-                setMessage("Stopped")
                 overview.state = "finished"
+                setMessage("Stopped")
             }
 
             if (state == "dirty") {

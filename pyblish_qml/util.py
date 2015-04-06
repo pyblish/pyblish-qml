@@ -1,13 +1,23 @@
 import os
+import sys
 import time
-import Queue
-import logging
-import threading
 
 from PyQt5 import QtCore
 
 _timers = {}
-_invokes = []
+_async_threads = []
+
+
+def register_vendor_libraries():
+    package_dir = os.path.dirname(__file__)
+    vendor_dir = os.path.join(package_dir, "vendor")
+    sys.path.insert(0, vendor_dir)
+
+
+def deregister_vendor_libraries():
+    package_dir = os.path.dirname(__file__)
+    vendor_dir = os.path.join(package_dir, "vendor")
+    sys.path.remove(vendor_dir)
 
 
 class QState(QtCore.QState):
@@ -21,6 +31,44 @@ class QState(QtCore.QState):
         super(QState, self).__init__(*args, **kwargs)
         self.name = name
         self.setObjectName(name)
+
+
+class ItemList(list):
+    """List with keys
+
+    Raises:
+        KeyError is item is not in list
+
+    Example:
+        >>> Obj = type("Object", (object,), {})
+        >>> obj = Obj()
+        >>> obj.name = "Test"
+        >>> l = ItemList(key="name")
+        >>> l.append(obj)
+        >>> l[0] == obj
+        True
+        >>> l["Test"] == obj
+        True
+        >>> try:
+        ...   l["NotInList"]
+        ... except KeyError:
+        ...   print True
+        True
+
+    """
+
+    def __init__(self, key):
+        self.key = key
+
+    def __getitem__(self, index):
+        if isinstance(index, int):
+            return super(ItemList, self).__getitem__(index)
+
+        for item in self:
+            if getattr(item, self.key) == index:
+                return item
+
+        raise KeyError("%s not in list" % index)
 
 
 def echo(text=""):
@@ -43,6 +91,8 @@ def timer_end(name, format=None):
 def chain(*operations):
     """Run callables one after the other
 
+    The output of the last callable is passed to the next.
+
     Arguments:
         operations (list): Callables to run
 
@@ -58,7 +108,7 @@ def chain(*operations):
     return result
 
 
-def invoke(target, args=None, kwargs=None, callback=None):
+def async(target, args=None, kwargs=None, callback=None):
     """Perform operation in thread with callback
 
     Instances are cached until finished, at which point
@@ -77,19 +127,19 @@ def invoke(target, args=None, kwargs=None, callback=None):
 
     """
 
-    obj = _Invoke(target, args, kwargs, callback)
-    obj.finished.connect(lambda: _invoke_cleanup(obj))
+    obj = _Async(target, args, kwargs, callback)
+    obj.finished.connect(lambda: _async_cleanup(obj))
     obj.start()
-    _invokes.append(obj)
+    _async_threads.append(obj)
     return obj
 
 
-class _Invoke(QtCore.QThread):
+class _Async(QtCore.QThread):
 
     done = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
 
     def __init__(self, target, args=None, kwargs=None, callback=None):
-        super(_Invoke, self).__init__()
+        super(_Async, self).__init__()
 
         self.args = args or list()
         self.kwargs = kwargs or dict()
@@ -104,12 +154,8 @@ class _Invoke(QtCore.QThread):
         self.done.emit(result)
 
 
-def _invoke_cleanup(obj):
-    _invokes.remove(obj)
-
-
-# Alternative
-async = invoke
+def _async_cleanup(obj):
+    _async_threads.remove(obj)
 
 
 class Timer(object):
@@ -128,71 +174,6 @@ class Timer(object):
 
     def __exit__(self, type, value, tb):
         print self._format % ((time.time() - self._time) * 1000)
-
-
-class Log(QtCore.QObject):
-    """Expose Python's logging mechanism to QML"""
-
-    def __init__(self, name="qml", parent=None):
-        super(Log, self).__init__(parent)
-        self.log = logging.getLogger(name)
-
-        formatter = logging.Formatter("%(levelname)s %(message)s")
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        self.log.addHandler(handler)
-
-        # self.log.setLevel(logging.INFO)
-        self.log.setLevel(logging.DEBUG)
-        self.log.propagate = True
-
-    @QtCore.pyqtSlot(str)
-    def debug(self, msg):
-        self.log.debug(msg)
-
-    @QtCore.pyqtSlot(str)
-    def info(self, msg):
-        self.log.info(msg)
-
-    @QtCore.pyqtSlot(str)
-    def warning(self, msg):
-        self.log.warning(msg)
-
-    @QtCore.pyqtSlot(str)
-    def error(self, msg):
-        self.log.error(msg)
-
-
-def where(program):
-    """Parse PATH for executables
-
-    Windows note:
-        PATHEXT yields possible suffixes, such as .exe, .bat and .cmd
-
-    Usage:
-        >>> where("python")
-        c:\python27\python.exe
-
-    """
-
-    suffixes = [""]
-
-    try:
-        # Append Windows suffixes, such as .exe, .bat and .cmd
-        suffixes.extend(os.environ.get("PATHEXT").split(os.pathsep))
-    except:
-        pass
-
-    for path in os.environ["PATH"].split(os.pathsep):
-
-        # A path may be empty.
-        if not path:
-            continue
-
-        for suffix in suffixes:
-            full_path = os.path.join(path, program + suffix)
-            if os.path.isfile(full_path):
-                return full_path
 
 
 def format_text(text):

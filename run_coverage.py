@@ -11,5 +11,5 @@ sys.path.insert(0, vendor_dir)
 if __name__ == '__main__':
     import nose
     argv = sys.argv[:]
-    argv.extend(['--exclude=vendor', '--with-doctest', "--verbose"])
+    argv.extend(['-c', '.noserc'])
     nose.main(argv=argv)

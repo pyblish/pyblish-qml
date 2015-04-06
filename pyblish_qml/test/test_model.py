@@ -3,8 +3,10 @@ import time
 
 from PyQt5 import QtCore
 
-from ..vendor.nose.tools import *
 from .. import util
+
+# Vendor libraries
+from nose.tools import *
 
 
 def setup():

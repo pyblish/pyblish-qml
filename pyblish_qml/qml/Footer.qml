@@ -37,12 +37,12 @@ View {
 
         spacing: 3
 
-        Button {
-            elevation: 1
+        // Button {
+        //     elevation: 1
 
-            icon: "button-save"
-            onClicked: footer.save()
-        }
+        //     icon: "button-save"
+        //     onClicked: footer.save()
+        // }
 
         Button {
             elevation: 1

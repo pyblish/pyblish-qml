@@ -23,9 +23,13 @@ ICON_PATH = os.path.join(MODULE_DIR, "icon.ico")
 
 
 class Window(QtQuick.QQuickView):
+    """Main application window"""
+
     def __init__(self, parent=None):
         super(Window, self).__init__(None)
         self.parent = parent
+
+        self.setResizeMode(self.SizeRootObjectToView)
 
     def event(self, event):
         """Allow GUI to be closed upon holding Shift"""
@@ -47,7 +51,7 @@ class Window(QtQuick.QQuickView):
 
 
 class Application(QtGui.QGuiApplication):
-    """Pyblish QML wrapper around QApplication
+    """Pyblish QML wrapper around QGuiApplication
 
     Provides production and debug launchers along with controller
     initialisation and orchestration.
@@ -63,8 +67,7 @@ class Application(QtGui.QGuiApplication):
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
 
         window = Window(self)
-        window.setSource(QtCore.QUrl.fromLocalFile(APP_PATH))
-        window.setResizeMode(window.SizeRootObjectToView)
+        window.statusChanged.connect(self.on_status_changed)
 
         window.setWidth(400)
         window.setHeight(600)
@@ -84,6 +87,16 @@ class Application(QtGui.QGuiApplication):
         self.port = port
 
         self.server_unresponsive.connect(self.on_server_unresponsive)
+
+        window.setSource(QtCore.QUrl.fromLocalFile(APP_PATH))
+
+    def on_status_changed(self, status):
+        if status == QtQuick.QQuickView.Error:
+            for error in self.window.errors():
+                message = error.toString()
+                if "The specified procedure could not be found." in message:
+                    print compat.error_message["qtquick2plugin.dll"]
+                    self.quit()
 
     def show(self):
         """Display GUI
@@ -112,6 +125,7 @@ class Application(QtGui.QGuiApplication):
         if previously_hidden:
             # Deferring reset to give statemachine enough time
             # to start and set it's initial states.
+            QtCore.QTimer.singleShot(0, self.controller.show.emit)
             QtCore.QTimer.singleShot(0, self.controller.reset)
 
     def hide(self):
@@ -122,7 +136,7 @@ class Application(QtGui.QGuiApplication):
 
         """
 
-        self.controller.s_hide.emit()
+        self.controller.hide.emit()
         self.window.hide()
 
     def on_server_unresponsive(self):
@@ -211,34 +225,6 @@ class Application(QtGui.QGuiApplication):
         return rest.request("http://127.0.0.1", self.port, *args, **kwargs)
 
 
-class CloseEventHandler(QtCore.QObject):
-    """Prefer hiding the window, to closing it."""
-
-    def __init__(self, app, parent=None):
-        super(CloseEventHandler, self).__init__(parent)
-        self.app = app
-
-    def eventFilter(self, obj, event):
-        """Allow GUI to be closed upon holding Shift"""
-        if event.type() == QtCore.QEvent.Close:
-            modifiers = QtCore.QCoreApplication.instance().queryKeyboardModifiers()
-            shift_pressed = QtCore.Qt.ShiftModifier & modifiers
-
-            if shift_pressed:
-                util.echo("Shift pressed, accepting close event")
-                event.accept()
-
-            elif not self.app.keep_alive:
-                util.echo("Not keeping alive, accepting close event")
-                event.accept()
-            else:
-                util.echo("Ignoring close event")
-                event.ignore()
-                self.app.hide()
-
-        return super(CloseEventHandler, self).eventFilter(obj, event)
-
-
 def main(port, pid=None, preload=False, debug=False, validate=True):
     """Start the Qt-runtime and show the window
 
@@ -284,14 +270,10 @@ in order to bypass validation.
         # log.setLevel(logging.INFO)
 
     if debug:
-        try:
-            rest.request("http://127.0.0.1",
-                         port,
-                         "GET",
-                         "/hello",
-                         timeout=0.1)
-
-        except rest.ConnectionError:
+        # When in debug-mode, launch an in-process
+        # server for Pyblish Endpoint.
+        host = rest.Host(port=port)
+        if not host.hello():
             import mocking
             import threading
             import pyblish_endpoint.server

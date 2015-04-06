@@ -2,6 +2,7 @@
 
 from PyQt5 import QtCore
 
+import util
 
 defaults = {
     "name": "default",
@@ -11,6 +12,7 @@ defaults = {
     "optional": True,
     "hasError": False,
     "succeeded": False,
+    "processed": False,
     "currentProgress": 0,
     "errors": list(),
     "records": list()
@@ -73,19 +75,153 @@ class PluginItem(Item):
                 value = self.data[key]
             setattr(self, key, value)
 
-        doc = self.data["doc"]
+        doc = self.data.get("doc", "")
         if doc and len(doc) > 30:
             self.data["doc"] = doc[:30] + "..."
 
 
-class Model(QtCore.QAbstractListModel):
+class ItemModel(QtCore.QAbstractListModel):
     roles = dict()
     names = dict()
 
     data_changed = QtCore.pyqtSignal(object, str, object, object,
                                      arguments=["name", "key", "old", "new"])
 
-    def pairs(self):
+    def __iter__(self):
+        return self.iterator()
+
+    def __new__(cls, *args, **kwargs):
+        obj = super(ItemModel, cls).__new__(cls, *args, **kwargs)
+
+        index = 0
+        for key in (defaults.keys() +
+                    instance_defaults.keys() +
+                    plugin_defaults.keys()):
+            role = QtCore.Qt.UserRole + index
+            obj.roles[role] = key
+            index += 1
+
+        obj.names = dict((v, k) for k, v in obj.roles.iteritems())
+        obj.roles[999] = "itemType"
+
+        return obj
+
+    def __init__(self, parent=None):
+        super(ItemModel, self).__init__(parent)
+        self.items = list()
+        self.item_dict = dict()
+        self.instances = util.ItemList(key="name")
+        self.plugins = util.ItemList(key="name")
+
+    def update_with_state(self, state):
+        self.reset()
+
+        plugins = state.get("plugins", list())
+        context = state.get("context", dict(children=list()))
+
+        for plugin in plugins:
+            data = plugin["data"]
+
+            if data["order"] < 1:
+                data["isToggled"] = False
+
+            doc = data.get("doc")
+            if doc is not None:
+                data["doc"] = util.format_text(doc)
+
+            item = PluginItem(name=plugin["name"],
+                              data=data)
+            self.add_item(item)
+
+        for instance in context["children"]:
+            name = instance.get("name")
+            data = instance.get("data", {})
+
+            if data.get("publish") is False:
+                data["isToggled"] = False
+
+            item = InstanceItem(name=name, data=data)
+            self.add_item(item)
+
+    def update_current(self, pair):
+        """Update the currently processing pair
+
+        Arguments:
+            pair (dict): {"instance": <str>, "plugin": <str>}
+
+        """
+
+        for index in range(self.rowCount()):
+            self.setData(index, "isProcessing", False)
+
+        for type in ("instance", "plugin"):
+            name = pair[type]
+            item = self.itemFromName(name)
+
+            if not item:
+                continue
+
+            index = self.itemIndexFromItem(item)
+
+            self.setData(index, "isProcessing", True)
+            self.setData(index, "currentProgress", 1)
+
+    def update_with_result(self, result):
+        """Update item-model with result from host
+
+        State is sent from host after processing had taken place
+        and represents the events that took place; including
+        log messages and completion status.
+
+        Arguments:
+            result (dict): Dictionary following the Result schema
+
+        """
+
+        for index in range(self.rowCount()):
+            self.setData(index, "isProcessing", False)
+
+        for type in ("instance", "plugin"):
+            name = result[type]
+            item = self.itemFromName(name)
+
+            if not item:
+                assert type == "instance"
+                # No instance were processed.
+                continue
+
+            index = self.itemIndexFromItem(item)
+
+            self.setData(index, "isProcessing", True)
+            self.setData(index, "currentProgress", 1)
+            self.setData(index, "processed", True)
+
+            if result.get("error"):
+                self.setData(index, "hasError", True)
+
+                item.errors.append({
+                    "source": name,
+                    "error": result.get("error")
+                })
+
+            else:
+                self.setData(index, "succeeded", True)
+
+            if result.get("records"):
+                for record in result.get("records"):
+                    item.records.append(record)
+
+    def iterator(self):
+        """Default iterator
+
+        Yields items to be processed based on their
+        current state.
+
+        Yields:
+            tuple: (plugin, instance)
+
+        """
+
         for plugin in self.plugins:
             if not plugin.isToggled:
                 continue
@@ -127,30 +263,30 @@ class Model(QtCore.QAbstractListModel):
                 errors[plugin].append(error)
         return errors
 
-    def __new__(cls, *args, **kwargs):
-        obj = super(Model, cls).__new__(cls, *args, **kwargs)
+    def reset_status(self):
+        """Reset progress bars"""
+        for item in self.items:
+            index = self.itemIndexFromItem(item)
+            self.setData(index, "isProcessing", False)
+            self.setData(index, "currentProgress", 0)
 
-        index = 0
-        for key in (defaults.keys() +
-                    instance_defaults.keys() +
-                    plugin_defaults.keys()):
-            role = QtCore.Qt.UserRole + index
-            obj.roles[role] = key
-            index += 1
+    def update_compatibility(self):
+        for plugin in self.plugins:
+            has_compatible = False
 
-        obj.names = dict((v, k) for k, v in obj.roles.iteritems())
-        obj.roles[999] = "itemType"
+            for instance in self.instances:
+                if not instance.isToggled:
+                    continue
 
-        return obj
+                if any(x in plugin.families for x in (
+                        instance.family, "*")):
+                    has_compatible = True
+                    break
 
-    def __init__(self, parent=None):
-        super(Model, self).__init__(parent)
-        self.items = list()
-        self.item_dict = dict()
-        self.instances = list()
-        self.plugins = list()
+            index = self.itemIndexFromItem(plugin)
+            self.setData(index, "hasCompatible", has_compatible)
 
-    def addItem(self, item):
+    def add_item(self, item):
         self.beginInsertRows(QtCore.QModelIndex(),
                              self.rowCount(),
                              self.rowCount())
@@ -309,7 +445,74 @@ class TerminalModel(QtCore.QAbstractListModel):
         super(TerminalModel, self).__init__(parent)
         self.items = []
 
-    def addItem(self, item):
+    def update_with_state(self, state):
+        self.reset()
+
+        context_ = {
+            "type": "context",
+            "name": "Pyblish",
+            "filter": "Pyblish"
+        }
+
+        context_.update(state["context"]["data"])
+
+        self.add_item(context_)
+
+    def update_with_result(self, result):
+        parsed = self.parse_result(result)
+
+        if getattr(self, "_last_plugin", None) != result["plugin"]:
+            self._last_plugin = result["plugin"]
+            self.add_item(parsed["plugin"])
+
+        self.add_item(parsed["instance"])
+
+        for record in result["records"]:
+            self.add_item(record)
+
+        if parsed["error"] is not None:
+            self.add_item(parsed["error"])
+
+    def parse_result(self, result):
+        plugin_msg = {
+            "type": "plugin",
+            "message": result["plugin"],
+            "filter": result["plugin"],
+            "doc": result["doc"]
+        }
+
+        instance_msg = {
+            "type": "instance",
+            "message": result["instance"],
+            "filter": result["instance"],
+            "duration": result["duration"]
+        }
+
+        record_msgs = list()
+
+        for record in result["records"]:
+            record["type"] = "record"
+            record["filter"] = record["message"]
+            record["message"] = util.format_text(str(record["message"]))
+            record_msgs.append(record)
+
+        error_msg = None
+
+        if result["error"] is not None:
+            error = result["error"]
+            error["type"] = "error"
+            error["message"] = util.format_text(error["message"])
+            error["filter"] = error["message"]
+            error_msg = error
+
+        return {
+            "plugin": plugin_msg,
+            "instance": instance_msg,
+            "records": record_msgs,
+            "error": error_msg
+        }
+
+    def add_item(self, item):
         self.beginInsertRows(QtCore.QModelIndex(),
                              self.rowCount(),
                              self.rowCount())
@@ -317,6 +520,8 @@ class TerminalModel(QtCore.QAbstractListModel):
         self.items.append(item)
         self.endInsertRows()
         self.added.emit()
+
+    # Overridden methods
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self.items)
@@ -346,8 +551,8 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 
     Example:
         >>> # Exclude any item whose role 123 equals "Abc"
-        >>> model = ProxyModel()
-        >>> model.addExclusion(role=123, value="Abc")
+        >>> model = ProxyModel(None)
+        >>> model.add_exclusion(role=123, value="Abc")
 
     """
 
@@ -362,7 +567,7 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         self.excludes = dict()
         self.includes = dict()
 
-    def addExclusion(self, role, value):
+    def add_exclusion(self, role, value):
         """Exclude item if `role` equals `value`
 
         Attributes:
@@ -377,7 +582,7 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         self.excludes[role] = value
         self.invalidate()
 
-    def removeExclusion(self, role):
+    def remove_exclusion(self, role):
         """Remove exclusion rule
 
         TODO(marcus): Should we allow for multiple excluded
@@ -394,7 +599,7 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         self.excludes.pop(role, None)
         self.invalidate()
 
-    def addInclusion(self, role, value):
+    def add_inclusion(self, role, value):
         """Include item if `role` equals `value`
 
         Attributes:
@@ -405,6 +610,8 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 
         self.includes[role] = value
         self.invalidate()
+
+    # Overridden methods
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Exclude items in `self.excludes`"""
@@ -428,15 +635,15 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 class InstanceProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
         super(InstanceProxy, self).__init__(*args, **kwargs)
-        self.addInclusion(999, "InstanceItem")
+        self.add_inclusion(999, "InstanceItem")
 
 
 class PluginProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
         super(PluginProxy, self).__init__(*args, **kwargs)
-        self.addInclusion(999, "PluginItem")
-        self.addExclusion("type", "Selector")
-        self.addExclusion("hasCompatible", False)
+        self.add_inclusion(999, "PluginItem")
+        self.add_exclusion("type", "Selector")
+        self.add_exclusion("hasCompatible", False)
 
 
 class TerminalProxy(ProxyModel):
@@ -444,4 +651,4 @@ class TerminalProxy(ProxyModel):
         super(TerminalProxy, self).__init__(*args, **kwargs)
         self.setFilterRole(self.names["filter"])  # msg
         self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
-        self.addExclusion("levelname", "DEBUG")
+        self.add_exclusion("levelname", "DEBUG")
