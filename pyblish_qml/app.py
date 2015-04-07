@@ -29,6 +29,7 @@ class Window(QtQuick.QQuickView):
         super(Window, self).__init__(None)
         self.parent = parent
 
+        self.setTitle("Pyblish")
         self.setResizeMode(self.SizeRootObjectToView)
 
     def event(self, event):

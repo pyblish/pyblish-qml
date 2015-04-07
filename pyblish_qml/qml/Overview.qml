@@ -118,14 +118,8 @@ Item {
         AwesomeIcon {
             name: "circle-o-notch-rotate"
             anchors.centerIn: parent
-            opacity: terminal.status == Loader.Loading ? 1.0 : 0.0
+            opacity: tabBar.currentIndex == 0 && overview.state == "initialising" ? 1.0 : 0.0
             visible: opacity > 0 ? true : false
-
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: 100
-                }
-            }
         }
     }
 
