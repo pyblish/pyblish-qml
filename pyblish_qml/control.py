@@ -61,15 +61,6 @@ class Controller(QtCore.QObject):
         self.finished.connect(self.on_finished)
         self.item_model.data_changed.connect(self.on_data_changed)
 
-        def qt_message_handler(typ, ctx, msg):
-            util.echo("qt: %s" % msg)
-            self.echo({
-                "type": "message",
-                "message": msg
-            })
-
-        QtCore.qInstallMessageHandler(qt_message_handler)
-
         self.state_changed.connect(self.on_state_changed)
 
     def setup_statemachine(self):
