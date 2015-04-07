@@ -610,44 +610,49 @@ class Controller(QtCore.QObject):
                                                       "finished")):
             return self.error.emit("Not ready")
 
-        self.initialising.emit()
-        self.changes.clear()
-
         util.timer("resetting..")
 
-        init = self.host.init()
-        if isinstance(init, Exception):
-            return self.error.emit(str(init))
+        self.initialising.emit()
+        self.item_model.reset()
+        self.terminal_model.reset()
+        self.changes.clear()
 
-        state = self.host.state()
-        if isinstance(state, Exception):
-            return self.error.emit(str(state))
+        def init():
+            init = self.host.init()
+            if isinstance(init, Exception):
+                return init
 
-        self.item_model.update_with_state(state)
-        self.terminal_model.update_with_state(state)
-
-        def selectors():
-            for item in self.item_model.plugins:
-                if item.order < 1:
-                    yield item, None
-
-        def finished():
             state = self.host.state()
 
+            return state
+
+        def on_finished(state):
+            if isinstance(state, Exception):
+                return self.error.emit(str(state))
+
             self.item_model.update_with_state(state)
-            self.item_model.update_compatibility()
+            self.terminal_model.update_with_state(state)
 
-            self.initialised.emit()
+            def selectors():
+                for item in self.item_model.plugins:
+                    if item.order < 1:
+                        yield item, None
 
-            util.timer_end("resetting..",
-                           "Spent %.2f ms resetting..")
+            def on_finished():
+                state = self.host.state()
 
-        self.is_running = True
-        self.process_next(iterator=selectors(), on_finished=finished)
+                self.item_model.update_with_state(state)
+                self.item_model.update_compatibility()
 
-    # @QtCore.pyqtSlot(int)
-    # def repairInstance(self, index):
-    #     print "Repairing %s" % index
+                self.initialised.emit()
+
+                util.timer_end("resetting..",
+                               "Spent %.2f ms resetting..")
+
+            self.is_running = True
+            self.process_next(iterator=selectors(), on_finished=on_finished)
+
+        util.async(init, callback=on_finished)
 
     @QtCore.pyqtSlot(int)
     def repairPlugin(self, index):

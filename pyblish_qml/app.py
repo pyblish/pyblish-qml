@@ -8,7 +8,7 @@ import logging
 import threading
 
 # Dependencies
-from PyQt5 import QtCore, QtGui, QtQuick
+from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 
 # Local libraries
 import util
@@ -122,6 +122,19 @@ class Application(QtGui.QGuiApplication):
             window.setFlags(previous_flags)
 
         if previously_hidden:
+            # Give statemachine enough time to boot up
+            if "ready" not in self.controller.states:
+                util.timer("ready")
+
+                ready = QtTest.QSignalSpy(self.controller.ready)
+
+                count = len(ready)
+                ready.wait(1000)
+                if len(ready) != count + 1:
+                    util.echo("Warning: Could not enter ready state")
+
+                util.timer_end("ready", "Awaited statemachine for %.2f ms")
+
             self.controller.show.emit()
             self.controller.reset()
 
