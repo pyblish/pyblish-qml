@@ -85,7 +85,8 @@ def timer_end(name, format=None):
     _time = _timers.pop(name, None)
     format = format or name + ": %.3f ms"
     if _time is not None:
-        echo(format % (time.time() - _time))
+        ms = (time.time() - _time) * 1000
+        echo(format % ms)
 
 
 def chain(*operations):
@@ -150,8 +151,12 @@ class _Async(QtCore.QThread):
             self.done.connect(callback, type=connection)
 
     def run(self, *args, **kwargs):
-        result = self.target(*self.args, **self.kwargs)
-        self.done.emit(result)
+        try:
+            result = self.target(*self.args, **self.kwargs)
+        except Exception as e:
+            return self.done.emit(e)
+        else:
+            self.done.emit(result)
 
 
 def _async_cleanup(obj):
