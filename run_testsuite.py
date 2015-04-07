@@ -7,10 +7,9 @@ package_dir = os.path.join(repo_dir, "pyblish_qml")
 vendor_dir = os.path.join(package_dir, "vendor")
 sys.path.insert(0, vendor_dir)
 
-import nose
-
 
 if __name__ == '__main__':
+    import nose
     argv = sys.argv[:]
-    argv.extend(['--exclude=vendor', '--with-doctest'])
+    argv.extend(['--exclude=vendor', '--with-doctest', "--verbose"])
     nose.main(argv=argv)

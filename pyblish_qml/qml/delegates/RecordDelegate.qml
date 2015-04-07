@@ -5,12 +5,16 @@ import Pyblish 0.1
 BaseDelegate {
     id: root
 
-    property string shortMessage: msg.split("\n")[0]
-    property string longMessage: msg
+    property string shortMessage: message.split("\n")[0]
+    property string longMessage: message
 
     expandable: true
 
-    height: bodyItem.height + 5
+    height: {
+        if (loader.status == Loader.Ready)
+            return loader.item.height + 5
+        return 0
+    }
 
     property var levels: {
         "DEBUG":  {
@@ -38,7 +42,6 @@ BaseDelegate {
     color: levels[levelname].color
 
     body: Row {
-        // property real __height: Math.max(mask.height, messageLabel.paintedHeight, 
         property alias icon: mask.name
 
         spacing: 10

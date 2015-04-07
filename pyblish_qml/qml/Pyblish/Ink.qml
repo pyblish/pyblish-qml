@@ -5,7 +5,7 @@ import Pyblish 0.1
 Item {
     id: view
 
-    clip: true
+    // clip: true
     z: 2
 
     /*!

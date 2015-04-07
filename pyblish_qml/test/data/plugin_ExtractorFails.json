@@ -1,0 +1,23 @@
+{
+    "__fails__": true,
+    "__exception__": {
+        "message": "I was programmed to fail"
+    },
+    "__records__": [
+        {
+            "message": "I'm about to fail!",
+            "levelname": "WARNING"
+        },
+        {
+            "message": "Failing..",
+            "levelname": "ERROR"
+        }
+    ],
+
+    "data": {
+        "families": ["family1"],
+        "order": 2,
+        "canProcessInstance": true,
+        "compatibleInstances": ["Instance1", "Instance2"]
+    }
+}

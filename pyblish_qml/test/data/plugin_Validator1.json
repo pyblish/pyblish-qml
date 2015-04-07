@@ -1,0 +1,10 @@
+{
+    "__fails__": false,
+
+    "data": {
+        "families": ["family1"],
+        "order": 1,
+        "canProcessInstance": true,
+        "compatibleInstances": ["Instance1", "Instance2"]
+    }
+}

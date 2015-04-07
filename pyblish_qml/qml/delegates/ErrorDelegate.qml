@@ -16,8 +16,6 @@ BaseDelegate {
 
         width: parent.width
 
-        clip: true
-
         Icon {
             id: icon
             name: "error-red-16x16"
@@ -85,7 +83,7 @@ BaseDelegate {
                         }
 
                         Label {
-                            text: modelData.value
+                            text: modelData.value  || ""
                         }
                     }
                 }

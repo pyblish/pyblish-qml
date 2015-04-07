@@ -8,6 +8,7 @@ ListView {
 
     signal itemClicked(int index)
     signal itemDoubleClicked(int index)
+    signal actionTriggered(Action action, int index)
 
     width: 200
     height: 300
@@ -16,7 +17,7 @@ ListView {
 
     boundsBehavior: Flickable.DragOverBounds
 
-    delegate: ListItem.Standard {
+    delegate: ListItem.StandardActions {
         text: name
         active: optional
         checked: isToggled
@@ -34,8 +35,22 @@ ListView {
             return "default"
         }
 
-        onClicked: list.itemClicked(index)
-        onDoubleClicked: list.itemDoubleClicked(index)
+        onToggled: list.itemClicked(index)
+
+        actions: [
+            Action {
+                name: "repair"
+                iconName: "wrench"
+                enabled: hasError && hasRepair ? true : false
+                onTriggered: list.actionTriggered(this, index)
+            },
+
+            Action {
+                name: "explore"
+                iconName: "angle-right"
+                onTriggered: list.actionTriggered(this, index)
+            }
+        ]
     }
 
     section.delegate: Item {

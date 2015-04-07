@@ -8,8 +8,6 @@ Rectangle {
     width: 100
     height: 62
 
-    clip: true
-
     color: "transparent"
 
     property int elevation

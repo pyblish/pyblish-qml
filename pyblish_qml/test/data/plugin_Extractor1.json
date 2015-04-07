@@ -1,0 +1,20 @@
+{
+    "__fails__": false,
+    "__records__": [
+        {
+            "message": "I'm an extractor..",
+            "levelname": "WARNING"
+        },
+        {
+            "message": "And I love being tested.",
+            "levelname": "INFO"
+        }
+    ],
+
+    "data": {
+        "families": ["family1"],
+        "order": 2,
+        "canProcessInstance": true,
+        "compatibleInstances": ["Instance1", "Instance2"]
+    }
+}

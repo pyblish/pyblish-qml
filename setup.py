@@ -59,6 +59,5 @@ setup(
         "pyblish_qml": package_data
     },
     entry_points={},
-    install_requires=["pyblish-endpoint>=1.1.7",
-                      "pyblish>=1.0.14"]
+    install_requires=["pyblish-endpoint>=1.1.8"]
 )

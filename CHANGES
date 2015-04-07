@@ -1,6 +1,18 @@
 Changelog
 =========
 
+Version 0.2.8
+-------------
+
+- Feature: Repair
+- Feature: Compatible plug-ins updates interactively as you toggle instances.
+- Bugfix: Failing Selectors won't prohibit Extraction.
+- Enhancement: You can't close while publishing.
+- Enhancement: You can't crash the GUI. I dare you.
+- API: Added util.register_vendor_libraries
+- API: Added util.deregister_vendor_libraries
+- API: Changed util.invoke -> util.async
+
 Version 0.2.7
 -------------
 

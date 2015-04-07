@@ -73,20 +73,22 @@ View {
 
             onClicked: footer.publish()
 
-            /*
-             * Disable publish-button
-            */
-            Rectangle {
-                anchors.fill: parent
-                color: "gray"
-                opacity: 0.5
-                visible: mode == 0 ? false : true
+            visible: mode == 0 ? true : false
 
-                MouseArea {
-                    // Steal focus from default button
-                    anchors.fill: parent
-                }
-            }
+            // /*
+            //  * Disable publish-button
+            // */
+            // Rectangle {
+            //     anchors.fill: parent
+            //     color: "gray"
+            //     opacity: 0.5
+            //     visible: mode == 0 ? false : true
+
+            //     MouseArea {
+            //         // Steal focus from default button
+            //         anchors.fill: parent
+            //     }
+            // }
         }
     }
 }

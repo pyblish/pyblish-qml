@@ -10,7 +10,13 @@ Rectangle {
     ListView {
         anchors.fill: parent
 
-        model: ["power_off", "music", "th_large"]
+        model: ["power-off",
+                "music",
+                "th-large",
+                "wrench",
+                "arrow-right",
+                "angle-right",
+                "angle-double-right"]
 
         delegate: AwesomeIcon {
             name: modelData

@@ -26,7 +26,6 @@ Ink {
         anchors.fill: parent
         color: Qt.tint(backgroundColor, tintColor)
         antialiasing: parent.rotation || radius > 0 ? true : false
-        clip: true
 
         Behavior on color {
             ColorAnimation { duration: 200 }
