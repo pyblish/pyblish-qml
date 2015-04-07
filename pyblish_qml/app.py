@@ -59,6 +59,8 @@ class Application(QtGui.QGuiApplication):
     """
 
     server_unresponsive = QtCore.pyqtSignal()
+    show_signal = QtCore.pyqtSignal()
+    quit_signal = QtCore.pyqtSignal()
     keep_alive = False
 
     def __init__(self, port):
@@ -87,16 +89,13 @@ class Application(QtGui.QGuiApplication):
         self.port = port
 
         self.server_unresponsive.connect(self.on_server_unresponsive)
+        self.show_signal.connect(self.show)
 
         window.setSource(QtCore.QUrl.fromLocalFile(APP_PATH))
 
     def on_status_changed(self, status):
         if status == QtQuick.QQuickView.Error:
-            for error in self.window.errors():
-                message = error.toString()
-                if "The specified procedure could not be found." in message:
-                    print compat.error_message["qtquick2plugin.dll"]
-                    self.quit()
+            self.quit()
 
     def show(self):
         """Display GUI
@@ -123,10 +122,8 @@ class Application(QtGui.QGuiApplication):
             window.setFlags(previous_flags)
 
         if previously_hidden:
-            # Deferring reset to give statemachine enough time
-            # to start and set it's initial states.
-            QtCore.QTimer.singleShot(0, self.controller.show.emit)
-            QtCore.QTimer.singleShot(0, self.controller.reset)
+            self.controller.show.emit()
+            self.controller.reset()
 
     def hide(self):
         """Hide GUI
@@ -136,7 +133,7 @@ class Application(QtGui.QGuiApplication):
 
         """
 
-        self.controller.hide.emit()
+        # self.controller.hide.emit()
         self.window.hide()
 
     def on_server_unresponsive(self):
@@ -188,10 +185,10 @@ class Application(QtGui.QGuiApplication):
                     timer["count"] += 1
 
                 elif message == "show":
-                    self.show()
+                    self.show_signal.emit()
 
                 elif message == "close":
-                    self.quit()
+                    self.quit_signal.emit()
 
                 elif message == "kill":
                     util.echo(
@@ -230,9 +227,7 @@ def main(port, pid=None, preload=False, debug=False, validate=True):
 
     Arguments:
         port (int): Port through which to communicate
-        pid (int, optional): Process id of parent process. Defaults to
-            None, thus not being parented to a process and must thus
-            be killed manually.
+        pid (int, optional): Process id of parent process.
         debug (bool, optional): Whether or not to run in debug-mode.
             Defaults to False
         validate (bool, optional): Whether the environment should be validated
@@ -300,7 +295,7 @@ in order to bypass validation.
     app.listen()
 
     if not preload:
-        app.show()
+        app.show_signal.emit()
 
     util.timer_end("application",
                    "Spent %.2f ms creating the application")
