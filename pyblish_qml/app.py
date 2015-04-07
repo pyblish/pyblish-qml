@@ -41,6 +41,9 @@ class Window(QtQuick.QQuickView):
             if shift_pressed:
                 event.accept()
 
+            elif "publishing" in self.parent.controller.states:
+                event.ignore()
+
             elif not self.parent.keep_alive:
                 event.accept()
 
