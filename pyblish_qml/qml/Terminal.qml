@@ -2,6 +2,7 @@ import QtQuick 2.3
 import QtQuick.Controls 1.3 as Controls
 import QtQuick.Controls.Styles 1.3 as ControlStyle
 import Pyblish 0.1
+import "Delegates.js" as Delegates
 
 
 Column {
@@ -39,7 +40,7 @@ Column {
 
             delegate: Loader {
                 width: ListView.view.width
-                source: "delegates/" + Utils.toTitleCase(type) + "Delegate.qml"
+                sourceComponent: Delegates.components[type]
             }
         }
     }
