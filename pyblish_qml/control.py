@@ -653,6 +653,9 @@ class Controller(QtCore.QObject):
         self.item_model.setData(index, "hasError", False)
 
         def iterator(plugin):
+            if plugin.canRepairContext:
+                yield plugin, None
+
             for instance in self.item_model.instances:
                 if not instance.hasError:
                     continue

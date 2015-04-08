@@ -29,6 +29,8 @@ plugin_defaults = {
     "type": "unknown",
     "canProcessContext": False,
     "canProcessInstance": False,
+    "canRepairInstance": False,
+    "canRepairContext": False,
     "compatibleInstances": list(),
 }
 
