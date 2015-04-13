@@ -18,19 +18,19 @@ ListView {
     boundsBehavior: Flickable.DragOverBounds
 
     delegate: ListItem.StandardActions {
-        text: name
-        active: optional
-        checked: isToggled
+        text: item.name
+        active: item.optional
+        checked: item.isToggled
 
         height: 20
         width: parent.width
 
         status: {
-            if (isProcessing)
+            if (item.isProcessing)
                 return "selected"
-            if (hasError)
+            if (item.hasError)
                 return "error"
-            if (succeeded)
+            if (item.succeeded)
                 return "success"
             return "default"
         }
@@ -41,7 +41,7 @@ ListView {
             Action {
                 name: "repair"
                 iconName: "wrench"
-                enabled: hasError && hasRepair ? true : false
+                enabled: item.hasError && item.hasRepair ? true : false
                 onTriggered: list.actionTriggered(this, index)
             },
 
@@ -61,7 +61,7 @@ ListView {
             anchors.fill: parent
 
             Label {
-                text: section
+                text: item.section
                 opacity: 0.5
                 anchors.verticalCenter: parent.verticalCenter
             }

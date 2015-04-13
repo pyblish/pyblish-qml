@@ -11,12 +11,12 @@ BaseDelegate {
 
         anchors.verticalCenter: parent.verticalCenter
 
-        Icon {
-            name: "instance-white-16x16"
+        AwesomeIcon {
+            name: "file"
         }
 
         Label {
-            text: message
+            text: item.message
             style: "body2"
             anchors.verticalCenter: parent.verticalCenter
         }

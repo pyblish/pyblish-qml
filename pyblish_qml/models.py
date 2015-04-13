@@ -13,9 +13,7 @@ defaults = {
     "hasError": False,
     "succeeded": False,
     "processed": False,
-    "currentProgress": 0,
-    "errors": list(),
-    "records": list()
+    "currentProgress": 0
 }
 
 plugin_defaults = {
@@ -105,8 +103,8 @@ class ItemModel(QtCore.QAbstractListModel):
             obj.roles[role] = key
             index += 1
 
-        obj.names = dict((v, k) for k, v in obj.roles.iteritems())
         obj.roles[999] = "itemType"
+        obj.names = dict((v, k) for k, v in obj.roles.iteritems())
 
         return obj
 
@@ -203,17 +201,17 @@ class ItemModel(QtCore.QAbstractListModel):
             if result.get("error"):
                 self.setData(index, "hasError", True)
 
-                item.errors.append({
-                    "source": name,
-                    "error": result.get("error")
-                })
+                # item.errors.append({
+                #     "source": name,
+                #     "error": result.get("error")
+                # })
 
             else:
                 self.setData(index, "succeeded", True)
 
-            if result.get("records"):
-                for record in result.get("records"):
-                    item.records.append(record)
+            # if result.get("records"):
+            #     for record in result.get("records"):
+            #         item.records.append(record)
 
     def iterator(self):
         """Default iterator
@@ -319,8 +317,11 @@ class ItemModel(QtCore.QAbstractListModel):
         if role == 999:
             return type(item).__name__
 
-        if role in self.roles:
-            return getattr(item, self.roles[role], None)
+        if isinstance(role, int):
+            role = self.roles[role]
+
+        if role in self.names:
+            return getattr(item, role, None)
 
         return QtCore.QVariant()
 
@@ -380,11 +381,15 @@ class ItemModel(QtCore.QAbstractListModel):
         self.endResetModel()
 
 
-class TerminalModel(QtCore.QAbstractListModel):
+class ResultModel(QtCore.QAbstractListModel):
     roles = [
         "type",
         "filter",
         "message",
+
+        # Temporary metadata, until treemodel
+        "instance",
+        "plugin",
 
         # LogRecord
         "threadName",
@@ -431,7 +436,7 @@ class TerminalModel(QtCore.QAbstractListModel):
     added = QtCore.pyqtSignal()
 
     def __new__(cls, *args, **kwargs):
-        obj = super(TerminalModel, cls).__new__(cls, *args, **kwargs)
+        obj = super(ResultModel, cls).__new__(cls, *args, **kwargs)
 
         roles = dict()
         for index in range(len(obj.roles)):
@@ -444,7 +449,7 @@ class TerminalModel(QtCore.QAbstractListModel):
         return obj
 
     def __init__(self, parent=None):
-        super(TerminalModel, self).__init__(parent)
+        super(ResultModel, self).__init__(parent)
         self.items = []
 
     def update_with_state(self, state):
@@ -480,14 +485,20 @@ class TerminalModel(QtCore.QAbstractListModel):
             "type": "plugin",
             "message": result["plugin"],
             "filter": result["plugin"],
-            "doc": result["doc"]
+            "doc": result["doc"],
+
+            "plugin": result["plugin"],
+            "instance": result["instance"]
         }
 
         instance_msg = {
             "type": "instance",
             "message": result["instance"],
             "filter": result["instance"],
-            "duration": result["duration"]
+            "duration": result["duration"],
+
+            "plugin": result["plugin"],
+            "instance": result["instance"]
         }
 
         record_msgs = list()
@@ -496,7 +507,20 @@ class TerminalModel(QtCore.QAbstractListModel):
             record["type"] = "record"
             record["filter"] = record["message"]
             record["message"] = util.format_text(str(record["message"]))
+
+            record["plugin"] = result["plugin"]
+            record["instance"] = result["instance"]
+
             record_msgs.append(record)
+
+        error_msg = {
+            "type": "error",
+            "message": "No error",
+            "filter": "",
+
+            "plugin": result["plugin"],
+            "instance": result["instance"]
+        }
 
         error_msg = None
 
@@ -505,13 +529,17 @@ class TerminalModel(QtCore.QAbstractListModel):
             error["type"] = "error"
             error["message"] = util.format_text(error["message"])
             error["filter"] = error["message"]
+
+            error["plugin"] = result["plugin"]
+            error["instance"] = result["instance"]
+
             error_msg = error
 
         return {
             "plugin": plugin_msg,
             "instance": instance_msg,
             "records": record_msgs,
-            "error": error_msg
+            "error": error_msg,
         }
 
     def add_item(self, item):
@@ -528,14 +556,21 @@ class TerminalModel(QtCore.QAbstractListModel):
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self.items)
 
+    @QtCore.pyqtSlot(int, str)
     def data(self, index, role=QtCore.Qt.DisplayRole):
+        if isinstance(index, QtCore.QModelIndex):
+            index = index.row()
+
+        if isinstance(role, int):
+            role = self.roles[role]
+
         try:
-            item = self.items[index.row()]
+            item = self.items[index]
         except IndexError:
             return QtCore.QVariant()
 
-        if role in self.roles:
-            return item.get(self.roles[role], QtCore.QVariant())
+        if role in self.names:
+            return item.get(role, QtCore.QVariant())
 
         return QtCore.QVariant()
 
@@ -549,17 +584,29 @@ class TerminalModel(QtCore.QAbstractListModel):
 
 
 class ProxyModel(QtCore.QSortFilterProxyModel):
-    """A QSortFilterProxyModel with custom exclusion
+    """A QSortFilterProxyModel with custom exclude and include rules
+
+    Role may be either an integer or string, and each
+    role may include multiple values.
 
     Example:
         >>> # Exclude any item whose role 123 equals "Abc"
         >>> model = ProxyModel(None)
         >>> model.add_exclusion(role=123, value="Abc")
 
+        >>> # Exclude multiple values
+        >>> model.add_exclusion(role="name", value="Pontus")
+        >>> model.add_exclusion(role="name", value="Richard")
+
+        >>> # Exclude amongst includes
+        >>> model.add_inclusion(role="type", "PluginItem")
+        >>> model.add_exclusion(role="name", "Richard")
+
     """
 
     @property
     def names(self):
+        """Dictionary of Qt roles and string names"""
         return self.sourceModel().names
 
     def __init__(self, source, parent=None):
@@ -569,38 +616,58 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         self.excludes = dict()
         self.includes = dict()
 
+    @QtCore.pyqtSlot(QtCore.QVariant, QtCore.QVariant, result=QtCore.QVariant)
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        if isinstance(index, int):
+            index = self.index(index, 0, QtCore.QModelIndex())
+
+        if isinstance(role, basestring):
+            role = self.names[role]
+
+        return super(ProxyModel, self).data(index, role)
+
+    @QtCore.pyqtSlot(str, str)
     def add_exclusion(self, role, value):
         """Exclude item if `role` equals `value`
 
         Attributes:
-            role (int): Qt role to compare `value` to
+            role (int, string): Qt role or name to compare `value` to
             value (object): Value to exclude
 
         """
 
-        if not isinstance(role, int):
-            role = self.names[role]
+        self._add_rule(self.excludes, role, value)
 
-        self.excludes[role] = value
-        self.invalidate()
-
-    def remove_exclusion(self, role):
+    @QtCore.pyqtSlot(str, str)
+    def remove_exclusion(self, role, value=None):
         """Remove exclusion rule
 
-        TODO(marcus): Should we allow for multiple excluded
-            *values* for each role? For example, if a role
-            matches *any* or *all* of the excluded values
-            it could get excluded. How should the logic look
-            for something like that?
+        Arguments:
+            role (int, string): Qt role or name to remove
+            value (object, optional): Value to remove. If none
+                is supplied, the entire role will be removed.
 
         """
 
-        if not isinstance(role, int):
-            role = self.names[role]
+        self._remove_rule(self.excludes, role, value)
 
-        self.excludes.pop(role, None)
-        self.invalidate()
+    def set_exclusion(self, rules):
+        """Set excludes
 
+        Replaces existing excludes with those in `rules`
+
+        Arguments:
+            rules (list): Tuples of (role, value)
+
+        """
+
+        self._set_rules(self.excludes, rules)
+
+    @QtCore.pyqtSlot()
+    def clear_exclusion(self):
+        self._clear_group(self.excludes)
+
+    @QtCore.pyqtSlot(str, str)
     def add_inclusion(self, role, value):
         """Include item if `role` equals `value`
 
@@ -610,7 +677,59 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 
         """
 
-        self.includes[role] = value
+        self._add_rule(self.includes, role, value)
+
+    @QtCore.pyqtSlot(str, str)
+    def remove_inclusion(self, role, value=None):
+        """Remove exclusion rule"""
+        self._remove_rule(self.includes, role, value)
+
+    def set_inclusion(self, rules):
+        self._set_rules(self.includes, rules)
+
+    @QtCore.pyqtSlot()
+    def clear_inclusion(self):
+        self._clear_group(self.includes)
+
+    def _add_rule(self, group, role, value):
+        """Implementation detail"""
+        if not isinstance(role, int):
+            role = self.names[role]
+
+        if role not in group:
+            group[role] = list()
+
+        group[role].append(value)
+
+        self.invalidate()
+
+    def _remove_rule(self, group, role, value=None):
+        """Implementation detail"""
+        if not isinstance(role, int):
+            role = self.names[role]
+
+        if role not in group:
+            return
+
+        if value is None:
+            group.pop(role, None)
+        else:
+            group[role].remove(value)
+
+        self.invalidate()
+
+    def _set_rules(self, group, rules):
+        """Implementation detail"""
+        group.clear()
+
+        for rule in rules:
+            self._add_rule(group, *rule)
+
+        self.invalidate()
+
+    def _clear_group(self, group):
+        group.clear()
+
         self.invalidate()
 
     # Overridden methods
@@ -620,14 +739,14 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         model = self.sourceModel()
         index = model.index(source_row, 0, QtCore.QModelIndex())
 
-        for role, value in self.includes.iteritems():
+        for role, values in self.includes.items():
             data = model.data(index, role)
-            if data != value:
+            if data not in values:
                 return False
 
-        for role, value in self.excludes.iteritems():
+        for role, values in self.excludes.items():
             data = model.data(index, role)
-            if data == value:
+            if data in values:
                 return False
 
         return super(ProxyModel, self).filterAcceptsRow(
@@ -637,20 +756,45 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 class InstanceProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
         super(InstanceProxy, self).__init__(*args, **kwargs)
-        self.add_inclusion(999, "InstanceItem")
+        self.add_inclusion("itemType", "InstanceItem")
 
 
 class PluginProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
         super(PluginProxy, self).__init__(*args, **kwargs)
-        self.add_inclusion(999, "PluginItem")
+        self.add_inclusion("itemType", "PluginItem")
         self.add_exclusion("type", "Selector")
         self.add_exclusion("hasCompatible", False)
 
 
-class TerminalProxy(ProxyModel):
+class ResultProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
-        super(TerminalProxy, self).__init__(*args, **kwargs)
+        super(ResultProxy, self).__init__(*args, **kwargs)
         self.setFilterRole(self.names["filter"])  # msg
         self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
         self.add_exclusion("levelname", "DEBUG")
+
+
+class RecordProxy(ProxyModel):
+    def __init__(self, *args, **kwargs):
+        super(RecordProxy, self).__init__(*args, **kwargs)
+        self.add_inclusion("type", "record")
+        # self.add_inclusion("instance", "Peter01")
+        # self.add_inclusion("plugin", "SelectInstances")
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        return super(RecordProxy, self).filterAcceptsRow(
+            source_row, source_parent)
+
+
+class ErrorProxy(ProxyModel):
+    def __init__(self, *args, **kwargs):
+        super(ErrorProxy, self).__init__(*args, **kwargs)
+        self.add_inclusion("type", "error")
+        # self.add_inclusion("instance", "Peter01")
+        # self.add_inclusion("plugin", "ValidateNamespace")
+
+
+class GadgetProxy(ProxyModel):
+    def __init__(self, *args, **kwargs):
+        super(GadgetProxy, self).__init__(*args, **kwargs)

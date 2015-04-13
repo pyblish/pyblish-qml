@@ -12,8 +12,6 @@ Rectangle {
 
     property int elevation
 
-    property int radius: 0
-
     property color __color: Theme.backgroundColor
 
     property int margins: 5

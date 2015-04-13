@@ -5,7 +5,7 @@ import Pyblish 0.1
 BaseDelegate {
     id: root
 
-    expandable: doc && doc.indexOf("\n") != -1 ? true : false
+    expandable: item.doc && item.doc.indexOf("\n") != -1 ? true : false
 
     height: bodyItem.height + 5
 
@@ -18,9 +18,10 @@ BaseDelegate {
 
         anchors.verticalCenter: parent.verticalCenter
 
-        Icon {
+        AwesomeIcon {
             id: icon
-            name: "plugin2-white-27x27"
+            name: "plug"
+            size: 16
         }
 
         Column {
@@ -33,7 +34,7 @@ BaseDelegate {
                    10
 
             Label {
-                text: message
+                text: item.message
                 // style: "title"
                 width: parent.width
                 elide: Text.ElideRight
@@ -42,7 +43,7 @@ BaseDelegate {
             TextArea {
                 id: documentation
 
-                property string docstring: doc ? doc : "No documentation"
+                property string docstring: item.doc ? item.doc : "No documentation"
 
                 text: expanded ? docstring : docstring.split("\n")[0]
                 opacity: 0.5

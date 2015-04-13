@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 import util
 import rest
 import compat
-import control
+import control2
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
@@ -67,7 +67,7 @@ class Application(QtGui.QGuiApplication):
     quit_signal = QtCore.pyqtSignal()
     keep_alive = False
 
-    def __init__(self, port):
+    def __init__(self, source, port):
         super(Application, self).__init__(sys.argv)
 
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
@@ -82,7 +82,7 @@ class Application(QtGui.QGuiApplication):
         engine = window.engine()
         engine.addImportPath(QML_IMPORT_DIR)
 
-        controller = control.Controller(port)
+        controller = control2.Controller(port)
 
         context = engine.rootContext()
         context.setContextProperty("app", controller)
@@ -95,7 +95,7 @@ class Application(QtGui.QGuiApplication):
         self.server_unresponsive.connect(self.on_server_unresponsive)
         self.show_signal.connect(self.show)
 
-        window.setSource(QtCore.QUrl.fromLocalFile(APP_PATH))
+        window.setSource(QtCore.QUrl.fromLocalFile(source))
 
     def on_status_changed(self, status):
         if status == QtQuick.QQuickView.Error:
@@ -239,14 +239,15 @@ class Application(QtGui.QGuiApplication):
         return rest.request("http://127.0.0.1", self.port, *args, **kwargs)
 
 
-def main(port, pid=None, preload=False, debug=False, validate=True):
+def main(port, source=None, pid=None, preload=False, debug=False, validate=True):
     """Start the Qt-runtime and show the window
 
     Arguments:
         port (int): Port through which to communicate
-        pid (int, optional): Process id of parent process.
-        debug (bool, optional): Whether or not to run in debug-mode.
-            Defaults to False
+        source (str): QML entry-point
+        pid (int, optional): Process id of parent process. Deprecated
+        preload (bool, optional): Load in backgrund. Defaults to False
+        debug (bool, optional): Run in debug-mode. Defaults to False
         validate (bool, optional): Whether the environment should be validated
             prior to launching. Defaults to True
 
@@ -306,7 +307,7 @@ in order to bypass validation.
 
     util.timer("application")
 
-    app = Application(port)
+    app = Application(source or APP_PATH, port)
 
     app.keep_alive = not debug
     app.listen()

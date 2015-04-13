@@ -6,41 +6,43 @@ import Pyblish 0.1
 StackView {
     id: stack
 
-    initialItem: overview
+    function setup(type, name) {
+        app.gadgetProxy.clear_inclusion()
+        app.gadgetProxy.add_inclusion("itemType", Utils.toTitleCase(type) + "Item")
+        app.gadgetProxy.add_inclusion("name", name)
 
-    Component {
-        id: overview
+        app.recordProxy.clear_inclusion()
+        app.recordProxy.add_inclusion("type", "record")
+        app.recordProxy.add_inclusion(type, name)
 
-        Overview {
-            onPluginDoubleClicked: {
-                var itemData = app.pluginData(index)
+        app.errorProxy.clear_inclusion()
+        app.errorProxy.add_inclusion("type", "error")
+        app.errorProxy.add_inclusion(type, name)
+    }
 
-                stack.push({
-                    item: properties,
-                    properties: {
-                        itemData: itemData
-                    }
-                })
-            }
+    initialItem: Overview {
+        onExplorePlugin: {
+            var name = app.pluginProxy.data(index, "name")
 
-            onInstanceDoubleClicked: {
-                var itemData = app.instanceData(index)
+            setup("plugin", name)
 
-                stack.push({
-                    item: properties,
-                    properties: {
-                        itemData: itemData
-                    }
-                })
-            }
+            stack.push({item: perspective})
+        }
+
+        onExploreInstance: {
+            var name = app.instanceProxy.data(index, "name")
+
+            setup("instance", name)
+
+            stack.push({item: perspective})
         }
     }
 
     Component {
-        id: properties
+        id: perspective
 
-        Properties {
-            height: stack.height
+        Perspective {
+            // height: stack.height
         }
     }
 }

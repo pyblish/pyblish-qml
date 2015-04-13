@@ -7,8 +7,8 @@ Item {
 
     property string __lastPlugin
 
-    signal instanceDoubleClicked(int index)
-    signal pluginDoubleClicked(int index)
+    signal exploreInstance(int index)
+    signal explorePlugin(int index)
 
     states: [
         State {
@@ -81,7 +81,7 @@ Item {
                     if (action.name == "repair")
                         app.repairInstance(index)
                     else if (action.name == "explore")
-                        overview.instanceDoubleClicked(index)
+                        overview.exploreInstance(index)
                 }
 
                 onItemClicked: app.toggleInstance(index)
@@ -99,21 +99,21 @@ Item {
                     if (action.name == "repair")
                         app.repairPlugin(index)
                     else if (action.name == "explore")
-                        overview.pluginDoubleClicked(index)
+                        overview.explorePlugin(index)
                 }
 
                 onItemClicked: app.togglePlugin(index)
             }
         }
 
-        Terminal {
-            id: terminal
+        // Terminal {
+        //     id: terminal
 
-            anchors.fill: parent
-            anchors.margins: 2
+        //     anchors.fill: parent
+        //     anchors.margins: 2
             
-            visible: tabBar.currentIndex == 1
-        }
+        //     visible: tabBar.currentIndex == 1
+        // }
 
         AwesomeIcon {
             name: "circle-o-notch-rotate"

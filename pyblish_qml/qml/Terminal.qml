@@ -36,11 +36,21 @@ Column {
 
             boundsBehavior: Flickable.StopAtBounds
 
-            model: app.terminalProxy
+            model: app.resultProxy
 
-            delegate: Loader {
-                width: ListView.view.width
-                sourceComponent: Delegates.components[type]
+            delegate: Item {
+                property var item2: item
+
+                width: loader.width
+                height: loader.height
+
+                Loader {
+                    id: loader
+                    width: listView.width
+
+                    property var item: parent.item2
+                    sourceComponent: Delegates.components[loader.item.type]
+                }
             }
         }
     }
@@ -69,7 +79,7 @@ Column {
                     placeholderTextColor: Qt.darker(textColor, 1.5)
                 }
 
-                onTextChanged: app.terminalProxy.setFilterFixedString(text)
+                onTextChanged: app.resultProxy.setFilterFixedString(text)
             }
 
             Row {
@@ -129,7 +139,7 @@ Column {
 
                         onClicked: {
                             this.toggled = !this.toggled
-                            app.exclude("terminal",
+                            app.exclude("result",
                                         this.toggled ? "remove" : "add",
                                         "levelname",
                                         modelData.name)
@@ -141,7 +151,7 @@ Column {
     }
 
     Connections {
-        target: app.terminalModel
+        target: app.resultModel
         onAdded: listView.positionViewAtEnd()
     }
 }

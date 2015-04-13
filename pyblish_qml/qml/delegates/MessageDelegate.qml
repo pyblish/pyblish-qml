@@ -28,7 +28,7 @@ BaseDelegate {
 
         Label {
             id: label
-            text: message
+            text: item.message
 
             elide: Text.ElideRight
             

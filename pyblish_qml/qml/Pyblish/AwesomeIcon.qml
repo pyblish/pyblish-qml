@@ -11,7 +11,7 @@ Item {
     property bool rotate: widget.name.match(/.*-rotate/) !== null
 
     property alias color: text.color
-    property int size: 24
+    property int size: 16
 
     property bool shadow: false
 

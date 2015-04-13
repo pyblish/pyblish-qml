@@ -13,6 +13,7 @@ BaseDelegate {
         Icon {
             id: icon
             name: "logo-small"
+            size: 16
         }
 
         Column {
@@ -21,7 +22,7 @@ BaseDelegate {
             spacing: 2
 
             Label {
-                text: name + " " + pyblishVersion
+                text: item.name + " " + item.pyblishVersion
                 style: "title"
                 elide: Text.ElideRight
             }
@@ -30,23 +31,23 @@ BaseDelegate {
                 model: [
                 {
                     "key": "Python",
-                    "value": pythonVersion.split(" ")[0]
+                    "value": item.pythonVersion.split(" ")[0]
                 },
                 {
                     "key": "Endpoint",
-                    "value": endpointVersion
+                    "value": item.endpointVersion
                 },
                 {
                     "key": "Port",
-                    "value": port
+                    "value": item.port
                 },
                 {
                     "key": "User",
-                    "value": user
+                    "value": item.user
                 },
                 {
                     "key": "Host",
-                    "value": host
+                    "value": item.host
                 }]
 
                 Row {

@@ -70,6 +70,12 @@ class ItemList(list):
 
         raise KeyError("%s not in list" % index)
 
+    def get(self, key, default=None):
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return default
+
 
 def echo(text=""):
     print text

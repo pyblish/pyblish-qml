@@ -14,11 +14,11 @@ class Controller(control.Controller):
         super(Controller, self).__init__(port=6000)
 
 
-def setup():
+def _setup():
     lib.setup()
 
 
-def teardown():
+def _teardown():
     lib.teardown()
     lib._plugins[:] = []
 
@@ -69,32 +69,32 @@ def publish(plugins, controller=None):
     return c
 
 
-# def repair_plugin(plugins, plugin, controller=None):
-#     """Repair single plug-in
+def repair_plugin(plugins, plugin, controller=None):
+    """Repair single plug-in
 
-#     Argument:
-#         plugins (list): List of plug-ins to include
-#         plugin (str): Name of plug-in to repair
+    Argument:
+        plugins (list): List of plug-ins to include
+        plugin (str): Name of plug-in to repair
 
-#     """
+    """
 
-#     lib._plugins[:] = plugins
+    lib._plugins[:] = plugins
 
-#     c = controller or Controller()
+    c = controller or Controller()
 
-#     finished = QtTest.QSignalSpy(c.finished)
+    finished = QtTest.QSignalSpy(c.finished)
 
-#     count = len(finished)
-#     c.repairPlugin(index)
+    count = len(finished)
+    c.repairPlugin(index)
 
-#     finished.wait(1000)
-#     assert_equals(len(finished), count + 1)
-#     assert_true("finished" in c.states)
+    finished.wait(1000)
+    assert_equals(len(finished), count + 1)
+    assert_true("finished" in c.states)
 
-#     return c
+    return c
 
 
-@with_setup(setup, teardown)
+@with_setup(_setup, _teardown)
 def test_reset():
     """Reset works"""
     c = reset(["Selector1", "Validator1", "Extractor1"])
@@ -118,7 +118,7 @@ def test_reset():
     assert_equals(instances, expected_instances)
 
 
-@with_setup(setup, teardown)
+@with_setup(_setup, _teardown)
 def test_publish():
     """Publishing works"""
     plugins = ["Selector1", "Validator1", "Extractor1"]
@@ -137,7 +137,7 @@ def test_publish():
         assert_true(instance.succeeded)
 
 
-@with_setup(setup, teardown)
+@with_setup(_setup, _teardown)
 def test_publish_only_toggled():
     plugins = ["Selector1", "Validator1", "Extractor1"]
 
@@ -155,7 +155,7 @@ def test_publish_only_toggled():
     assert_true(plugin.processed)
 
 
-@with_setup(setup, teardown)
+@with_setup(_setup, _teardown)
 def test_publish_only_compatible():
     plugins = ["Selector1", "ValidatorIncompatible", "Extractor1"]
 
@@ -176,7 +176,7 @@ def test_publish_only_compatible():
     assert_true(plugin.processed)
 
 
-@with_setup(setup, teardown)
+@with_setup(_setup, _teardown)
 def test_publish_failure():
     """Publishing with failure"""
     plugins = ["Selector1", "Validator1", "ExtractorFails"]
@@ -196,7 +196,7 @@ def test_publish_failure():
             assert_true(plugin.succeeded)
 
 
-@with_setup(setup, teardown)
+@with_setup(_setup, _teardown)
 def test_state_equals_last_entered():
     """State property of controller equals the last entered state"""
     plugins = ["Selector1", "Validator1", "Extractor1"]
@@ -215,7 +215,7 @@ def test_state_equals_last_entered():
     assert_equals(c.state, _state["current"])
 
 
-@with_setup(setup, teardown)
+@with_setup(_setup, _teardown)
 def test_pyqt_properties():
     """pyqtPropeties provide attributes properly"""
     c = Controller()
@@ -224,3 +224,13 @@ def test_pyqt_properties():
     assert_equals(c.pluginProxy, c.plugin_proxy)
     assert_equals(c.terminalProxy, c.terminal_proxy)
     assert_equals(c.terminalModel, c.terminal_model)
+
+
+@with_setup(_setup, _teardown)
+def test_repair_instance():
+    """Repairing an instance works"""
+
+
+@with_setup(_setup, _teardown)
+def test_repair_context():
+    """Repairing the context works"""
