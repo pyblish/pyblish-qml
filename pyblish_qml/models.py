@@ -99,6 +99,12 @@ class PropertyType(QtCore.pyqtWrapperType):
     prefix = "__pyqtproperty__"
 
     def __new__(cls, name, bases, attrs):
+        """Convert class properties into pyqtProperties
+
+        For use in conjuction with the :func:Item factory function.
+
+        """
+
         for key, value in attrs.copy().items():
             if key.startswith("__"):
                 continue
@@ -135,7 +141,7 @@ class AbstractItem(QtCore.QObject):
 
 
 def Item(**kwargs):
-    """Factory for QAbstractListModel items
+    """Factory function for QAbstractListModel items
 
     Any class attributes are converted into pyqtProperties
     and must be declared with its type as value.
@@ -171,7 +177,6 @@ def Item(**kwargs):
             key = PropertyType.prefix + key
         setattr(self, key, value)
 
-    assert hasattr(self, "__datachanged__")
     return self
 
 
@@ -185,6 +190,13 @@ class AbstractModel(QtCore.QAbstractListModel):
         return self.items[index]
 
     def add_item(self, **item):
+        """Add new item to model
+
+        Each keyword argument is passed to the :func:Item
+        factory function.
+
+        """
+
         self.beginInsertRows(QtCore.QModelIndex(),
                              self.rowCount(),
                              self.rowCount())
@@ -229,6 +241,9 @@ class AbstractModel(QtCore.QAbstractListModel):
 
 
 class ItemModel(AbstractModel):
+    def __iter__(self):
+        return self.iterator()
+
     def __init__(self, *args, **kwargs):
         super(ItemModel, self).__init__(*args, **kwargs)
         self.plugins = util.ItemList(key="name")
@@ -527,8 +542,8 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         >>> model.add_exclusion(role="name", value="Richard")
 
         >>> # Exclude amongst includes
-        >>> model.add_inclusion(role="type", "PluginItem")
-        >>> model.add_exclusion(role="name", "Richard")
+        >>> model.add_inclusion(role="type", value="PluginItem")
+        >>> model.add_exclusion(role="name", value="Richard")
 
     """
 

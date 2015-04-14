@@ -222,8 +222,8 @@ def test_pyqt_properties():
 
     assert_equals(c.instanceProxy, c.instance_proxy)
     assert_equals(c.pluginProxy, c.plugin_proxy)
-    assert_equals(c.terminalProxy, c.terminal_proxy)
-    assert_equals(c.terminalModel, c.terminal_model)
+    assert_equals(c.resultProxy, c.result_proxy)
+    assert_equals(c.resultModel, c.result_model)
 
 
 @with_setup(_setup, _teardown)
