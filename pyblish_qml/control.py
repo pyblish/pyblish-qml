@@ -671,6 +671,9 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot(int)
     def repairPlugin(self, index):
+        if "finished" not in self.states:
+            return self.error.emit("Not ready")
+
         index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
         index = self.plugin_proxy.mapToSource(index)
 
@@ -690,6 +693,7 @@ class Controller(QtCore.QObject):
         self.publishing.emit()
         self.is_running = True
 
-        plugin = self.item_model.itemFromIndex(index.row())
+        plugin = self.item_model.items[index.row()]
         plugin.hasError = False
+
         self.repair_next(iterator=iterator(plugin))
