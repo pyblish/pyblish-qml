@@ -57,10 +57,19 @@ Column {
         Row {
             anchors.fill: parent
 
-            Item {
-                // Spacer item
+            Controls.TextField {
                 height: parent.height
                 width: parent.width - toolBar.width
+
+                placeholderText: "Filter.."
+
+                style: ControlStyle.TextFieldStyle {
+                    background: Rectangle { color: "transparent" }
+                    textColor: "white"
+                    placeholderTextColor: Qt.darker(textColor, 1.5)
+                }
+
+                onTextChanged: app.resultProxy.setFilterFixedString(text)
             }
 
             Row {
