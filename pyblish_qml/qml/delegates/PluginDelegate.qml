@@ -7,7 +7,7 @@ BaseDelegate {
 
     expandable: object.doc && object.doc.indexOf("\n") != -1 ? true : false
 
-    height: bodyItem.height + 5
+    height: loader.item.height + 5
 
     body: Row {
         id: content

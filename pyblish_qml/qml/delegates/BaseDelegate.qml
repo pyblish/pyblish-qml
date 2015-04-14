@@ -8,7 +8,7 @@ Item {
     property color color: "white"
 
     property Component body
-    property alias bodyItem: loader.item
+    // property alias loader.item: loader.item
     property alias loader: loader
     property alias toggle: toggle
 
