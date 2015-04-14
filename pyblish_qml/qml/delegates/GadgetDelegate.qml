@@ -16,7 +16,7 @@ Item {
         Label {
             id: title
             style: "title"
-            text: item.name
+            text: object.name
 
             anchors.verticalCenter: parent.verticalCenter
             anchors.fill: parent

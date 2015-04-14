@@ -1,3 +1,11 @@
+/*
+ * QML Application
+ *
+ * This file represents the highest-level of content in the
+ * presentation-layer of Pyblish QML.
+ *
+*/
+
 import QtQuick 2.3
 import QtQuick.Controls 1.3
 import Pyblish 0.1
@@ -6,6 +14,13 @@ import Pyblish 0.1
 StackView {
     id: stack
 
+    /*
+     * Setup next stack
+     *
+     * Format relevant proxy-models to display information
+     * relevant to the currently expored item.
+     *
+    */
     function setup(type, name) {
         app.gadgetProxy.clear_inclusion()
         app.gadgetProxy.add_inclusion("itemType", Utils.toTitleCase(type) + "Item")
@@ -22,7 +37,7 @@ StackView {
 
     initialItem: Overview {
         onExplorePlugin: {
-            var name = app.pluginProxy.data(index, "name")
+            var name = app.pluginProxy.item(index).name
 
             setup("plugin", name)
 
@@ -30,7 +45,7 @@ StackView {
         }
 
         onExploreInstance: {
-            var name = app.instanceProxy.data(index, "name")
+            var name = app.instanceProxy.item(index).name
 
             setup("instance", name)
 
@@ -41,8 +56,6 @@ StackView {
     Component {
         id: perspective
 
-        Perspective {
-            // height: stack.height
-        }
+        Perspective {}
     }
 }

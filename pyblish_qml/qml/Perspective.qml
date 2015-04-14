@@ -108,7 +108,7 @@ Rectangle {
 
                             delegate: Loader {
                                 width: ListView.view.width
-                                sourceComponent: Delegates.components[modelData.type || type]
+                                sourceComponent: Delegates.components[modelData.type || object.type]
                             }
                         }
                     }

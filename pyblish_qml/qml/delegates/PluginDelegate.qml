@@ -5,7 +5,7 @@ import Pyblish 0.1
 BaseDelegate {
     id: root
 
-    expandable: item.doc && item.doc.indexOf("\n") != -1 ? true : false
+    expandable: object.doc && object.doc.indexOf("\n") != -1 ? true : false
 
     height: bodyItem.height + 5
 
@@ -34,7 +34,7 @@ BaseDelegate {
                    10
 
             Label {
-                text: item.message
+                text: object.message
                 // style: "title"
                 width: parent.width
                 elide: Text.ElideRight
@@ -43,7 +43,7 @@ BaseDelegate {
             TextArea {
                 id: documentation
 
-                property string docstring: item.doc ? item.doc : "No documentation"
+                property string docstring: object.doc ? object.doc : "No documentation"
 
                 text: expanded ? docstring : docstring.split("\n")[0]
                 opacity: 0.5

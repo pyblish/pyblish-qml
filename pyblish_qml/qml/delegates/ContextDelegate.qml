@@ -22,7 +22,7 @@ BaseDelegate {
             spacing: 2
 
             Label {
-                text: item.name + " " + item.pyblishVersion
+                text: object.name + " " + object.pyblishVersion
                 style: "title"
                 elide: Text.ElideRight
             }
@@ -31,23 +31,23 @@ BaseDelegate {
                 model: [
                 {
                     "key": "Python",
-                    "value": item.pythonVersion.split(" ")[0]
+                    "value": object.pythonVersion.split(" ")[0]
                 },
                 {
                     "key": "Endpoint",
-                    "value": item.endpointVersion
+                    "value": object.endpointVersion
                 },
                 {
                     "key": "Port",
-                    "value": item.port
+                    "value": object.port
                 },
                 {
                     "key": "User",
-                    "value": item.user
+                    "value": object.user
                 },
                 {
                     "key": "Host",
-                    "value": item.host
+                    "value": object.host
                 }]
 
                 Row {

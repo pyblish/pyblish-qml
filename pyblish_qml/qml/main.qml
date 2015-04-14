@@ -1,16 +1,21 @@
+/*
+ * QML entry-point
+ *
+ * This file is loaded from Python and in turn loads
+ * the actual application. The application is then loaded
+ * in an asynchronous fashion so as to display the window
+ * as quickly as possible.
+ *
+ * See app.qml for next step.
+ *
+*/
+
 import QtQuick 2.3
 import QtQuick.Window 2.2
 import QtQml.StateMachine 1.0
 
 
 Rectangle {
-    // title: "Pyblish"
-
-    // width: 400
-    // height: 600
-    // minimumWidth: 300
-    // minimumHeight: 300
-
     color: Qt.rgba(0.3, 0.3, 0.3)
 
     StateMachine {

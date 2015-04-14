@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 import util
 import rest
 import compat
-import control2
+import control
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
@@ -82,7 +82,7 @@ class Application(QtGui.QGuiApplication):
         engine = window.engine()
         engine.addImportPath(QML_IMPORT_DIR)
 
-        controller = control2.Controller(port)
+        controller = control.Controller(port)
 
         context = engine.rootContext()
         context.setContextProperty("app", controller)

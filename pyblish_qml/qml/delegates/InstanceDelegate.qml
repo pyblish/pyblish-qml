@@ -16,7 +16,7 @@ BaseDelegate {
         }
 
         Label {
-            text: item.message
+            text: object.message
             style: "body2"
             anchors.verticalCenter: parent.verticalCenter
         }

@@ -75,7 +75,7 @@ Item {
                 width: Math.floor(parent.width / 2.0)  // To keep checkbox border from collapsing
                 height: parent.height
 
-                section.property: "family"
+                section.property: "object.family"
 
                 onActionTriggered: {
                     if (action.name == "repair")
@@ -93,7 +93,7 @@ Item {
                 width: Math.floor(parent.width / 2.0)
                 height: parent.height
 
-                section.property: "type"
+                section.property: "object.type"
 
                 onActionTriggered: {
                     if (action.name == "repair")
@@ -106,14 +106,14 @@ Item {
             }
         }
 
-        // Terminal {
-        //     id: terminal
+        Terminal {
+            id: terminal
 
-        //     anchors.fill: parent
-        //     anchors.margins: 2
+            anchors.fill: parent
+            anchors.margins: 2
             
-        //     visible: tabBar.currentIndex == 1
-        // }
+            visible: tabBar.currentIndex == 1
+        }
 
         AwesomeIcon {
             name: "circle-o-notch-rotate"

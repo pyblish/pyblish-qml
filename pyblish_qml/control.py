@@ -1,4 +1,3 @@
-
 # Dependencies
 from PyQt5 import QtCore
 
@@ -64,7 +63,7 @@ class Controller(QtCore.QObject):
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
         self.finished.connect(self.on_finished)
-        self.item_model.data_changed.connect(self.on_data_changed)
+        # self.item_model.data_changed.connect(self.on_data_changed)
 
         self.state_changed.connect(self.on_state_changed)
 
@@ -202,6 +201,10 @@ class Controller(QtCore.QObject):
         return self.instance_proxy
 
     @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
+    def itemModel(self):
+        return self.item_model
+
+    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
     def pluginProxy(self):
         return self.plugin_proxy
 
@@ -304,12 +307,12 @@ class Controller(QtCore.QObject):
         if "ready" not in self.states:
             return self.error.emit("Not ready")
 
-        item = model.itemFromIndex(index)
-        model.setData(index, "isToggled", not item.isToggled)
+        item = model.items[index]
+        item.isToggled = not item.isToggled
 
     def echo(self, data):
         """Append `data` to result model"""
-        self.result_model.add_item(data)
+        self.result_model.add_item(**data)
 
     # Event handlers
 
@@ -546,7 +549,7 @@ class Controller(QtCore.QObject):
 
             # NOTE(marcus): This is temporary
             plugin_name = result["plugin"]
-            plugin_item = self.item_model.itemFromName(plugin_name)
+            plugin_item = self.item_model.plugins[plugin_name]
             result["doc"] = plugin_item.doc
             # end
 
@@ -671,8 +674,6 @@ class Controller(QtCore.QObject):
         index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
         index = self.plugin_proxy.mapToSource(index)
 
-        self.item_model.setData(index, "hasError", False)
-
         def iterator(plugin):
             if plugin.canRepairContext:
                 yield plugin, None
@@ -690,4 +691,5 @@ class Controller(QtCore.QObject):
         self.is_running = True
 
         plugin = self.item_model.itemFromIndex(index.row())
+        plugin.hasError = False
         self.repair_next(iterator=iterator(plugin))

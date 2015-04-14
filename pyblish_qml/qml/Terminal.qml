@@ -38,19 +38,9 @@ Column {
 
             model: app.resultProxy
 
-            delegate: Item {
-                property var item2: item
-
-                width: loader.width
-                height: loader.height
-
-                Loader {
-                    id: loader
-                    width: listView.width
-
-                    property var item: parent.item2
-                    sourceComponent: Delegates.components[loader.item.type]
-                }
+            delegate: Loader {
+                width: ListView.view.width
+                sourceComponent: Delegates.components[object.type]
             }
         }
     }
@@ -67,19 +57,10 @@ Column {
         Row {
             anchors.fill: parent
 
-            Controls.TextField {
+            Item {
+                // Spacer item
                 height: parent.height
                 width: parent.width - toolBar.width
-
-                placeholderText: "Filter.."
-
-                style: ControlStyle.TextFieldStyle {
-                    background: Rectangle { color: "transparent" }
-                    textColor: "white"
-                    placeholderTextColor: Qt.darker(textColor, 1.5)
-                }
-
-                onTextChanged: app.resultProxy.setFilterFixedString(text)
             }
 
             Row {
