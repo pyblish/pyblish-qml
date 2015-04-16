@@ -185,7 +185,7 @@ class AbstractModel(QtCore.QAbstractListModel):
         super(AbstractModel, self).__init__(parent)
         self.items = util.ItemList(key="name")
 
-    @QtCore.pyqtSlot(QtCore.QObject)
+    @QtCore.pyqtSlot(int, result=QtCore.QObject)
     def item(self, index):
         return self.items[index]
 

@@ -32,6 +32,10 @@ class Window(QtQuick.QQuickView):
         self.setTitle("Pyblish")
         self.setResizeMode(self.SizeRootObjectToView)
 
+        self.setWidth(430)
+        self.setHeight(600)
+        self.setMinimumSize(QtCore.QSize(430, 300))
+
     def event(self, event):
         """Allow GUI to be closed upon holding Shift"""
         if event.type() == QtCore.QEvent.Close:
@@ -74,10 +78,6 @@ class Application(QtGui.QGuiApplication):
 
         window = Window(self)
         window.statusChanged.connect(self.on_status_changed)
-
-        window.setWidth(400)
-        window.setHeight(600)
-        window.setMinimumSize(QtCore.QSize(300, 300))
 
         engine = window.engine()
         engine.addImportPath(QML_IMPORT_DIR)
@@ -239,7 +239,8 @@ class Application(QtGui.QGuiApplication):
         return rest.request("http://127.0.0.1", self.port, *args, **kwargs)
 
 
-def main(port, source=None, pid=None, preload=False, debug=False, validate=True):
+def main(port, source=None, pid=None,
+         preload=False, debug=False, validate=True):
     """Start the Qt-runtime and show the window
 
     Arguments:

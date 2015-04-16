@@ -7,8 +7,8 @@ Item {
 
     property string __lastPlugin
 
-    signal exploreInstance(int index)
-    signal explorePlugin(int index)
+    signal instanceEntered(int index)
+    signal pluginEntered(int index)
 
     states: [
         State {
@@ -80,8 +80,8 @@ Item {
                 onActionTriggered: {
                     if (action.name == "repair")
                         app.repairInstance(index)
-                    else if (action.name == "explore")
-                        overview.exploreInstance(index)
+                    else if (action.name == "enter")
+                        overview.instanceEntered(index)
                 }
 
                 onItemClicked: app.toggleInstance(index)
@@ -98,8 +98,8 @@ Item {
                 onActionTriggered: {
                     if (action.name == "repair")
                         app.repairPlugin(index)
-                    else if (action.name == "explore")
-                        overview.explorePlugin(index)
+                    else if (action.name == "enter")
+                        overview.pluginEntered(index)
                 }
 
                 onItemClicked: app.togglePlugin(index)

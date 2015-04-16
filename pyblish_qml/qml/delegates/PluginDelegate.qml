@@ -7,8 +7,6 @@ BaseDelegate {
 
     expandable: object.doc && object.doc.indexOf("\n") != -1 ? true : false
 
-    height: loader.item.height + 5
-
     body: Row {
         id: content
 
@@ -35,7 +33,6 @@ BaseDelegate {
 
             Label {
                 text: object.message
-                // style: "title"
                 width: parent.width
                 elide: Text.ElideRight
             }

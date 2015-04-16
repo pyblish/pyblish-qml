@@ -7,8 +7,6 @@ BaseDelegate {
 
     expandable: true
 
-    height: loader.item.height + 5
-
     body: Row {
         id: content
 

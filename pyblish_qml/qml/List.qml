@@ -46,7 +46,7 @@ ListView {
             },
 
             Action {
-                name: "explore"
+                name: "enter"
                 iconName: "angle-right"
                 onTriggered: actionTriggered(this, index)
             }

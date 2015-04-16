@@ -10,12 +10,6 @@ BaseDelegate {
 
     expandable: true
 
-    height: {
-        if (loader.status == Loader.Ready)
-            return loader.item.height + 5
-        return 0
-    }
-
     property var levels: {
         "DEBUG":  {
             "color": Qt.lighter("steelblue", 1.3),

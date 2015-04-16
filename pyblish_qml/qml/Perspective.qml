@@ -1,119 +1,135 @@
-import QtQuick 2.3
-import Pyblish 0.1
-import "Delegates.js" as Delegates
+// import QtQuick 2.3
+// import QtGraphicalEffects 1.0
+// import Pyblish 0.1
+// import "Delegates.js" as Delegates
+// import Perspective 0.1 as Perspective
 
 
-Rectangle {
-    id: root
+// Item {
+//     id: root
 
-    color: Theme.backgroundColor
+//     Column {
+//         anchors.fill: parent
 
-    Column {
-        anchors.fill: parent
+//         ActionBar {
+//             id: actionBar
 
-        ActionBar {
-            id: actionBar
+//             width: parent.width
+//             height: 50
 
-            width: parent.width
-            height: 50
+//             actions: [
+//                 Action {
+//                     iconName: "button-back"
+//                     onTriggered: stack.pop()
+//                 }
+//             ]
 
-            actions: [
-                Action {
-                    iconName: "button-back"
-                    onTriggered: stack.pop()
-                }
-            ]
+//             elevation: 1
+//         }
 
-            elevation: 1
-        }
+//         View {
+//             elevation: 1
+//             width: parent.width
+//             height: root.height - actionBar.height
 
-        View {
-            elevation: -1
-            width: parent.width
-            height: root.height - actionBar.height
+//             View {
+//                 anchors.fill: parent
+//                 anchors.margins: 8
+//                 elevation: -1
 
-            ListView {
+//                 ListView {
+//                     id: body
 
-                anchors.fill: parent
-                anchors.margins: 5
+//                     anchors.top: dropShadowContainer.bottom
+//                     anchors.bottom: parent.bottom
 
-                boundsBehavior: Flickable.StopAtBounds
+//                     interactive: false
 
-                spacing: -1
+//                     anchors.left: parent.left
+//                     anchors.right: parent.right
+//                     anchors.margins: 10
 
-                model: [
-                    {
-                        "type": "gadget",
-                        "name": "Gadget",
-                        "tab": false,
-                        "model": app.gadgetProxy
-                    },
-                    {
-                        "name": "Records",
-                        "tab": true,
-                        "model": app.recordProxy
-                    },
-                    {
-                        "name": "Errors",
-                        "tab": true,
-                        "model": app.errorProxy
-                    }
-                ]
+//                     boundsBehavior: Flickable.StopAtBounds
 
-                delegate: Column {
-                    width: ListView.view.width
+//                     spacing: -1
 
-                    View {
-                        color: "gray"
-                        height: text.paintedHeight + 10
-                        width: parent.width
-                        elevation: 1
-                        z: 2
+//                     model: [
+//                         {
+//                             "type": "documentation",
+//                             "name": "Documentation",
+//                             "tab": true,
+//                             "closed": true,
+//                             "gutter": false,
+//                             "model": app.gadgetProxy
+//                         },
+//                         {
+//                             "type": "errors",
+//                             "name": "Errors",
+//                             "tab": true,
+//                             "closed": false,
+//                             "model": app.errorProxy
+//                         },
+//                         {
+//                             "type": "records",
+//                             "name": "Records",
+//                             "tab": true,
+//                             "closed": false,
+//                             "model": app.recordProxy
+//                         },
+//                         // {
+//                         //     "type": "plugins",
+//                         //     "name": "Plug-ins",
+//                         //     "tab": true,
+//                         //     "closed": false,
+//                         //     "model": app.pluginProxy
+//                         // },
+//                         // {
+//                         //     "type": "instances",
+//                         //     "name": "Instances",
+//                         //     "tab": true,
+//                         //     "closed": false,
+//                         //     "model": app.instanceProxy
+//                         // },
+//                     ]
 
-                        visible: modelData.tab
+//                     delegate: Loader {
+//                         width: ListView.view.width
+//                         sourceComponent: Delegates.components[modelData.type]
+//                     }
+//                 }
 
-                        Row {
-                            anchors.fill: parent
-                            anchors.leftMargin: 10
-                            spacing: 10
+//                 Item {
+//                     id: dropShadowContainer
 
-                            AwesomeIcon {
-                                name: "caret-right"
-                                size: 16
-                                anchors.verticalCenter: parent.verticalCenter
-                                rotation: 90
-                            }
+//                     visible: false
 
-                            Label {
-                                id: text
-                                text: modelData.name
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-                    }
+//                     anchors.top: parent.top
+//                     anchors.left: parent.left
+//                     anchors.right: parent.right
+//                     anchors.margins: {
+//                         leftMargin: 2
+//                         rightMargin: 2
+//                         topMargin: 2
+//                     }
 
-                    View {
-                        width: parent.width
-                        height: Math.min(listView.contentHeight, 180)
+//                     height: 180
 
-                        ListView {
-                            id: listView
+//                     Perspective.Header {
+//                         id: header
+//                         anchors.fill: parent
+//                     }
+//                 }
 
-                            anchors.fill: parent
-
-                            model: modelData.model
-
-                            clip: true
-                            boundsBehavior: Flickable.StopAtBounds
-
-                            delegate: Loader {
-                                width: ListView.view.width
-                                sourceComponent: Delegates.components[modelData.type || object.type]
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+//                 DropShadow {
+//                     source: dropShadowContainer
+//                     anchors.fill: source
+//                     verticalOffset: 3
+//                     radius: 8.0
+//                     samples: 16
+//                     fast: true
+//                     color: "#80000000"
+//                 }
+//             }
+//         }
+//     }
+// }

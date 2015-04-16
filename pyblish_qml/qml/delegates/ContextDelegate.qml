@@ -3,8 +3,6 @@ import Pyblish 0.1
 
 
 BaseDelegate {
-    height: loader.item.height + 10
-
     body: Row {
         id: delegate
 

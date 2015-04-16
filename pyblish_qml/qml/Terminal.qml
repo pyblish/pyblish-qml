@@ -11,9 +11,9 @@ Column {
         height: parent.height - filter.height
 
         Rectangle {
-            id: sidebar
+            id: gutter
 
-            color: Theme.backgroundColor
+            color: Qt.darker(Theme.backgroundColor, 2)
 
             width: icon.width
 
@@ -49,7 +49,7 @@ Column {
     Rectangle {
         id: filter
 
-        color: Qt.darker(Theme.backgroundColor, 1.4)
+        color: Qt.darker(Theme.backgroundColor, 2)
 
         width: parent.width
         height: 30

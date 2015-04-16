@@ -9,6 +9,7 @@
 import QtQuick 2.3
 import QtQuick.Controls 1.3
 import Pyblish 0.1
+import Perspective 0.1 as Perspective
 
 
 StackView {
@@ -21,41 +22,34 @@ StackView {
      * relevant to the currently expored item.
      *
     */
-    function setup(type, name) {
-        app.gadgetProxy.clear_inclusion()
-        app.gadgetProxy.add_inclusion("itemType", Utils.toTitleCase(type) + "Item")
-        app.gadgetProxy.add_inclusion("name", name)
-
+    function setup(item) {
         app.recordProxy.clear_inclusion()
         app.recordProxy.add_inclusion("type", "record")
-        app.recordProxy.add_inclusion(type, name)
+        app.recordProxy.add_inclusion("type", item.type)
+        app.recordProxy.add_inclusion(item.itemType, item.name)
 
         app.errorProxy.clear_inclusion()
         app.errorProxy.add_inclusion("type", "error")
-        app.errorProxy.add_inclusion(type, name)
+        app.errorProxy.add_inclusion("type", item.type)
+        app.errorProxy.add_inclusion(item.itemType, item.name)
+
+        var component = Qt.createComponent("Perspective/Page.qml", stack)
+        stack.push({item: component, properties: {"item": item}})
     }
 
     initialItem: Overview {
-        onExplorePlugin: {
-            var name = app.pluginProxy.item(index).name
-
-            setup("plugin", name)
-
-            stack.push({item: perspective})
+        onInstanceEntered: {
+            setup(app.instanceProxy.item(index))
         }
 
-        onExploreInstance: {
-            var name = app.instanceProxy.item(index).name
-
-            setup("instance", name)
-
-            stack.push({item: perspective})
+        onPluginEntered: {
+            setup(app.pluginProxy.item(index))
         }
     }
 
     Component {
         id: perspective
 
-        Perspective {}
+        Perspective.Page {}
     }
 }
