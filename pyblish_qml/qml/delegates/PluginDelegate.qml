@@ -5,14 +5,14 @@ import Pyblish 0.1
 BaseDelegate {
     id: root
 
-    expandable: object.doc && object.doc.indexOf("\n") != -1 ? true : false
+    // expandable: object.doc && object.doc.indexOf("\n") != -1 ? true : false
 
     body: Row {
         id: content
 
         spacing: 10
 
-        height: expanded ? 40 + documentation.paintedHeight : 40
+        // height: expanded ? 40 + documentation.paintedHeight : 40
 
         anchors.verticalCenter: parent.verticalCenter
 
@@ -37,18 +37,18 @@ BaseDelegate {
                 elide: Text.ElideRight
             }
 
-            TextArea {
-                id: documentation
+            // TextArea {
+            //     id: documentation
 
-                property string docstring: object.doc ? object.doc : "No documentation"
+            //     property string docstring: object.doc ? object.doc : "No documentation"
 
-                text: expanded ? docstring : docstring.split("\n")[0]
-                opacity: 0.5
-                maximumLineCount: expanded ? 99999 : 1
+            //     text: expanded ? docstring : docstring.split("\n")[0]
+            //     opacity: 0.5
+            //     maximumLineCount: expanded ? 99999 : 1
 
-                width: parent.width
-                elide: Text.ElideRight
-            }
+            //     width: parent.width
+            //     elide: Text.ElideRight
+            // }
         }
     }
 }

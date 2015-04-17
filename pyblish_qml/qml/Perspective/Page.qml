@@ -9,157 +9,127 @@ Item {
 
     property QtObject item
 
-    Column {
-        anchors.fill: parent
-        spacing: -1
+    ActionBar {
+        id: actionBar
 
-        ActionBar {
-            id: actionBar
+        width: parent.width
+        height: 45
 
-            width: parent.width
-            height: 50
+        actions: [
+            Action {
+                iconName: "button-back"
+                onTriggered: stack.pop()
+            },
+            Action {
+                name: "Perspective"
+            }
+        ]
 
-            actions: [
-                Action {
-                    iconName: "button-back"
-                    onTriggered: stack.pop()
-                }
-            ]
+        elevation: 1
+    }
 
-            elevation: 1
+    View {
+        elevation: 1
+
+        anchors {
+            left: parent.left
+            top: actionBar.bottom
+            right: parent.right
+            bottom: parent.bottom
+            topMargin: -1
         }
 
         View {
-            elevation: 1
-            width: parent.width
-            height: root.height - actionBar.height
+            anchors.fill: parent
+            anchors.margins: margins
 
-            View {
-                anchors.fill: parent
-                anchors.margins: 5
+            elevation: -1
 
-                elevation: -1
+            AwesomeIcon {
+                name: "circle-o-notch-rotate"
+                anchors.centerIn: parent
+                opacity: body.status == Loader.Ready ? 0.0 : 1.0
+                visible: opacity > 0
+            }
 
-                ListView {
-                    id: body
+            Loader {
+                id: body
 
-                    anchors {
-                        top: header.bottom
-                        bottom: parent.bottom
-                        left: parent.left
+                asynchronous: true
 
-                        leftMargin: 7
-                        rightMargin: 7
-                        bottomMargin: 2
-                    }
-
-                    clip: true
-
-                    width: scrollbar.visible ? parent.width - 40 : parent.width - anchors.leftMargin * 2
-
-                    boundsBehavior: Flickable.StopAtBounds
-
-                    spacing: -1
-
-                    model: [
-                        {type: "spacer"},
-                        {
-                            type: "documentation",
-                            name: "Documentation",
-                            closed: true,
-                            item: root.item
-                        },
-                        {
-                            type: "errors",
-                            name: "Errors",
-                            closed: false,
-                            model: app.errorProxy
-                        },
-                        {
-                            type: "records",
-                            name: "Records",
-                            closed: false,
-                            model: app.recordProxy
-                        },
-                        // {
-                        //     "type": "plugins",
-                        //     "name": "Plug-ins",
-                        //     "tab": true,
-                        //     "closed": false,
-                        //     "model": app.pluginProxy
-                        // },
-                        // {
-                        //     "type": "instances",
-                        //     "name": "Instances",
-                        //     "tab": true,
-                        //     "closed": false,
-                        //     "model": app.instanceProxy
-                        // },
-                        {type: "spacer"},
-                    ]
-
-                    delegate: Loader {
-                        width: ListView.view.width
-                        sourceComponent: Delegates.components[modelData.type]
-                    }
+                anchors {
+                    top: header.bottom
+                    bottom: parent.bottom
+                    left: parent.left
+                    right: parent.right
+                    bottomMargin: 2
                 }
 
-                Header {
-                    id: header
+                source: "Viewport.qml"
+            }
 
-                    anchors {
-                        top: parent.top
-                        left: parent.left
-                        right: parent.right
+            Header {
+                id: header
 
-                        leftMargin: 10
-                        rightMargin: 10
-                    }
+                anchors {
+                    top: parent.top
+                    left: parent.left
+                    right: parent.right
 
-                    Title {
-                        name: item.name
-                        width: parent.width
-                    }
-
-                    Gadget {
-                        name: item.name
-                        width: parent.width
-                    }
-
-                    Spacer {
-                        height: 10
-                    }
+                    leftMargin: 10
+                    rightMargin: 10
                 }
 
-                Scrollbar {
-                    id: scrollbar
-
-                    anchors.top: body.top
-                    anchors.bottom: body.bottom
-                    anchors.right: parent.right
-                    anchors.margins: 2
-
-                    width: 20
-
-                    flickable: body
-                }
-
-                Rectangle {
-                    id: shadow
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: header.bottom
-                    anchors.leftMargin: 2
-                    anchors.rightMargin: 2
-
+                Spacer {
                     height: 10
+                }
 
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: Theme.alpha("black", 0.3) }
-                        GradientStop { position: 1.0; color: "transparent" }
-                    }
+                // Title {
+                //     name: item.name
+                //     width: parent.width
+                // }
+
+                Gadget {
+                    title: item.name
+                    subheading: item.family || "Plug-in"
+                    duration: item.duration
+                    finishedAt: item.finishedAt
+                    hasError: item.hasError
+                    source: item.module || ""
+                    itemType: item.itemType
+                    amountFailed: item.amountFailed
+                    amountPassed: item.amountPassed
+
+                    width: parent.width
+                }
+
+                Spacer {
+                    height: 10
+                }
+            }
+
+            Rectangle {
+                id: shadow
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: header.bottom
+                anchors.leftMargin: 2
+                anchors.rightMargin: 2
+
+                height: 5
+
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Theme.alpha("black", 0.3) }
+                    GradientStop { position: 1.0; color: "transparent" }
                 }
             }
         }
     }
+
+    Binding {
+        target: body.item
+        property: "item"
+        value: root.item
+    }
+
 }

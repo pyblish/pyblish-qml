@@ -1,4 +1,5 @@
 from .. import control
+from .. import models
 
 import lib
 import data
@@ -131,7 +132,7 @@ def test_publish():
     # should now contain plug-ins with their
     # `succeeded` flag set to True
 
-    for plugin, instance in c.item_model:
+    for plugin, instance in models.ItemIterator(c.item_model):
         print "# %s->%s" % (plugin, instance)
         assert_true(plugin.succeeded)
         assert_true(instance.succeeded)
@@ -189,7 +190,7 @@ def test_publish_failure():
     # should now contain plug-ins with their
     # `succeeded` flag set to True
 
-    for plugin, instance in c.item_model:
+    for plugin, instance in models.ItemIterator(c.item_model):
         if plugin.name == "ExtractorFails":
             assert_false(plugin.succeeded)
         else:

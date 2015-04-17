@@ -16,6 +16,7 @@ ListView {
     clip: true
 
     boundsBehavior: Flickable.DragOverBounds
+    pixelAligned: true
 
     delegate: ListItem.StandardActions {
         text: object.name

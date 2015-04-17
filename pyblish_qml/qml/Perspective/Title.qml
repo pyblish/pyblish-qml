@@ -23,14 +23,12 @@ RowLayout {
         Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
     }
 
-    Item {
-        // Spacer
+    Spacer {
         Layout.fillWidth: true
     }
 
     AwesomeIcon {
         name: "ellipsis-h"
-        // size: 20
         Layout.alignment: Qt.AlignBottom
     }
 }

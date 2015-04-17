@@ -35,6 +35,6 @@ Item {
         target: flickable
         property: "contentY"
         value: ((flickable.contentHeight * (1 - flickable.visibleArea.heightRatio)) * handle.y) / handle.drag.maximumY
-        when: handle.drag.active && flickable !== undefined
+        when: !flickable.moving && handle.drag.active && flickable !== undefined
     }
 }

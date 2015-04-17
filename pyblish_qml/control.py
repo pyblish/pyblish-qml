@@ -1,10 +1,19 @@
+
+import time
+
 # Dependencies
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtQml
 
 # Local libraries
 import util
 import rest
 import models
+
+
+def pyqtConstantProperty(fget):
+    return QtCore.pyqtProperty(QtCore.QVariant,
+                               fget=fget,
+                               constant=True)
 
 
 class Controller(QtCore.QObject):
@@ -18,6 +27,7 @@ class Controller(QtCore.QObject):
 
     """
 
+    # PyQt Signals
     info = QtCore.pyqtSignal(str, arguments=["message"])
     error = QtCore.pyqtSignal(str, arguments=["message"])
 
@@ -39,8 +49,20 @@ class Controller(QtCore.QObject):
 
     state_changed = QtCore.pyqtSignal(str, arguments=["state"])
 
+    # PyQt Properties
+    itemModel = pyqtConstantProperty(lambda self: self.item_model)
+    itemProxy = pyqtConstantProperty(lambda self: self.item_proxy)
+    recordProxy = pyqtConstantProperty(lambda self: self.record_proxy)
+    errorProxy = pyqtConstantProperty(lambda self: self.error_proxy)
+    instanceProxy = pyqtConstantProperty(lambda self: self.instance_proxy)
+    pluginProxy = pyqtConstantProperty(lambda self: self.plugin_proxy)
+    resultModel = pyqtConstantProperty(lambda self: self.result_model)
+    resultProxy = pyqtConstantProperty(lambda self: self.result_proxy)
+
     def __init__(self, port, parent=None):
         super(Controller, self).__init__(parent)
+
+        self._temp = [1, 2, 3, 4]
 
         self.item_model = models.ItemModel()
         self.result_model = models.ResultModel()
@@ -49,9 +71,10 @@ class Controller(QtCore.QObject):
         self.plugin_proxy = models.PluginProxy(self.item_model)
         self.result_proxy = models.ResultProxy(self.result_model)
 
+        # Used in Perspective
+        self.item_proxy = models.ProxyModel(self.item_model)
         self.record_proxy = models.RecordProxy(self.result_model)
         self.error_proxy = models.ErrorProxy(self.result_model)
-        self.gadget_proxy = models.GadgetProxy(self.item_model)
 
         self.changes = dict()
         self.is_running = False
@@ -182,41 +205,9 @@ class Controller(QtCore.QObject):
     def states(self):
         return self._states
 
-    # Models
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def recordProxy(self):
-        return self.record_proxy
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def errorProxy(self):
-        return self.error_proxy
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def gadgetProxy(self):
-        return self.gadget_proxy
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def instanceProxy(self):
-        return self.instance_proxy
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def itemModel(self):
-        return self.item_model
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def pluginProxy(self):
-        return self.plugin_proxy
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def resultModel(self):
-        return self.result_model
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def resultProxy(self):
-        return self.result_proxy
-
-    # End models
+    @QtCore.pyqtSlot(result=float)
+    def time(self):
+        return time.time()
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
@@ -556,7 +547,7 @@ class Controller(QtCore.QObject):
             self.result_model.update_with_result(result)
 
         if iterator is None:
-            iterator = self.item_model.iterator()
+            iterator = models.ItemIterator(self.item_model)
 
         if test is None:
             def test(pair):
@@ -604,7 +595,7 @@ class Controller(QtCore.QObject):
         self.is_running = True
         self.save()
         self.process_next(
-            iterator=self.item_model.iterator(),
+            iterator=models.ItemIterator(self.item_model),
             test=self.tests("publish"))
 
     @QtCore.pyqtSlot()

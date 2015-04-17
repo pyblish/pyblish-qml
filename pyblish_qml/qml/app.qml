@@ -19,37 +19,35 @@ StackView {
      * Setup next stack
      *
      * Format relevant proxy-models to display information
-     * relevant to the currently expored item.
+     * relevant to the currently entered item.
      *
     */
     function setup(item) {
         app.recordProxy.clear_inclusion()
         app.recordProxy.add_inclusion("type", "record")
-        app.recordProxy.add_inclusion("type", item.type)
         app.recordProxy.add_inclusion(item.itemType, item.name)
 
         app.errorProxy.clear_inclusion()
         app.errorProxy.add_inclusion("type", "error")
-        app.errorProxy.add_inclusion("type", item.type)
         app.errorProxy.add_inclusion(item.itemType, item.name)
 
-        var component = Qt.createComponent("Perspective/Page.qml", stack)
-        stack.push({item: component, properties: {"item": item}})
+        app.itemProxy.clear_inclusion()
+        app.itemProxy.add_inclusion(
+            "itemType", item.itemType == "instance" ? "plugin" : "instance")
+
+        stack.push({
+            item: perspective,
+            properties: {"item": item}
+        })
     }
 
     initialItem: Overview {
-        onInstanceEntered: {
-            setup(app.instanceProxy.item(index))
-        }
-
-        onPluginEntered: {
-            setup(app.pluginProxy.item(index))
-        }
+        onInstanceEntered: setup(app.instanceProxy.item(index))
+        onPluginEntered: setup(app.pluginProxy.item(index))
     }
 
     Component {
         id: perspective
-
         Perspective.Page {}
     }
 }

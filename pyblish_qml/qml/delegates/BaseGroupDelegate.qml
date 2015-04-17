@@ -16,21 +16,20 @@ Column {
     MouseArea {
         id: header
 
-        height: 25
+        height: 20
 
         width: parent.width
 
         onClicked: opened = !opened
 
-        View {
-            anchors.fill: parent
-            elevation: 1
-        }
-
         Row {
             anchors.fill: parent
-            anchors.leftMargin: 10
             spacing: 10
+
+            Label {
+                text: modelData.name
+                anchors.verticalCenter: parent.verticalCenter
+            }
 
             AwesomeIcon {
                 name: "caret-right"
@@ -38,12 +37,7 @@ Column {
 
                 anchors.verticalCenter: parent.verticalCenter
 
-                size: 16
-            }
-
-            Label {
-                text: modelData.name
-                anchors.verticalCenter: parent.verticalCenter
+                size: 10
             }
         }
     }
@@ -57,6 +51,10 @@ Column {
         visible: opened
 
         color: Qt.darker(Theme.backgroundColor, 2)
+
+        clip: true
+
+        radius: 5
 
         Rectangle {
             id: gutter
@@ -85,5 +83,9 @@ Column {
 
             sourceComponent: opened ? root.item : null
         }
+    }
+
+    Spacer {
+        height: opened ? 20 : 0
     }
 }

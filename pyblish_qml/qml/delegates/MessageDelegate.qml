@@ -5,12 +5,6 @@ import Pyblish 0.1
 BaseDelegate {
     id: root
 
-    height: {
-        if (loader.status == Loader.Ready)
-            return loader.item.height + 5
-        return 0
-    }
-
     body: Row {
         id: content
 

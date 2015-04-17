@@ -1,10 +1,10 @@
+import time
 from PyQt5 import QtCore
 
 import util
 
-defaults = {
+item_defaults = {
     "name": "default",
-    "isSelected": False,
     "isProcessing": False,
     "isToggled": True,
     "optional": True,
@@ -12,7 +12,10 @@ defaults = {
     "succeeded": False,
     "processed": False,
     "currentProgress": 0,
-    "section": "default",
+    "duration": 0,  # Time (ms) to process pair
+    "finishedAt": 0,  # Time (s) when finished
+    "amountPassed": 0,  # Number of plug-ins/instances passed
+    "amountFailed": 0  # Number of plug-ins/instances failed
 }
 
 plugin_defaults = {
@@ -24,6 +27,7 @@ plugin_defaults = {
     "families": list(),
     "hosts": list(),
     "type": "unknown",
+    "module": "unknown",
     "canProcessContext": False,
     "canProcessInstance": False,
     "canRepairInstance": False,
@@ -137,7 +141,7 @@ class AbstractItem(QtCore.QObject):
     """
 
     __metaclass__ = PropertyType
-    __datachanged__ = QtCore.pyqtSignal(object)
+    __datachanged__ = QtCore.pyqtSignal(QtCore.QObject)
 
 
 def Item(**kwargs):
@@ -240,10 +244,41 @@ class AbstractModel(QtCore.QAbstractListModel):
         self.endResetModel()
 
 
-class ItemModel(AbstractModel):
-    def __iter__(self):
-        return self.iterator()
+def ItemIterator(model):
+    """Item iterator
 
+    Yields items to be processed based on their
+    current state.
+
+    Yields:
+        tuple: (plugin, instance)
+
+    """
+
+    for plugin in model.plugins:
+        if not plugin.isToggled:
+            continue
+
+        if not plugin.hasCompatible:
+            continue
+
+        if plugin.canProcessContext:
+            yield plugin, None
+
+        if not plugin.canProcessInstance:
+            continue
+
+        for instance in model.instances:
+            if not instance.isToggled:
+                continue
+
+            if instance.name not in plugin.compatibleInstances:
+                continue
+
+            yield plugin, instance
+
+
+class ItemModel(AbstractModel):
     def __init__(self, *args, **kwargs):
         super(ItemModel, self).__init__(*args, **kwargs)
         self.plugins = util.ItemList(key="name")
@@ -271,7 +306,7 @@ class ItemModel(AbstractModel):
         context = state.get("context", dict(children=list()))
 
         for plugin in plugins:
-            properties = defaults.copy()
+            properties = item_defaults.copy()
             properties.update(plugin_defaults)
             properties.update(plugin["data"])
             properties["name"] = plugin["name"]
@@ -286,7 +321,7 @@ class ItemModel(AbstractModel):
             self.add_item(**properties)
 
         for instance in context["children"]:
-            properties = defaults.copy()
+            properties = item_defaults.copy()
             properties.update(instance_defaults)
             properties.update(instance.get("data", {}))
             properties["name"] = instance["name"]
@@ -347,42 +382,14 @@ class ItemModel(AbstractModel):
 
             if result.get("error"):
                 item.hasError = True
+                item.amountFailed += 1
 
             else:
                 item.succeeded = True
+                item.amountPassed += 1
 
-    def iterator(self):
-        """Default iterator
-
-        Yields items to be processed based on their
-        current state.
-
-        Yields:
-            tuple: (plugin, instance)
-
-        """
-
-        for plugin in self.plugins:
-            if not plugin.isToggled:
-                continue
-
-            if not plugin.hasCompatible:
-                continue
-
-            if plugin.canProcessContext:
-                yield plugin, None
-
-            if not plugin.canProcessInstance:
-                continue
-
-            for instance in self.instances:
-                if not instance.isToggled:
-                    continue
-
-                if instance.name not in plugin.compatibleInstances:
-                    continue
-
-                yield plugin, instance
+            item.duration += result["duration"]
+            item.finishedAt = time.time()
 
     def has_failed_validator(self):
         for validator in self.plugins:
@@ -451,8 +458,8 @@ class ResultModel(AbstractModel):
         instance = parsed.get("instance")
         records = parsed.get("records")
 
-        if getattr(self, "_last_plugin", None) != plugin:
-            self._last_plugin = plugin
+        if getattr(self, "_last_plugin", None) != plugin["plugin"]:
+            self._last_plugin = plugin["plugin"]
             self.add_item(**plugin)
 
         self.add_item(**instance)

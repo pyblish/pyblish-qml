@@ -6,9 +6,78 @@ import Pyblish 0.1
 View {
     height: 85
 
-    property string name
+    property string title
+    property string subheading
+    property int amountPassed
+    property int amountFailed
+    property bool hasError
+    property string source
+    property string itemType
+
+    /*!
+        Time in milliseconds taken to process
+    */
+    property real duration
+    
+    /*!
+        Seconds since finished
+    */
+    property real finishedAt
+
+    property string ago: "Not started"
+    property var agoIntervals: [
+        {
+            "range": 86400,
+            "text": "days ago.."
+        },
+        {
+            "range": 3600,
+            "text": "over an hour ago"
+        },
+        {
+            "range": 60,
+            "text": "about a minute ago"
+        },
+        {
+            "range": 10,
+            "text": "about 10 seconds ago"
+        },
+        {
+            "range": 0,
+            "text": "just now"
+        }
+    ]
+
+    function updateAgo() {
+        if (!finishedAt)
+            return
+
+        var t = app.time() - finishedAt
+        for (var i = 0; i < agoIntervals.length; i++) {
+            if (t > agoIntervals[i].range) {
+                ago = agoIntervals[i].text
+                return
+            }
+        }
+    }
 
     color: Qt.darker(Theme.backgroundColor, 2)
+
+    onDurationChanged: {
+        ago = "Just now"
+        agoTimer.start()
+    }
+
+    Timer {
+        id: agoTimer
+
+        interval: 10000
+        repeat: true
+
+        onTriggered: updateAgo()
+    }
+
+    Component.onCompleted: updateAgo()
 
     RowLayout {
         spacing: 10
@@ -23,12 +92,12 @@ View {
             |//|________________|___|
         */
         Rectangle {
-            color: "#a73f3f"
+            color: finishedAt ? (hasError ? "#a73f3f" : "#3fa75f") : "#3f7aa7"
             width: 25
             height: parent.height
 
             AwesomeIcon {
-                name: "exclamation-circle"
+                name: finishedAt ? (hasError ? "exclamation-circle" : "check-circle") : "circle"
                 size: 20
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 3
@@ -48,16 +117,42 @@ View {
 
             Spacer {}
 
-            Label {
-                text: name
-                style: "title"
-                font.weight: Font.Bold
+            Row {
+                spacing: 5
+
+                height: text.paintedHeight
+                width: parent.width
+
+                AwesomeIcon {
+                    name: itemType == "plugin" ? "plug" : "file"
+                    size: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Label {
+                    id: text
+                    text: title
+                    style: "subheading"
+                    font.weight: Font.Bold
+                    width: parent.width
+                    elide: Text.ElideLeft
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
 
             Label {
-                text: name
+                text: subheading
                 opacity: 0.5
+                width: parent.width
+                elide: Text.ElideLeft
             }
+
+            // Label {
+            //     text: source || ""
+            //     opacity: 0.5
+            //     width: parent.width
+            //     elide: Text.ElideLeft
+            // }
         }
 
         /*!
@@ -72,16 +167,21 @@ View {
             Repeater {
                 model: [
                     {
-                        "icon": "wrench",
-                        "text": "13/15 passed"
+                        // "icon": "check-square",
+                        // "icon": "heartbeat",
+                        "icon": "slack",
+                        "text": "%1/%2 passed"
+                            .arg(amountPassed)
+                            .arg(amountFailed + amountPassed)
                     },
                     {
-                        "icon": "wrench",
-                        "text": "ran for 640 ms"
+                        "icon": "clock-o",
+                        "text": duration ? "ran for %1 ms".arg(duration)
+                                         : "Not started"
                     },
                     {
-                        "icon": "wrench",
-                        "text": "about 2 mins ago"
+                        "icon": "calendar",
+                        "text": ago
                     }
                 ]
 
