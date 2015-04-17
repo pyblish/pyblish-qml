@@ -7,7 +7,9 @@ Version 0.2.9
 - Feature: Perspective
 - Enhancement: Uniform sizes in Terminal
 - Bugfix: Repair now repairs broken context (see #73)
-- API: Improved model (see #81)
+- API: New model (see #81)
+- API: Added Pyblish.Scrollbar
+- API: Added Pyblish.Spacer
 
 Version 0.2.8
 -------------
