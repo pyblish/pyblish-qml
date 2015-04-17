@@ -6,7 +6,8 @@ Version 0.2.9
 
 - Feature: Perspective
 - Enhancement: Uniform sizes in Terminal
-- 
+- Bugfix: Repair now repairs broken context (see #73)
+- API: Improved model (see #81)
 
 Version 0.2.8
 -------------
