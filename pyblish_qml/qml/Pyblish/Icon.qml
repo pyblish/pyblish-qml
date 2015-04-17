@@ -5,6 +5,7 @@ Image {
     id: icon
 
     property string name: ""
+    property int size
 
     source: {
         if (name == "")
@@ -13,8 +14,8 @@ Image {
         return Qt.resolvedUrl("icons/%1.png".arg(name))
     }
 
-    width: sourceSize.Width
-    height: sourceSize.Height
+    width: size || sourceSize.Width
+    height: size || sourceSize.Height
 
     mipmap: true
 }

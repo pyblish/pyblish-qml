@@ -5,11 +5,6 @@
 
 The Pyblish QML project provides for a graphical frontend to [Pyblish][].
 
-- [Installation][install]
 - [User Guide][userguide]
-- [Contributing][contributing]
 
-[install]: https://github.com/pyblish/pyblish-qml/wiki/Installation
-[contributing]: https://github.com/pyblish/pyblish-qml/wiki/Contributing
-[userguide]: https://github.com/pyblish/pyblish-qml/wiki/User-Guide
-[Pyblish]: https://github.com/pyblish/pyblish
+[userguide]: https://github.com/pyblish/pyblish-qml/wiki

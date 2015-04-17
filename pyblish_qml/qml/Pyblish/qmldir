@@ -15,6 +15,8 @@ Label 0.1 Label.qml
 Object 0.1 Object.qml
 ProgressBar 0.1 ProgressBar.qml
 SpinBox 0.1 SpinBox.qml
+Spacer 0.1 Spacer.qml
+Scrollbar 0.1 Scrollbar.qml
 View 0.1 View.qml
 TabBar 0.1 TabBar.qml
 TabView 0.1 TabView.qml

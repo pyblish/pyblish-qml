@@ -12,7 +12,7 @@ Item {
 
         anchors.fill: parent
 
-        model: 50
+        model: 20
         delegate: Rectangle {
             height: 50
             width: root.width

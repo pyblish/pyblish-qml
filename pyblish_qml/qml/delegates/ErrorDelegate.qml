@@ -7,8 +7,6 @@ BaseDelegate {
 
     expandable: true
 
-    height: bodyItem.height + 5
-
     body: Row {
         id: content
 
@@ -33,9 +31,9 @@ BaseDelegate {
                    root.toggle.width -
                    10
 
-            property bool hasLongMessage: message.indexOf("\n") != -1 ? true : false
-            property string shortMessage: message.split("\n")[0]
-            property string longMessage: message
+            property bool hasLongMessage: object.message.indexOf("\n") != -1 ? true : false
+            property string shortMessage: object.message.split("\n")[0]
+            property string longMessage: object.message
 
             Label {
                 text: root.expanded ? body.longMessage : body.shortMessage
@@ -57,19 +55,19 @@ BaseDelegate {
                     model: [
                         {
                             "key": "Filename",
-                            "value": fname
+                            "value": object.fname
                         },
                         {
                             "key": "Line Number",
-                            "value": line_number
+                            "value": object.line_number
                         },
                         {
                             "key": "Function",
-                            "value": func
+                            "value": object.func
                         },
                         {
                             "key": "Exception",
-                            "value": exc
+                            "value": object.exc
                         }
                     ]
 

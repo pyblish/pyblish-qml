@@ -7,13 +7,23 @@ Item {
 
     property color color: "white"
 
+    /*!
+        This property contains the inner component of this
+        delegate. The delegate wraps this component.
+    */
     property Component body
-    property alias bodyItem: loader.item
+
     property alias loader: loader
     property alias toggle: toggle
 
     property bool expandable
     property bool expanded
+
+    height: {
+        if (loader.status == Loader.Ready)
+            return loader.item.height + 5
+        return 0
+    }
 
     Row {
         anchors.fill: parent

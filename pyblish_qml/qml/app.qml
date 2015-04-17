@@ -1,46 +1,53 @@
+/*
+ * QML Application
+ *
+ * This file represents the highest-level of content in the
+ * presentation-layer of Pyblish QML.
+ *
+*/
+
 import QtQuick 2.3
 import QtQuick.Controls 1.3
 import Pyblish 0.1
+import Perspective 0.1 as Perspective
 
 
 StackView {
     id: stack
 
-    initialItem: overview
+    /*
+     * Setup next stack
+     *
+     * Format relevant proxy-models to display information
+     * relevant to the currently entered item.
+     *
+    */
+    function setup(item) {
+        app.recordProxy.clear_inclusion()
+        app.recordProxy.add_inclusion("type", "record")
+        app.recordProxy.add_inclusion(item.itemType, item.name)
 
-    Component {
-        id: overview
+        app.errorProxy.clear_inclusion()
+        app.errorProxy.add_inclusion("type", "error")
+        app.errorProxy.add_inclusion(item.itemType, item.name)
 
-        Overview {
-            onPluginDoubleClicked: {
-                var itemData = app.pluginData(index)
+        app.itemProxy.clear_inclusion()
+        app.itemProxy.add_inclusion(
+            "itemType", item.itemType == "instance" ? "plugin" : "instance")
 
-                stack.push({
-                    item: properties,
-                    properties: {
-                        itemData: itemData
-                    }
-                })
-            }
+        stack.push({
+            item: perspective,
+            properties: {"item": item}
+        })
+    }
 
-            onInstanceDoubleClicked: {
-                var itemData = app.instanceData(index)
-
-                stack.push({
-                    item: properties,
-                    properties: {
-                        itemData: itemData
-                    }
-                })
-            }
-        }
+    initialItem: Overview {
+        onInstanceEntered: setup(app.instanceProxy.item(index))
+        onPluginEntered: setup(app.pluginProxy.item(index))
     }
 
     Component {
-        id: properties
-
-        Properties {
-            height: stack.height
-        }
+        id: perspective
+        Perspective.Page {}
     }
 }

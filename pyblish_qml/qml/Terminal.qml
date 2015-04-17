@@ -11,9 +11,9 @@ Column {
         height: parent.height - filter.height
 
         Rectangle {
-            id: sidebar
+            id: gutter
 
-            color: Theme.backgroundColor
+            color: Qt.darker(Theme.backgroundColor, 2)
 
             width: icon.width
 
@@ -36,11 +36,11 @@ Column {
 
             boundsBehavior: Flickable.StopAtBounds
 
-            model: app.terminalProxy
+            model: app.resultProxy
 
             delegate: Loader {
                 width: ListView.view.width
-                sourceComponent: Delegates.components[type]
+                sourceComponent: Delegates.components[object.type]
             }
         }
     }
@@ -49,7 +49,7 @@ Column {
     Rectangle {
         id: filter
 
-        color: Qt.darker(Theme.backgroundColor, 1.4)
+        color: Qt.darker(Theme.backgroundColor, 2)
 
         width: parent.width
         height: 30
@@ -69,7 +69,7 @@ Column {
                     placeholderTextColor: Qt.darker(textColor, 1.5)
                 }
 
-                onTextChanged: app.terminalProxy.setFilterFixedString(text)
+                onTextChanged: app.resultProxy.setFilterFixedString(text)
             }
 
             Row {
@@ -129,7 +129,7 @@ Column {
 
                         onClicked: {
                             this.toggled = !this.toggled
-                            app.exclude("terminal",
+                            app.exclude("result",
                                         this.toggled ? "remove" : "add",
                                         "levelname",
                                         modelData.name)
@@ -141,7 +141,7 @@ Column {
     }
 
     Connections {
-        target: app.terminalModel
+        target: app.resultModel
         onAdded: listView.positionViewAtEnd()
     }
 }

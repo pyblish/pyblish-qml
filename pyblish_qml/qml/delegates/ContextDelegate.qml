@@ -3,8 +3,6 @@ import Pyblish 0.1
 
 
 BaseDelegate {
-    height: bodyItem.height + 10
-
     body: Row {
         id: delegate
 
@@ -13,6 +11,7 @@ BaseDelegate {
         Icon {
             id: icon
             name: "logo-small"
+            size: 16
         }
 
         Column {
@@ -21,7 +20,7 @@ BaseDelegate {
             spacing: 2
 
             Label {
-                text: name + " " + pyblishVersion
+                text: object.name + " " + object.pyblishVersion
                 style: "title"
                 elide: Text.ElideRight
             }
@@ -30,23 +29,23 @@ BaseDelegate {
                 model: [
                 {
                     "key": "Python",
-                    "value": pythonVersion.split(" ")[0]
+                    "value": object.pythonVersion.split(" ")[0]
                 },
                 {
                     "key": "Endpoint",
-                    "value": endpointVersion
+                    "value": object.endpointVersion
                 },
                 {
                     "key": "Port",
-                    "value": port
+                    "value": object.port
                 },
                 {
                     "key": "User",
-                    "value": user
+                    "value": object.user
                 },
                 {
                     "key": "Host",
-                    "value": host
+                    "value": object.host
                 }]
 
                 Row {

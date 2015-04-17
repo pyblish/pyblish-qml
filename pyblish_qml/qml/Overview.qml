@@ -7,8 +7,8 @@ Item {
 
     property string __lastPlugin
 
-    signal instanceDoubleClicked(int index)
-    signal pluginDoubleClicked(int index)
+    signal instanceEntered(int index)
+    signal pluginEntered(int index)
 
     states: [
         State {
@@ -75,13 +75,13 @@ Item {
                 width: Math.floor(parent.width / 2.0)  // To keep checkbox border from collapsing
                 height: parent.height
 
-                section.property: "family"
+                section.property: "object.family"
 
                 onActionTriggered: {
                     if (action.name == "repair")
                         app.repairInstance(index)
-                    else if (action.name == "explore")
-                        overview.instanceDoubleClicked(index)
+                    else if (action.name == "enter")
+                        overview.instanceEntered(index)
                 }
 
                 onItemClicked: app.toggleInstance(index)
@@ -93,13 +93,13 @@ Item {
                 width: Math.floor(parent.width / 2.0)
                 height: parent.height
 
-                section.property: "type"
+                section.property: "object.type"
 
                 onActionTriggered: {
                     if (action.name == "repair")
                         app.repairPlugin(index)
-                    else if (action.name == "explore")
-                        overview.pluginDoubleClicked(index)
+                    else if (action.name == "enter")
+                        overview.pluginEntered(index)
                 }
 
                 onItemClicked: app.togglePlugin(index)

@@ -16,39 +16,40 @@ ListView {
     clip: true
 
     boundsBehavior: Flickable.DragOverBounds
+    pixelAligned: true
 
     delegate: ListItem.StandardActions {
-        text: name
-        active: optional
-        checked: isToggled
+        text: object.name
+        active: object.optional
+        checked: object.isToggled
 
         height: 20
         width: parent.width
 
         status: {
-            if (isProcessing)
+            if (object.isProcessing)
                 return "selected"
-            if (hasError)
+            if (object.hasError)
                 return "error"
-            if (succeeded)
+            if (object.succeeded)
                 return "success"
             return "default"
         }
 
-        onToggled: list.itemClicked(index)
+        onToggled: itemClicked(index)
 
         actions: [
             Action {
                 name: "repair"
                 iconName: "wrench"
-                enabled: hasError && hasRepair ? true : false
-                onTriggered: list.actionTriggered(this, index)
+                enabled: object.hasError && object.hasRepair ? true : false
+                onTriggered: actionTriggered(this, index)
             },
 
             Action {
-                name: "explore"
+                name: "enter"
                 iconName: "angle-right"
-                onTriggered: list.actionTriggered(this, index)
+                onTriggered: actionTriggered(this, index)
             }
         ]
     }

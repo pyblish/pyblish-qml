@@ -1,12 +1,10 @@
-"""Model components used in QML"""
-
+import time
 from PyQt5 import QtCore
 
 import util
 
-defaults = {
+item_defaults = {
     "name": "default",
-    "isSelected": False,
     "isProcessing": False,
     "isToggled": True,
     "optional": True,
@@ -14,19 +12,22 @@ defaults = {
     "succeeded": False,
     "processed": False,
     "currentProgress": 0,
-    "errors": list(),
-    "records": list()
+    "duration": 0,  # Time (ms) to process pair
+    "finishedAt": 0,  # Time (s) when finished
+    "amountPassed": 0,  # Number of plug-ins/instances passed
+    "amountFailed": 0  # Number of plug-ins/instances failed
 }
 
 plugin_defaults = {
     "optional": False,
-    "doc": None,
+    "doc": "",
     "order": None,
     "hasRepair": False,
     "hasCompatible": False,
     "families": list(),
     "hosts": list(),
     "type": "unknown",
+    "module": "unknown",
     "canProcessContext": False,
     "canProcessInstance": False,
     "canRepairInstance": False,
@@ -40,82 +41,263 @@ instance_defaults = {
     "compatiblePlugins": list(),
 }
 
+result_defaults = {
+    "type": "default",
+    "filter": "default",
+    "message": "default",
 
-class Item(object):
-    default_data = {}
+    # Temporary metadata: "default", until treemodel
+    "instance": "default",
+    "plugin": "default",
 
-    def __str__(self):
-        return self.name
+    # LogRecord
+    "threadName": "default",
+    "name": "default",
+    "thread": "default",
+    "created": "default",
+    "process": "default",
+    "processName": "default",
+    "args": "default",
+    "module": "default",
+    "filename": "default",
+    "levelno": 0,
+    "levelname": "default",
+    "exc_text": "default",
+    "pathname": "default",
+    "lineno": 0,
+    "msg": "default",
+    "exc_info": "default",
+    "funcName": "default",
+    "relativeCreated": "default",
+    "msecs": 0.0,
 
-    def __repr__(self):
-        return self.__str__()
+    # Exception
+    "fname": "default",
+    "line_number": 0,
+    "func": "default",
+    "exc": "default",
 
-    def __init__(self, name, data):
-        for key, value in defaults.iteritems():
-            if data.get(key) is not None:
-                value = data[key]
-            setattr(self, key, value)
+    # Context
+    "port": 0,
+    "host": "default",
+    "user": "default",
+    "connectTime": "default",
+    "pythonVersion": "default",
+    "pyblishVersion": "default",
+    "endpointVersion": "default",
 
-        self.name = name
-        self.data = data
-
-
-class InstanceItem(Item):
-    def __init__(self, *args, **kwargs):
-        super(InstanceItem, self).__init__(*args, **kwargs)
-
-        for key, value in instance_defaults.iteritems():
-            if self.data.get(key) is not None:
-                value = self.data[key]
-            setattr(self, key, value)
+    # Plugin
+    "doc": "default",
+}
 
 
-class PluginItem(Item):
-    def __init__(self, *args, **kwargs):
-        super(PluginItem, self).__init__(*args, **kwargs)
+class PropertyType(QtCore.pyqtWrapperType):
+    """Metaclass for converting class attributes into pyqtProperties
 
-        for key, value in plugin_defaults.iteritems():
-            if self.data.get(key) is not None:
-                value = self.data[key]
-            setattr(self, key, value)
+    Usage:
+        >>> class AbstractClass(QtCore.QObject):
+        ...     __metaclass__ = PropertyType
 
-        doc = self.data.get("doc", "")
-        if doc and len(doc) > 30:
-            self.data["doc"] = doc[:30] + "..."
+    """
+
+    prefix = "__pyqtproperty__"
+
+    def __new__(cls, name, bases, attrs):
+        """Convert class properties into pyqtProperties
+
+        For use in conjuction with the :func:Item factory function.
+
+        """
+
+        for key, value in attrs.copy().items():
+            if key.startswith("__"):
+                continue
+
+            notify = QtCore.pyqtSignal()
+
+            def set_data(key, value):
+                def set_data(self, value):
+                    setattr(self, cls.prefix + key, value)
+                    getattr(self, key + "Changed").emit()
+                    self.__datachanged__.emit(self)
+                return set_data
+
+            attrs[key + "Changed"] = notify
+            attrs[key] = QtCore.pyqtProperty(
+                type(value) if value is not None else QtCore.QVariant,
+                fget=lambda self, k=key: getattr(self, cls.prefix + k, None),
+                fset=set_data(key, value),
+                notify=notify)
+
+        return super(PropertyType, cls).__new__(cls, name, bases, attrs)
 
 
-class ItemModel(QtCore.QAbstractListModel):
-    roles = dict()
-    names = dict()
+class AbstractItem(QtCore.QObject):
+    """Model Item
 
-    data_changed = QtCore.pyqtSignal(object, str, object, object,
-                                     arguments=["name", "key", "old", "new"])
+    See here for full details:
+    https://github.com/pyblish/pyblish-qml/issues/81
 
-    def __iter__(self):
-        return self.iterator()
+    """
 
-    def __new__(cls, *args, **kwargs):
-        obj = super(ItemModel, cls).__new__(cls, *args, **kwargs)
+    __metaclass__ = PropertyType
+    __datachanged__ = QtCore.pyqtSignal(QtCore.QObject)
 
-        index = 0
-        for key in (defaults.keys() +
-                    instance_defaults.keys() +
-                    plugin_defaults.keys()):
-            role = QtCore.Qt.UserRole + index
-            obj.roles[role] = key
-            index += 1
 
-        obj.names = dict((v, k) for k, v in obj.roles.iteritems())
-        obj.roles[999] = "itemType"
+def Item(**kwargs):
+    """Factory function for QAbstractListModel items
 
-        return obj
+    Any class attributes are converted into pyqtProperties
+    and must be declared with its type as value.
 
+    Special keyword "parent" is not passed as object properties
+    but instead passed to the QObject constructor.
+
+    Usage:
+        >>> item = Item(name="default name",
+        ...             age=5,
+        ...             alive=True)
+        >>> assert item.name == "default name"
+        >>> assert item.age == 5
+        >>> assert item.alive == True
+        >>>
+        >>> # Jsonifyable content
+        >>> assert item.json == {
+        ...     "name": "default name",
+        ...     "age": 5,
+        ...     "alive": True
+        ...     }, item.json
+
+    """
+
+    parent = kwargs.pop("parent", None)
+    cls = type("Item", (AbstractItem,), kwargs.copy())
+
+    self = cls(parent)
+    self.json = kwargs  # Store as json
+
+    for key, value in kwargs.items():
+        if hasattr(self, key):
+            key = PropertyType.prefix + key
+        setattr(self, key, value)
+
+    return self
+
+
+class AbstractModel(QtCore.QAbstractListModel):
     def __init__(self, parent=None):
-        super(ItemModel, self).__init__(parent)
-        self.items = list()
-        self.item_dict = dict()
-        self.instances = util.ItemList(key="name")
+        super(AbstractModel, self).__init__(parent)
+        self.items = util.ItemList(key="name")
+
+    @QtCore.pyqtSlot(int, result=QtCore.QObject)
+    def item(self, index):
+        return self.items[index]
+
+    def add_item(self, **item):
+        """Add new item to model
+
+        Each keyword argument is passed to the :func:Item
+        factory function.
+
+        """
+
+        self.beginInsertRows(QtCore.QModelIndex(),
+                             self.rowCount(),
+                             self.rowCount())
+
+        item["parent"] = self
+        item = Item(**item)
+        self.items.append(item)
+        self.endInsertRows()
+
+        item.__datachanged__.connect(self._dataChanged)
+
+        return item
+
+    def _dataChanged(self, item):
+        """Explicitly emit dataChanged upon item changing"""
+        index = self.items.index(item)
+        qindex = self.createIndex(index, 0)
+        self.dataChanged.emit(qindex, qindex)
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return len(self.items)
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        if role in (QtCore.Qt.UserRole + 0, QtCore.Qt.UserRole + 1):
+            try:
+                return self.items[index.row()]
+            except:
+                pass
+
+        return QtCore.QVariant()
+
+    def roleNames(self):
+        return {
+            QtCore.Qt.UserRole + 0: "item",
+            QtCore.Qt.UserRole + 1: "object"
+        }
+
+    def reset(self):
+        self.beginResetModel()
+        self.items[:] = []
+        self.endResetModel()
+
+
+def ItemIterator(model):
+    """Item iterator
+
+    Yields items to be processed based on their
+    current state.
+
+    Yields:
+        tuple: (plugin, instance)
+
+    """
+
+    for plugin in model.plugins:
+        if not plugin.isToggled:
+            continue
+
+        if not plugin.hasCompatible:
+            continue
+
+        if plugin.canProcessContext:
+            yield plugin, None
+
+        if not plugin.canProcessInstance:
+            continue
+
+        for instance in model.instances:
+            if not instance.isToggled:
+                continue
+
+            if instance.name not in plugin.compatibleInstances:
+                continue
+
+            yield plugin, instance
+
+
+class ItemModel(AbstractModel):
+    def __init__(self, *args, **kwargs):
+        super(ItemModel, self).__init__(*args, **kwargs)
         self.plugins = util.ItemList(key="name")
+        self.instances = util.ItemList(key="name")
+
+    def add_item(self, **item):
+        item = super(ItemModel, self).add_item(**item)
+        type = item.itemType
+
+        if type == "plugin":
+            self.plugins.append(item)
+
+        elif type == "instance":
+            self.instances.append(item)
+
+        else:
+            raise TypeError("item not instance nore plug-in")
+
+        return item
 
     def update_with_state(self, state):
         self.reset()
@@ -124,28 +306,31 @@ class ItemModel(QtCore.QAbstractListModel):
         context = state.get("context", dict(children=list()))
 
         for plugin in plugins:
-            data = plugin["data"]
+            properties = item_defaults.copy()
+            properties.update(plugin_defaults)
+            properties.update(plugin["data"])
+            properties["name"] = plugin["name"]
+            properties["itemType"] = "plugin"
 
-            if data["order"] < 1:
-                data["isToggled"] = False
+            if properties["order"] < 1:
+                properties["isToggled"] = False
 
-            doc = data.get("doc")
-            if doc is not None:
-                data["doc"] = util.format_text(doc)
+            if properties.get("doc"):
+                properties["doc"] = util.format_text(properties.get("doc"))
 
-            item = PluginItem(name=plugin["name"],
-                              data=data)
-            self.add_item(item)
+            self.add_item(**properties)
 
         for instance in context["children"]:
-            name = instance.get("name")
-            data = instance.get("data", {})
+            properties = item_defaults.copy()
+            properties.update(instance_defaults)
+            properties.update(instance.get("data", {}))
+            properties["name"] = instance["name"]
+            properties["itemType"] = "instance"
 
-            if data.get("publish") is False:
-                data["isToggled"] = False
+            if properties.get("publish") is False:
+                properties["isToggled"] = False
 
-            item = InstanceItem(name=name, data=data)
-            self.add_item(item)
+            self.add_item(**properties)
 
     def update_current(self, pair):
         """Update the currently processing pair
@@ -155,20 +340,18 @@ class ItemModel(QtCore.QAbstractListModel):
 
         """
 
-        for index in range(self.rowCount()):
-            self.setData(index, "isProcessing", False)
+        for item in self.items:
+            item.isProcessing = False
 
         for type in ("instance", "plugin"):
             name = pair[type]
-            item = self.itemFromName(name)
+            item = self.items.get(name)
 
             if not item:
                 continue
 
-            index = self.itemIndexFromItem(item)
-
-            self.setData(index, "isProcessing", True)
-            self.setData(index, "currentProgress", 1)
+            item.isProcessing = True
+            item.currentProgress = 1
 
     def update_with_result(self, result):
         """Update item-model with result from host
@@ -182,71 +365,31 @@ class ItemModel(QtCore.QAbstractListModel):
 
         """
 
-        for index in range(self.rowCount()):
-            self.setData(index, "isProcessing", False)
+        for item in self.items:
+            item.isProcessing = False
 
         for type in ("instance", "plugin"):
             name = result[type]
-            item = self.itemFromName(name)
+            item = self.items.get(name)
 
             if not item:
                 assert type == "instance"
-                # No instance were processed.
                 continue
 
-            index = self.itemIndexFromItem(item)
-
-            self.setData(index, "isProcessing", True)
-            self.setData(index, "currentProgress", 1)
-            self.setData(index, "processed", True)
+            item.isProcessing = True
+            item.currentProgress = 1
+            item.processed = True
 
             if result.get("error"):
-                self.setData(index, "hasError", True)
-
-                item.errors.append({
-                    "source": name,
-                    "error": result.get("error")
-                })
+                item.hasError = True
+                item.amountFailed += 1
 
             else:
-                self.setData(index, "succeeded", True)
+                item.succeeded = True
+                item.amountPassed += 1
 
-            if result.get("records"):
-                for record in result.get("records"):
-                    item.records.append(record)
-
-    def iterator(self):
-        """Default iterator
-
-        Yields items to be processed based on their
-        current state.
-
-        Yields:
-            tuple: (plugin, instance)
-
-        """
-
-        for plugin in self.plugins:
-            if not plugin.isToggled:
-                continue
-
-            if not plugin.hasCompatible:
-                continue
-
-            if plugin.canProcessContext:
-                yield plugin, None
-
-            if not plugin.canProcessInstance:
-                continue
-
-            for instance in self.instances:
-                if not instance.isToggled:
-                    continue
-
-                if instance.name not in plugin.compatibleInstances:
-                    continue
-
-                yield plugin, instance
+            item.duration += result["duration"]
+            item.finishedAt = time.time()
 
     def has_failed_validator(self):
         for validator in self.plugins:
@@ -256,22 +399,11 @@ class ItemModel(QtCore.QAbstractListModel):
                 return True
         return False
 
-    def errors(self):
-        """Parse and return current errors"""
-        errors = dict()
-        for plugin in self.plugins:
-            for error in plugin.errors:
-                if plugin.name not in errors:
-                    errors[plugin] = list()
-                errors[plugin].append(error)
-        return errors
-
     def reset_status(self):
         """Reset progress bars"""
         for item in self.items:
-            index = self.itemIndexFromItem(item)
-            self.setData(index, "isProcessing", False)
-            self.setData(index, "currentProgress", 0)
+            item.isProcessing = False
+            item.currentProgress = 0
 
     def update_compatibility(self):
         for plugin in self.plugins:
@@ -285,209 +417,78 @@ class ItemModel(QtCore.QAbstractListModel):
                     has_compatible = True
                     break
 
-            index = self.itemIndexFromItem(plugin)
-            self.setData(index, "hasCompatible", has_compatible)
-
-    def add_item(self, item):
-        self.beginInsertRows(QtCore.QModelIndex(),
-                             self.rowCount(),
-                             self.rowCount())
-
-        self.items.append(item)
-
-        # Performance buffers
-        self.item_dict[item.name] = item
-        if isinstance(item, PluginItem):
-            self.plugins.append(item)
-        elif isinstance(item, InstanceItem):
-            self.instances.append(item)
-
-        self.endInsertRows()
-
-    def rowCount(self, parent=QtCore.QModelIndex()):
-        return len(self.items)
-
-    def data(self, index, role=QtCore.Qt.DisplayRole):
-        if isinstance(index, QtCore.QModelIndex):
-            index = index.row()
-
-        try:
-            item = self.items[index]
-        except IndexError:
-            return QtCore.QVariant()
-
-        if role == 999:
-            return type(item).__name__
-
-        if role in self.roles:
-            return getattr(item, self.roles[role], None)
-
-        return QtCore.QVariant()
-
-    def roleNames(self):
-        return self.roles
-
-    def setData(self, index, key, value):
-        if isinstance(index, QtCore.QModelIndex):
-            index = index.row()
-
-        item = self.items[index]
-
-        try:
-            old = getattr(item, key)
-        except AttributeError:
-            print "%s did not exist"
-            return
-
-        setattr(item, key, value)
-
-        if key in item.data:
-            item.data[key] = value
-
-        qindex = self.createIndex(index, 0)
-        self.dataChanged.emit(qindex, qindex)
-        self.data_changed.emit(item, key, old, value)
-
-    def itemFromName(self, name):
-        return self.item_dict.get(name)
-
-    def itemFromIndex(self, index):
-        return self.items[index]
-
-    def itemIndexFromName(self, name):
-        item = self.itemFromName(name)
-        return self.itemIndexFromItem(item)
-
-    def itemIndexFromItem(self, item):
-        return self.items.index(item)
-
-    @property
-    def serialized(self):
-        serialized = list()
-        for item in self.items:
-            serialized.append(item.data)
-        return serialized
+            plugin.hasCompatible = has_compatible
 
     def reset(self):
-        self.beginResetModel()
-        self.items[:] = []
-
-        # Clear caches too
-        self.item_dict.clear()
         self.instances[:] = []
         self.plugins[:] = []
+        super(ItemModel, self).reset()
 
-        self.endResetModel()
 
-
-class TerminalModel(QtCore.QAbstractListModel):
-    roles = [
-        "type",
-        "filter",
-        "message",
-
-        # LogRecord
-        "threadName",
-        "name",
-        "thread",
-        "created",
-        "process",
-        "processName",
-        "args",
-        "module",
-        "filename",
-        "levelno",
-        "exc_text",
-        "pathname",
-        "lineno",
-        "msg",
-        "exc_info",
-        "funcName",
-        "relativeCreated",
-        "levelname",
-        "msecs",
-
-        # Exception
-        "fname",
-        "line_number",
-        "func",
-        "exc",
-
-        # Context
-        "port",
-        "host",
-        "user",
-        "connectTime",
-        "pythonVersion",
-        "pyblishVersion",
-        "endpointVersion",
-
-        # Plugin
-        "doc",
-        "instance",
-        "plugin"
-    ]
+class ResultModel(AbstractModel):
 
     added = QtCore.pyqtSignal()
 
-    def __new__(cls, *args, **kwargs):
-        obj = super(TerminalModel, cls).__new__(cls, *args, **kwargs)
-
-        roles = dict()
-        for index in range(len(obj.roles)):
-            role = obj.roles[index]
-            roles[QtCore.Qt.UserRole + index] = role
-
-        obj.roles = roles
-        obj.names = dict((v, k) for k, v in roles.iteritems())
-
-        return obj
-
-    def __init__(self, parent=None):
-        super(TerminalModel, self).__init__(parent)
-        self.items = []
+    def add_item(self, **item):
+        try:
+            return super(ResultModel, self).add_item(**item)
+        finally:
+            self.added.emit()
 
     def update_with_state(self, state):
         self.reset()
 
-        context_ = {
+        data = state["context"]["data"]
+
+        properties = result_defaults.copy()
+        properties.update(data)
+        properties.update({
             "type": "context",
             "name": "Pyblish",
             "filter": "Pyblish"
-        }
+        })
 
-        context_.update(state["context"]["data"])
-
-        self.add_item(context_)
+        self.add_item(**properties)
 
     def update_with_result(self, result):
         parsed = self.parse_result(result)
 
-        if getattr(self, "_last_plugin", None) != result["plugin"]:
-            self._last_plugin = result["plugin"]
-            self.add_item(parsed["plugin"])
+        error = parsed.get("error")
+        plugin = parsed.get("plugin")
+        instance = parsed.get("instance")
+        records = parsed.get("records")
 
-        self.add_item(parsed["instance"])
+        if getattr(self, "_last_plugin", None) != plugin["plugin"]:
+            self._last_plugin = plugin["plugin"]
+            self.add_item(**plugin)
 
-        for record in result["records"]:
-            self.add_item(record)
+        self.add_item(**instance)
 
-        if parsed["error"] is not None:
-            self.add_item(parsed["error"])
+        for record in records:
+            self.add_item(**record)
+
+        if error is not None:
+            self.add_item(**error)
 
     def parse_result(self, result):
         plugin_msg = {
             "type": "plugin",
             "message": result["plugin"],
             "filter": result["plugin"],
-            "doc": result["doc"]
+            "doc": result["doc"],
+
+            "plugin": result["plugin"],
+            "instance": result["instance"]
         }
 
         instance_msg = {
             "type": "instance",
             "message": result["instance"],
             "filter": result["instance"],
-            "duration": result["duration"]
+            "duration": result["duration"],
+
+            "plugin": result["plugin"],
+            "instance": result["instance"]
         }
 
         record_msgs = list()
@@ -496,7 +497,20 @@ class TerminalModel(QtCore.QAbstractListModel):
             record["type"] = "record"
             record["filter"] = record["message"]
             record["message"] = util.format_text(str(record["message"]))
+
+            record["plugin"] = result["plugin"]
+            record["instance"] = result["instance"]
+
             record_msgs.append(record)
+
+        error_msg = {
+            "type": "error",
+            "message": "No error",
+            "filter": "",
+
+            "plugin": result["plugin"],
+            "instance": result["instance"]
+        }
 
         error_msg = None
 
@@ -505,62 +519,40 @@ class TerminalModel(QtCore.QAbstractListModel):
             error["type"] = "error"
             error["message"] = util.format_text(error["message"])
             error["filter"] = error["message"]
+
+            error["plugin"] = result["plugin"]
+            error["instance"] = result["instance"]
+
             error_msg = error
 
         return {
             "plugin": plugin_msg,
             "instance": instance_msg,
             "records": record_msgs,
-            "error": error_msg
+            "error": error_msg,
         }
-
-    def add_item(self, item):
-        self.beginInsertRows(QtCore.QModelIndex(),
-                             self.rowCount(),
-                             self.rowCount())
-
-        self.items.append(item)
-        self.endInsertRows()
-        self.added.emit()
-
-    # Overridden methods
-
-    def rowCount(self, parent=QtCore.QModelIndex()):
-        return len(self.items)
-
-    def data(self, index, role=QtCore.Qt.DisplayRole):
-        try:
-            item = self.items[index.row()]
-        except IndexError:
-            return QtCore.QVariant()
-
-        if role in self.roles:
-            return item.get(self.roles[role], QtCore.QVariant())
-
-        return QtCore.QVariant()
-
-    def roleNames(self):
-        return self.roles
-
-    def reset(self):
-        self.beginResetModel()
-        self.items[:] = []
-        self.endResetModel()
 
 
 class ProxyModel(QtCore.QSortFilterProxyModel):
-    """A QSortFilterProxyModel with custom exclusion
+    """A QSortFilterProxyModel with custom exclude and include rules
+
+    Role may be either an integer or string, and each
+    role may include multiple values.
 
     Example:
         >>> # Exclude any item whose role 123 equals "Abc"
         >>> model = ProxyModel(None)
         >>> model.add_exclusion(role=123, value="Abc")
 
-    """
+        >>> # Exclude multiple values
+        >>> model.add_exclusion(role="name", value="Pontus")
+        >>> model.add_exclusion(role="name", value="Richard")
 
-    @property
-    def names(self):
-        return self.sourceModel().names
+        >>> # Exclude amongst includes
+        >>> model.add_inclusion(role="type", value="PluginItem")
+        >>> model.add_exclusion(role="name", value="Richard")
+
+    """
 
     def __init__(self, source, parent=None):
         super(ProxyModel, self).__init__(parent)
@@ -569,38 +561,55 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         self.excludes = dict()
         self.includes = dict()
 
+    @QtCore.pyqtSlot(int, result=QtCore.QObject)
+    def item(self, index):
+        index = self.index(index, 0, QtCore.QModelIndex())
+        index = self.mapToSource(index)
+        model = self.sourceModel()
+        return model.items[index.row()]
+
+    @QtCore.pyqtSlot(str, str)
     def add_exclusion(self, role, value):
         """Exclude item if `role` equals `value`
 
         Attributes:
-            role (int): Qt role to compare `value` to
+            role (int, string): Qt role or name to compare `value` to
             value (object): Value to exclude
 
         """
 
-        if not isinstance(role, int):
-            role = self.names[role]
+        self._add_rule(self.excludes, role, value)
 
-        self.excludes[role] = value
-        self.invalidate()
-
-    def remove_exclusion(self, role):
+    @QtCore.pyqtSlot(str, str)
+    def remove_exclusion(self, role, value=None):
         """Remove exclusion rule
 
-        TODO(marcus): Should we allow for multiple excluded
-            *values* for each role? For example, if a role
-            matches *any* or *all* of the excluded values
-            it could get excluded. How should the logic look
-            for something like that?
+        Arguments:
+            role (int, string): Qt role or name to remove
+            value (object, optional): Value to remove. If none
+                is supplied, the entire role will be removed.
 
         """
 
-        if not isinstance(role, int):
-            role = self.names[role]
+        self._remove_rule(self.excludes, role, value)
 
-        self.excludes.pop(role, None)
-        self.invalidate()
+    def set_exclusion(self, rules):
+        """Set excludes
 
+        Replaces existing excludes with those in `rules`
+
+        Arguments:
+            rules (list): Tuples of (role, value)
+
+        """
+
+        self._set_rules(self.excludes, rules)
+
+    @QtCore.pyqtSlot()
+    def clear_exclusion(self):
+        self._clear_group(self.excludes)
+
+    @QtCore.pyqtSlot(str, str)
     def add_inclusion(self, role, value):
         """Include item if `role` equals `value`
 
@@ -610,7 +619,53 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 
         """
 
-        self.includes[role] = value
+        self._add_rule(self.includes, role, value)
+
+    @QtCore.pyqtSlot(str, str)
+    def remove_inclusion(self, role, value=None):
+        """Remove exclusion rule"""
+        self._remove_rule(self.includes, role, value)
+
+    def set_inclusion(self, rules):
+        self._set_rules(self.includes, rules)
+
+    @QtCore.pyqtSlot()
+    def clear_inclusion(self):
+        self._clear_group(self.includes)
+
+    def _add_rule(self, group, role, value):
+        """Implementation detail"""
+        if role not in group:
+            group[role] = list()
+
+        group[role].append(value)
+
+        self.invalidate()
+
+    def _remove_rule(self, group, role, value=None):
+        """Implementation detail"""
+        if role not in group:
+            return
+
+        if value is None:
+            group.pop(role, None)
+        else:
+            group[role].remove(value)
+
+        self.invalidate()
+
+    def _set_rules(self, group, rules):
+        """Implementation detail"""
+        group.clear()
+
+        for rule in rules:
+            self._add_rule(group, *rule)
+
+        self.invalidate()
+
+    def _clear_group(self, group):
+        group.clear()
+
         self.invalidate()
 
     # Overridden methods
@@ -618,16 +673,23 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row, source_parent):
         """Exclude items in `self.excludes`"""
         model = self.sourceModel()
-        index = model.index(source_row, 0, QtCore.QModelIndex())
+        item = model.items[source_row]
 
-        for role, value in self.includes.iteritems():
-            data = model.data(index, role)
-            if data != value:
+        key = getattr(item, "filter", None)
+        if key is not None:
+            regex = self.filterRegExp()
+            if regex.pattern():
+                match = regex.indexIn(key)
+                return False if match == -1 else True
+
+        for role, values in self.includes.items():
+            data = getattr(item, role, None)
+            if data not in values:
                 return False
 
-        for role, value in self.excludes.iteritems():
-            data = model.data(index, role)
-            if data == value:
+        for role, values in self.excludes.items():
+            data = getattr(item, role, None)
+            if data in values:
                 return False
 
         return super(ProxyModel, self).filterAcceptsRow(
@@ -637,20 +699,36 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 class InstanceProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
         super(InstanceProxy, self).__init__(*args, **kwargs)
-        self.add_inclusion(999, "InstanceItem")
+        self.add_inclusion("itemType", "instance")
 
 
 class PluginProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
         super(PluginProxy, self).__init__(*args, **kwargs)
-        self.add_inclusion(999, "PluginItem")
+        self.add_inclusion("itemType", "plugin")
         self.add_exclusion("type", "Selector")
         self.add_exclusion("hasCompatible", False)
 
 
-class TerminalProxy(ProxyModel):
+class ResultProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
-        super(TerminalProxy, self).__init__(*args, **kwargs)
-        self.setFilterRole(self.names["filter"])  # msg
-        self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        super(ResultProxy, self).__init__(*args, **kwargs)
         self.add_exclusion("levelname", "DEBUG")
+        self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
+
+
+class RecordProxy(ProxyModel):
+    def __init__(self, *args, **kwargs):
+        super(RecordProxy, self).__init__(*args, **kwargs)
+        self.add_inclusion("type", "record")
+
+
+class ErrorProxy(ProxyModel):
+    def __init__(self, *args, **kwargs):
+        super(ErrorProxy, self).__init__(*args, **kwargs)
+        self.add_inclusion("type", "error")
+
+
+class GadgetProxy(ProxyModel):
+    def __init__(self, *args, **kwargs):
+        super(GadgetProxy, self).__init__(*args, **kwargs)

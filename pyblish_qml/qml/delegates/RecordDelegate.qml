@@ -5,16 +5,10 @@ import Pyblish 0.1
 BaseDelegate {
     id: root
 
-    property string shortMessage: message.split("\n")[0]
-    property string longMessage: message
+    property string shortMessage: object.message.split("\n")[0]
+    property string longMessage: object.message
 
     expandable: true
-
-    height: {
-        if (loader.status == Loader.Ready)
-            return loader.item.height + 5
-        return 0
-    }
 
     property var levels: {
         "DEBUG":  {
@@ -39,7 +33,7 @@ BaseDelegate {
         }
     }
 
-    color: levels[levelname].color
+    color: levels[object.levelname].color
 
     body: Row {
         property alias icon: mask.name
@@ -48,7 +42,7 @@ BaseDelegate {
 
         Icon {
             id: mask
-            name: levels[levelname].icon
+            name: levels[object.levelname].icon
         }
 
         Column {
@@ -76,35 +70,35 @@ BaseDelegate {
                     model: [
                         {
                             "key": "Levelname",
-                            "value": levelname
+                            "value": object.levelname
                         },
                         {
                             "key": "Object",
-                            "value": name
+                            "value": object.name
                         },
                         {
                             "key": "Filename",
-                            "value": filename
+                            "value": object.filename
                         },
                         {
                             "key": "Path",
-                            "value": pathname
+                            "value": object.pathname
                         },
                         {
                             "key": "Line number",
-                            "value": lineno
+                            "value": object.lineno
                         },
                         {
                             "key": "Function name",
-                            "value": funcName
+                            "value": object.funcName
                         },
                         {
                             "key": "Thread",
-                            "value": threadName
+                            "value": object.threadName
                         },
                         {
                             "key": "Milliseconds",
-                            "value": msecs
+                            "value": object.msecs
                         },
                     ]
 

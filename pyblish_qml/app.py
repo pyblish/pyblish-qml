@@ -32,6 +32,10 @@ class Window(QtQuick.QQuickView):
         self.setTitle("Pyblish")
         self.setResizeMode(self.SizeRootObjectToView)
 
+        self.setWidth(430)
+        self.setHeight(600)
+        self.setMinimumSize(QtCore.QSize(430, 300))
+
     def event(self, event):
         """Allow GUI to be closed upon holding Shift"""
         if event.type() == QtCore.QEvent.Close:
@@ -67,17 +71,13 @@ class Application(QtGui.QGuiApplication):
     quit_signal = QtCore.pyqtSignal()
     keep_alive = False
 
-    def __init__(self, port):
+    def __init__(self, source, port):
         super(Application, self).__init__(sys.argv)
 
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
 
         window = Window(self)
         window.statusChanged.connect(self.on_status_changed)
-
-        window.setWidth(400)
-        window.setHeight(600)
-        window.setMinimumSize(QtCore.QSize(300, 300))
 
         engine = window.engine()
         engine.addImportPath(QML_IMPORT_DIR)
@@ -95,7 +95,7 @@ class Application(QtGui.QGuiApplication):
         self.server_unresponsive.connect(self.on_server_unresponsive)
         self.show_signal.connect(self.show)
 
-        window.setSource(QtCore.QUrl.fromLocalFile(APP_PATH))
+        window.setSource(QtCore.QUrl.fromLocalFile(source))
 
     def on_status_changed(self, status):
         if status == QtQuick.QQuickView.Error:
@@ -239,14 +239,16 @@ class Application(QtGui.QGuiApplication):
         return rest.request("http://127.0.0.1", self.port, *args, **kwargs)
 
 
-def main(port, pid=None, preload=False, debug=False, validate=True):
+def main(port, source=None, pid=None,
+         preload=False, debug=False, validate=True):
     """Start the Qt-runtime and show the window
 
     Arguments:
         port (int): Port through which to communicate
-        pid (int, optional): Process id of parent process.
-        debug (bool, optional): Whether or not to run in debug-mode.
-            Defaults to False
+        source (str): QML entry-point
+        pid (int, optional): Process id of parent process. Deprecated
+        preload (bool, optional): Load in backgrund. Defaults to False
+        debug (bool, optional): Run in debug-mode. Defaults to False
         validate (bool, optional): Whether the environment should be validated
             prior to launching. Defaults to True
 
@@ -306,7 +308,7 @@ in order to bypass validation.
 
     util.timer("application")
 
-    app = Application(port)
+    app = Application(source or APP_PATH, port)
 
     app.keep_alive = not debug
     app.listen()

@@ -1,10 +1,19 @@
+
+import time
+
 # Dependencies
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtQml
 
 # Local libraries
 import util
 import rest
 import models
+
+
+def pyqtConstantProperty(fget):
+    return QtCore.pyqtProperty(QtCore.QVariant,
+                               fget=fget,
+                               constant=True)
 
 
 class Controller(QtCore.QObject):
@@ -18,6 +27,7 @@ class Controller(QtCore.QObject):
 
     """
 
+    # PyQt Signals
     info = QtCore.pyqtSignal(str, arguments=["message"])
     error = QtCore.pyqtSignal(str, arguments=["message"])
 
@@ -39,15 +49,32 @@ class Controller(QtCore.QObject):
 
     state_changed = QtCore.pyqtSignal(str, arguments=["state"])
 
+    # PyQt Properties
+    itemModel = pyqtConstantProperty(lambda self: self.item_model)
+    itemProxy = pyqtConstantProperty(lambda self: self.item_proxy)
+    recordProxy = pyqtConstantProperty(lambda self: self.record_proxy)
+    errorProxy = pyqtConstantProperty(lambda self: self.error_proxy)
+    instanceProxy = pyqtConstantProperty(lambda self: self.instance_proxy)
+    pluginProxy = pyqtConstantProperty(lambda self: self.plugin_proxy)
+    resultModel = pyqtConstantProperty(lambda self: self.result_model)
+    resultProxy = pyqtConstantProperty(lambda self: self.result_proxy)
+
     def __init__(self, port, parent=None):
         super(Controller, self).__init__(parent)
 
+        self._temp = [1, 2, 3, 4]
+
         self.item_model = models.ItemModel()
-        self.terminal_model = models.TerminalModel()
+        self.result_model = models.ResultModel()
 
         self.instance_proxy = models.InstanceProxy(self.item_model)
         self.plugin_proxy = models.PluginProxy(self.item_model)
-        self.terminal_proxy = models.TerminalProxy(self.terminal_model)
+        self.result_proxy = models.ResultProxy(self.result_model)
+
+        # Used in Perspective
+        self.item_proxy = models.ProxyModel(self.item_model)
+        self.record_proxy = models.RecordProxy(self.result_model)
+        self.error_proxy = models.ErrorProxy(self.result_model)
 
         self.changes = dict()
         self.is_running = False
@@ -59,7 +86,7 @@ class Controller(QtCore.QObject):
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
         self.finished.connect(self.on_finished)
-        self.item_model.data_changed.connect(self.on_data_changed)
+        # self.item_model.data_changed.connect(self.on_data_changed)
 
         self.state_changed.connect(self.on_state_changed)
 
@@ -178,21 +205,9 @@ class Controller(QtCore.QObject):
     def states(self):
         return self._states
 
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def instanceProxy(self):
-        return self.instance_proxy
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def pluginProxy(self):
-        return self.plugin_proxy
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def terminalModel(self):
-        return self.terminal_model
-
-    @QtCore.pyqtProperty(QtCore.QVariant, constant=True)
-    def terminalProxy(self):
-        return self.terminal_proxy
+    @QtCore.pyqtSlot(result=float)
+    def time(self):
+        return time.time()
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
@@ -243,7 +258,7 @@ class Controller(QtCore.QObject):
 
         """
 
-        target = {"terminal": self.terminal_proxy,
+        target = {"result": self.result_proxy,
                   "instance": self.instance_proxy,
                   "plugin": self.plugin_proxy}[target]
 
@@ -251,7 +266,7 @@ class Controller(QtCore.QObject):
             target.add_exclusion(role, value)
 
         elif operation == "remove":
-            target.remove_exclusion(role)
+            target.remove_exclusion(role, value)
 
         else:
             raise TypeError("operation must be either `add` or `remove`")
@@ -283,12 +298,12 @@ class Controller(QtCore.QObject):
         if "ready" not in self.states:
             return self.error.emit("Not ready")
 
-        item = model.itemFromIndex(index)
-        model.setData(index, "isToggled", not item.isToggled)
+        item = model.items[index]
+        item.isToggled = not item.isToggled
 
     def echo(self, data):
-        """Append `data` to terminal model"""
-        self.terminal_model.add_item(data)
+        """Append `data` to result model"""
+        self.result_model.add_item(**data)
 
     # Event handlers
 
@@ -525,14 +540,14 @@ class Controller(QtCore.QObject):
 
             # NOTE(marcus): This is temporary
             plugin_name = result["plugin"]
-            plugin_item = self.item_model.itemFromName(plugin_name)
+            plugin_item = self.item_model.plugins[plugin_name]
             result["doc"] = plugin_item.doc
             # end
 
-            self.terminal_model.update_with_result(result)
+            self.result_model.update_with_result(result)
 
         if iterator is None:
-            iterator = self.item_model.iterator()
+            iterator = models.ItemIterator(self.item_model)
 
         if test is None:
             def test(pair):
@@ -580,7 +595,7 @@ class Controller(QtCore.QObject):
         self.is_running = True
         self.save()
         self.process_next(
-            iterator=self.item_model.iterator(),
+            iterator=models.ItemIterator(self.item_model),
             test=self.tests("publish"))
 
     @QtCore.pyqtSlot()
@@ -605,7 +620,7 @@ class Controller(QtCore.QObject):
 
         self.initialising.emit()
         self.item_model.reset()
-        self.terminal_model.reset()
+        self.result_model.reset()
         self.changes.clear()
 
         def init():
@@ -622,7 +637,7 @@ class Controller(QtCore.QObject):
                 return self.error.emit(str(state))
 
             self.item_model.update_with_state(state)
-            self.terminal_model.update_with_state(state)
+            self.result_model.update_with_state(state)
 
             def selectors():
                 for item in self.item_model.plugins:
@@ -647,10 +662,11 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot(int)
     def repairPlugin(self, index):
+        if "finished" not in self.states:
+            return self.error.emit("Not ready")
+
         index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
         index = self.plugin_proxy.mapToSource(index)
-
-        self.item_model.setData(index, "hasError", False)
 
         def iterator(plugin):
             if plugin.canRepairContext:
@@ -668,5 +684,7 @@ class Controller(QtCore.QObject):
         self.publishing.emit()
         self.is_running = True
 
-        plugin = self.item_model.itemFromIndex(index.row())
+        plugin = self.item_model.items[index.row()]
+        plugin.hasError = False
+
         self.repair_next(iterator=iterator(plugin))
