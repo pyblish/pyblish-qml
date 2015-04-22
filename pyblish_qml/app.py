@@ -306,6 +306,8 @@ in order to bypass validation.
 
             util.echo("Running debug app on port: %s" % port)
 
+    util.echo("Starting Pyblish..")
+
     util.timer("application")
 
     app = Application(source or APP_PATH, port)
