@@ -54,6 +54,31 @@ Item {
                         model: app.recordProxy,
                         load: true,
                     },
+                    {
+                        type: "timeline",
+                        name: "Timeline",
+                        closed: false,
+                        load: true,
+                        data: function () {
+                            /*!
+                                Serialise model to data compatible with Timeline
+                                NOTE(marcus): Have Timeline adapt to the interface
+                                    of the model, instead of doing it this way. It
+                                    might yield better performance and withstand
+                                    greater changes during refactoring work.
+                            */
+                            var data = [];
+
+                            for (var i = 0; i < app.itemProxy.rowCount(); i++) {
+                                data.push({
+                                    "name": app.itemProxy.item(i).name,
+                                    "duration": app.itemProxy.item(i).duration,
+                                })
+                            }
+
+                            return data;
+                        }()
+                    },
                     // {
                     //     type: "items",
                     //     name: "Plug-ins",

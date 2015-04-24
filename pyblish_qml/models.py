@@ -695,6 +695,10 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         return super(ProxyModel, self).filterAcceptsRow(
             source_row, source_parent)
 
+    @QtCore.pyqtSlot(result=int)
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return super(ProxyModel, self).rowCount(parent)
+
 
 class InstanceProxy(ProxyModel):
     def __init__(self, *args, **kwargs):

@@ -31,9 +31,9 @@ StackView {
         app.errorProxy.add_inclusion("type", "error")
         app.errorProxy.add_inclusion(item.itemType, item.name)
 
+        var otherItem = item.itemType == "instance" ? "plugin" : "instance"
         app.itemProxy.clear_inclusion()
-        app.itemProxy.add_inclusion(
-            "itemType", item.itemType == "instance" ? "plugin" : "instance")
+        app.itemProxy.add_inclusion("itemType", otherItem)
 
         stack.push({
             item: perspective,

@@ -2,7 +2,7 @@
 import time
 
 # Dependencies
-from PyQt5 import QtCore, QtQml
+from PyQt5 import QtCore
 
 # Local libraries
 import util

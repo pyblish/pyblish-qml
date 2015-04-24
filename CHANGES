@@ -1,6 +1,12 @@
 Changelog
 =========
 
+Version 0.2.10
+--------------
+
+- API: Added Pyblish.Graphs module
+- API: Pyblish.Graphs.Timeline contributed by @madoodia
+
 Version 0.2.9
 -------------
 

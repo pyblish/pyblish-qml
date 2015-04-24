@@ -19,4 +19,5 @@ var components = {
     "spacer":        Qt.createComponent("delegates/SpacerDelegate.qml"),
     "results":       Qt.createComponent("delegates/ResultsDelegate.qml"),
     "items":         Qt.createComponent("delegates/ItemsDelegate.qml"),
+    "timeline":      Qt.createComponent("delegates/TimelineDelegate.qml"),
 }
