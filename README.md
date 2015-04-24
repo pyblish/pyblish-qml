@@ -8,3 +8,4 @@ The Pyblish QML project provides for a graphical frontend to [Pyblish][].
 - [User Guide][userguide]
 
 [userguide]: https://github.com/pyblish/pyblish-qml/wiki
+[Pyblish]: http://www.pyblish.com
