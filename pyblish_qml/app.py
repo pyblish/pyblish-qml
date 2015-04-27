@@ -127,7 +127,8 @@ class Application(QtGui.QGuiApplication):
 
         if previously_hidden:
             # Give statemachine enough time to boot up
-            if "ready" not in self.controller.states:
+            if not any(state in self.controller.states
+                       for state in ["ready", "finished"]):
                 util.timer("ready")
 
                 ready = QtTest.QSignalSpy(self.controller.ready)
