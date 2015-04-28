@@ -239,7 +239,7 @@ class Controller(QtCore.QObject):
         source_index = source_qindex.row()
 
         model = self.item_model
-        item = model.itemFromIndex(source_index)
+        item = model.items[source_index]
 
         if item.optional:
             self.__toggle_item(self.item_model, source_index)
@@ -284,7 +284,7 @@ class Controller(QtCore.QObject):
 
     def __item_data(self, model, index):
         """Return item data as dict"""
-        item = model.itemFromIndex(index)
+        item = model.items[index]
 
         data = {
             "name": item.name,
