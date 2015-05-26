@@ -262,20 +262,42 @@ def ItemIterator(model):
         if not plugin.hasCompatible:
             continue
 
-        if plugin.canProcessContext:
+        if not model.instances:
             yield plugin, None
 
-        if not plugin.canProcessInstance:
+        else:
+            for instance in model.instances:
+                if not instance.isToggled:
+                    continue
+
+                if instance.name not in plugin.compatibleInstances:
+                    continue
+
+                yield plugin, instance
+
+
+def PluginIterator(model):
+    for x in model.plugins:
+        if not x.isToggled:
             continue
 
-        for instance in model.instances:
-            if not instance.isToggled:
-                continue
+        if not x.hasCompatible:
+            continue
 
-            if instance.name not in plugin.compatibleInstances:
-                continue
+        print "Yielding %s" % x.name
+        yield x
 
-            yield plugin, instance
+
+def InstanceIterator(model):
+    for x in model.instances:
+        if not x.isToggled:
+            continue
+
+        if not x.hasCompatible:
+            continue
+
+        print "Yielding %s" % x.name
+        yield x
 
 
 class ItemModel(AbstractModel):
@@ -284,6 +306,7 @@ class ItemModel(AbstractModel):
         self.plugins = util.ItemList(key="name")
         self.instances = util.ItemList(key="name")
 
+    # @QtCore.pyqtSlot(QtCore.QVariant)
     def add_item(self, **item):
         item = super(ItemModel, self).add_item(**item)
         type = item.itemType
@@ -369,7 +392,7 @@ class ItemModel(AbstractModel):
             item.isProcessing = False
 
         for type in ("instance", "plugin"):
-            name = result[type]
+            name = result[type]["name"]
             item = self.items.get(name)
 
             if not item:
@@ -430,25 +453,28 @@ class ResultModel(AbstractModel):
     added = QtCore.pyqtSignal()
 
     def add_item(self, **item):
+        item_ = result_defaults.copy()
+        item_.update(item)
+
         try:
-            return super(ResultModel, self).add_item(**item)
+            return super(ResultModel, self).add_item(**item_)
         finally:
             self.added.emit()
 
-    def update_with_state(self, state):
-        self.reset()
+    # def update_with_state(self, state):
+    #     self.reset()
 
-        data = state["context"]["data"]
+    #     data = state["context"]["data"]
 
-        properties = result_defaults.copy()
-        properties.update(data)
-        properties.update({
-            "type": "context",
-            "name": "Pyblish",
-            "filter": "Pyblish"
-        })
+    #     properties = result_defaults.copy()
+    #     properties.update(data)
+    #     properties.update({
+    #         "type": "context",
+    #         "name": "Pyblish",
+    #         "filter": "Pyblish"
+    #     })
 
-        self.add_item(**properties)
+    #     self.add_item(**properties)
 
     def update_with_result(self, result):
         parsed = self.parse_result(result)
@@ -471,24 +497,30 @@ class ResultModel(AbstractModel):
             self.add_item(**error)
 
     def parse_result(self, result):
+        plugin_name = result["plugin"]["name"]
+
+        try:
+            instance_name = result["instance"]["name"]
+        except:
+            instance_name = None
+
         plugin_msg = {
             "type": "plugin",
-            "message": result["plugin"],
-            "filter": result["plugin"],
-            "doc": result["doc"],
+            "message": plugin_name,
+            "filter": plugin_name,
 
-            "plugin": result["plugin"],
-            "instance": result["instance"]
+            "plugin": plugin_name,
+            "instance": instance_name
         }
 
         instance_msg = {
             "type": "instance",
-            "message": result["instance"],
-            "filter": result["instance"],
+            "message": instance_name or "Context",
+            "filter": instance_name,
             "duration": result["duration"],
 
-            "plugin": result["plugin"],
-            "instance": result["instance"]
+            "plugin": plugin_name,
+            "instance": instance_name
         }
 
         record_msgs = list()
@@ -498,8 +530,8 @@ class ResultModel(AbstractModel):
             record["filter"] = record["message"]
             record["message"] = util.format_text(str(record["message"]))
 
-            record["plugin"] = result["plugin"]
-            record["instance"] = result["instance"]
+            record["plugin"] = plugin_name
+            record["instance"] = instance_name
 
             record_msgs.append(record)
 
@@ -508,8 +540,8 @@ class ResultModel(AbstractModel):
             "message": "No error",
             "filter": "",
 
-            "plugin": result["plugin"],
-            "instance": result["instance"]
+            "plugin": plugin_name,
+            "instance": instance_name
         }
 
         error_msg = None
@@ -520,8 +552,8 @@ class ResultModel(AbstractModel):
             error["message"] = util.format_text(error["message"])
             error["filter"] = error["message"]
 
-            error["plugin"] = result["plugin"]
-            error["instance"] = result["instance"]
+            error["plugin"] = plugin_name
+            error["instance"] = instance_name
 
             error_msg = error
 

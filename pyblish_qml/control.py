@@ -3,10 +3,11 @@ import time
 
 # Dependencies
 from PyQt5 import QtCore
+import pyblish_rpc.client
+import pyblish.logic
 
 # Local libraries
 import util
-import rest
 import models
 
 
@@ -79,7 +80,6 @@ class Controller(QtCore.QObject):
         self.changes = dict()
         self.is_running = False
         self.machine = self.setup_statemachine()
-        self.host = rest.Host(port=port)
         self._state = None
         self._states = list()
 
@@ -89,6 +89,9 @@ class Controller(QtCore.QObject):
         # self.item_model.data_changed.connect(self.on_data_changed)
 
         self.state_changed.connect(self.on_state_changed)
+
+        # Connect to host
+        self.host = pyblish_rpc.client.Proxy(port=port)
 
     def setup_statemachine(self):
         """Setup and start state machine"""
@@ -216,7 +219,7 @@ class Controller(QtCore.QObject):
         source_index = source_qindex.row()
 
         self.__toggle_item(self.item_model, source_index)
-        self.item_model.update_compatibility()
+        # self.item_model.update_compatibility()
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def pluginData(self, index):
@@ -278,9 +281,9 @@ class Controller(QtCore.QObject):
 
         self.saving.emit()
 
-        util.async(self.host.save,
-                   args=[self.changes],
-                   callback=self.saved.emit)
+        # util.async(self.host.save,
+        #            args=[self.changes],
+        #            callback=self.saved.emit)
 
     def __item_data(self, model, index):
         """Return item data as dict"""
@@ -384,66 +387,66 @@ class Controller(QtCore.QObject):
 
     # Data wranglers
 
-    def tests(self, type):
-        if type == "publish":
-            def test(pair):
-                if not self.is_running:
-                    return False
+    # def tests(self, type):
+    #     if type == "publish":
+    #         def test(pair):
+    #             if not self.is_running:
+    #                 return False
 
-                plugin, instance = pair
+    #             plugin, instance = pair
 
-                if plugin.order >= 2:
-                    if self.item_model.has_failed_validator():
-                        return False
+    #             if plugin.order >= 2:
+    #                 if self.item_model.has_failed_validator():
+    #                     return False
 
-                return True
+    #             return True
 
-            return test
+    #         return test
 
-        if type == "repair":
-            def test(pair):
-                if not self.is_running:
-                    return False
+    #     if type == "repair":
+    #         def test(pair):
+    #             if not self.is_running:
+    #                 return False
 
-                return True
+    #             return True
 
-            return test
+    #         return test
 
-        return lambda pair: True
+    #     return lambda pair: True
 
-    def process_next(self, result=None, iterator=None,
-                     test=None, on_finished=None):
-        """Process next pair
+    # def process_next(self, result=None, iterator=None,
+    #                  test=None, on_finished=None):
+    #     """Process next pair
 
-        Compute next pair using `iterator` and pass along
-        results to host.
+    #     Compute next pair using `iterator` and pass along
+    #     results to host.
 
-        See :meth:`_next` for more details.
+    #     See :meth:`_next` for more details.
 
-        """
+    #     """
 
-        return self._next(mode="process",
-                          result=result,
-                          iterator=iterator,
-                          test=self.tests("publish"),
-                          on_finished=on_finished)
+    #     return self._next(mode="process",
+    #                       result=result,
+    #                       iterator=iterator,
+    #                       test=self.tests("publish"),
+    #                       on_finished=on_finished)
 
-    def repair_next(self, result=None, iterator=None,
-                    test=None, on_finished=None):
-        """Repair next pair
+    # def repair_next(self, result=None, iterator=None,
+    #                 test=None, on_finished=None):
+    #     """Repair next pair
 
-        Compute next pair using `iterator` and pass along
-        results to host.
+    #     Compute next pair using `iterator` and pass along
+    #     results to host.
 
-        See :meth:`_next` for more details.
+    #     See :meth:`_next` for more details.
 
-        """
+    #     """
 
-        return self._next(mode="repair",
-                          result=result,
-                          test=self.tests("repair"),
-                          iterator=iterator,
-                          on_finished=on_finished)
+    #     return self._next(mode="repair",
+    #                       result=result,
+    #                       test=self.tests("repair"),
+    #                       iterator=iterator,
+    #                       on_finished=on_finished)
 
     def _next(self,
               mode,
@@ -484,9 +487,9 @@ class Controller(QtCore.QObject):
         then returned to the main thread in which they are drawn before
         making another IPC call.
 
-        The reason this complexity is that the drawing must take place
-        in the main thread, whereas the processing must occur in a thread,
-        so as to not block the GUI.
+        The reason for this complexity is that the drawing must take place
+        in the main thread, whereas the processing must occur in a separate
+        thread so as to not block the GUI.
 
         Arguments:
             result (dict, Exception, optional): Results from previous
@@ -591,12 +594,67 @@ class Controller(QtCore.QObject):
             self.error.emit("Not ready")
             return
 
+        def generate_message(vars):
+            return ("Test data:\n" + "\n".join(["{0}={1}".format(k, v)
+                    for k, v in vars.iteritems()]))
+
         self.publishing.emit()
         self.is_running = True
         self.save()
-        self.process_next(
-            iterator=models.ItemIterator(self.item_model),
-            test=self.tests("publish"))
+
+        # Get available items from host
+        plugins = self.host.discover()
+        context = self.host.context()
+
+        # Filter items in GUI with items from host
+        _plugins = [x.name for x in models.PluginIterator(self.item_model)]
+        _context = [x.name for x in models.InstanceIterator(self.item_model)]
+
+        plugins = [p for p in plugins if p.name in _plugins]
+        context[:] = [x for x in context if x.name in _context]
+
+        # Publish
+        iterator = pyblish.logic.process(plugins=plugins,
+                                         process=self.host.process,
+                                         context=context)
+        # def on_finished(result):
+
+        #     self.item_model.update_with_result(result)
+        #     self.result_model.update_with_result(result)
+
+        #     # Highlight upcoming pair
+        #     self.item_model.update_current(pair)
+
+        for result in iterator:
+            state = self.host.state()
+            pair = {"plugin": state["nextPlugin"].name,
+                    "instance": getattr(state["nextInstance"], "name", None)}
+
+            if isinstance(result, pyblish.logic.TestFailed):
+                self.error.emit(str(result))
+                self.echo({
+                    "type": "message",
+                    "message": generate_message(result.vars)
+                })
+                continue
+
+            if isinstance(result, Exception):
+                self.error.emit("Unknown error occured; check terminal")
+                self.echo({
+                    "type": "message",
+                    "message": str(result)
+                })
+                continue
+
+            self.item_model.update_with_result(result)
+            self.result_model.update_with_result(result)
+
+            # Highlight upcoming pair
+            self.item_model.update_current(pair)
+
+        self.is_running = False
+        self.finished.emit()
+        self.on_finished()
 
     @QtCore.pyqtSlot()
     def stop(self):
@@ -617,48 +675,92 @@ class Controller(QtCore.QObject):
             return self.error.emit("Not ready")
 
         util.timer("resetting..")
+        request_count = self.host.stats()["totalRequestCount"]
 
         self.initialising.emit()
         self.item_model.reset()
         self.result_model.reset()
         self.changes.clear()
 
-        def init():
-            init = self.host.init()
-            if isinstance(init, Exception):
-                return init
+        # Append Context
+        context = self.host.context()
 
-            state = self.host.state()
+        item = models.item_defaults.copy()
+        item.update(models.instance_defaults)
+        item.update(context.to_json()["data"])
+        item["name"] = "Context"
+        item["itemType"] = "instance"
+        item["isToggled"] = True
+        item["hasCompatible"] = True
+        item["family"] = None
+        self.item_model.add_item(**item)
 
-            return state
+        item = models.result_defaults.copy()
+        item.update(context.to_json()["data"])
+        item.update({
+            "type": "context",
+            "name": "Pyblish",
+            "filter": "Pyblish",
+        })
+        self.result_model.add_item(**item)
 
-        def on_finished(state):
-            if isinstance(state, Exception):
-                return self.error.emit(str(state))
+        # Append plug-ins
+        plugins = self.host.discover()
+        for plugin in plugins:
+            item = {}
+            item.update(models.item_defaults)
+            item.update(models.plugin_defaults)
+            item.update(plugin.data)
+            item.update(plugin.to_json())
 
-            self.item_model.update_with_state(state)
-            self.result_model.update_with_state(state)
+            item["itemType"] = "plugin"
+            item["isToggled"] = not plugin.order < 1
+            item["hasCompatible"] = True
 
-            def selectors():
-                for item in self.item_model.plugins:
-                    if item.order < 1:
-                        yield item, None
+            self.item_model.add_item(**item)
 
-            def on_finished():
-                state = self.host.state()
+        # Perform selection
+        for result in pyblish.logic.process(
+                plugins=[p for p in plugins if p.order < 1],
+                process=self.host.process,
+                context=self.host.context()):
 
-                self.item_model.update_with_state(state)
-                self.item_model.update_compatibility()
+            if isinstance(result, Exception):
+                self.error.emit("Got an exception: %s" % str(result))
+                continue
 
-                self.initialised.emit()
+            self.result_model.update_with_result(result)
 
-                util.timer_end("resetting..",
-                               "Spent %.2f ms resetting..")
+        # Append instances
+        for instance in self.host.context():
+            item = {}
+            item.update(models.item_defaults)
+            item.update(models.instance_defaults)
+            item.update(instance.to_json()["data"])
+            item.update(instance.to_json())
 
-            self.is_running = True
-            self.process_next(iterator=selectors(), on_finished=on_finished)
+            item["itemType"] = "instance"
+            item["isToggled"] = instance.data("publish", True)
+            item["hasCompatible"] = True
 
-        util.async(init, callback=on_finished)
+            self.item_model.add_item(**item)
+
+        # Compute compatibility
+        for plugin in self.item_model.plugins:
+            compatible = pyblish.logic.instances_by_plugin(context, plugin)
+            plugin.compatibleInstances = [getattr(i, "id") for i in compatible]
+
+        for instance in self.item_model.instances:
+            compatible = pyblish.logic.plugins_by_family(plugins,
+                                                         instance.family)
+            instance.compatiblePlugins = [getattr(i, "id") for i in compatible]
+
+        # Report statistics
+        request_count -= self.host.stats()["totalRequestCount"]
+        util.timer_end("resetting..", "Spent %.2f ms resetting")
+        util.echo("Made %i requests during reset." % abs(request_count))
+
+        self.initialised.emit()
 
     @QtCore.pyqtSlot(int)
     def repairPlugin(self, index):

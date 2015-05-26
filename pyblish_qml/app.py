@@ -10,9 +10,10 @@ import threading
 # Dependencies
 from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 
+import pyblish_rpc.client
+
 # Local libraries
 import util
-import rest
 import compat
 import control
 
@@ -91,6 +92,7 @@ class Application(QtGui.QGuiApplication):
         self.engine = engine
         self.controller = controller
         self.port = port
+        self.host = pyblish_rpc.client.Proxy(port)
 
         self.server_unresponsive.connect(self.on_server_unresponsive)
         self.show_signal.connect(self.show)
@@ -190,13 +192,11 @@ class Application(QtGui.QGuiApplication):
         def message_monitor():
             while True:
                 try:
-                    response = self.request("POST", "/client").json()
+                    message = self.host.push()
                 except Exception as e:
                     util.echo(getattr(e, "msg", str(e)))
                     self.server_unresponsive.emit()
                     break
-
-                message = response.get("message")
 
                 if message == "heartbeat":
                     timer["value"] = time.time()
@@ -235,9 +235,6 @@ class Application(QtGui.QGuiApplication):
             thread = threading.Thread(target=thread, name=thread.__name__)
             thread.daemon = True
             thread.start()
-
-    def request(self, *args, **kwargs):
-        return rest.request("http://127.0.0.1", self.port, *args, **kwargs)
 
 
 def main(port, source=None, pid=None,
@@ -285,30 +282,24 @@ in order to bypass validation.
         # log.setLevel(logging.INFO)
 
     if debug:
-        # When in debug-mode, launch an in-process
-        # server for Pyblish Endpoint.
-        host = rest.Host(port=port)
-        if not host.hello():
-            import mocking
-            import threading
-            import pyblish_endpoint.server
+        import pyblish_rpc.client
+        proxy = pyblish_rpc.client.Proxy(port)
 
-            os.environ["ENDPOINT_PORT"] = str(port)
+        if not proxy.ping():
+            util.echo("No existing client found, creating..")
+            import pyblish_rpc.server
+            os.environ["PYBLISH_CLIENT_PORT"] = str(port)
 
-            Service = mocking.MockService
-            # Service.SLEEP_DURATION = .1
+            thread = threading.Thread(
+                target=pyblish_rpc.server.start_debug_server,
+                kwargs={"port": port})
 
-            endpoint = threading.Thread(
-                target=pyblish_endpoint.server.start_production_server,
-                kwargs={"port": port, "service": Service})
-
-            endpoint.daemon = True
-            endpoint.start()
+            thread.daemon = True
+            thread.start()
 
             util.echo("Running debug app on port: %s" % port)
 
     util.echo("Starting Pyblish..")
-
     util.timer("application")
 
     app = Application(source or APP_PATH, port)
@@ -326,6 +317,7 @@ in order to bypass validation.
 
 
 if __name__ == "__main__":
+    proxy = pyblish_rpc.client.Proxy(6000)
     main(port=6000,
          pid=os.getpid(),
          preload=False,
