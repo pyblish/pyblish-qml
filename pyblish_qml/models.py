@@ -33,6 +33,7 @@ plugin_defaults = {
     "canRepairInstance": False,
     "canRepairContext": False,
     "compatibleInstances": list(),
+    "__pre11__": False,
 }
 
 instance_defaults = {
@@ -284,7 +285,6 @@ def PluginIterator(model):
         if not x.hasCompatible:
             continue
 
-        print "Yielding %s" % x.name
         yield x
 
 
@@ -296,7 +296,6 @@ def InstanceIterator(model):
         if not x.hasCompatible:
             continue
 
-        print "Yielding %s" % x.name
         yield x
 
 
@@ -306,8 +305,8 @@ class ItemModel(AbstractModel):
         self.plugins = util.ItemList(key="name")
         self.instances = util.ItemList(key="name")
 
-    # @QtCore.pyqtSlot(QtCore.QVariant)
-    def add_item(self, **item):
+    @QtCore.pyqtSlot(QtCore.QVariant)
+    def add_item(self, item):
         item = super(ItemModel, self).add_item(**item)
         type = item.itemType
 
@@ -322,38 +321,31 @@ class ItemModel(AbstractModel):
 
         return item
 
-    def update_with_state(self, state):
-        self.reset()
+    @QtCore.pyqtSlot(QtCore.QVariant)
+    def add_plugin(self, plugin):
+        item = {}
+        item.update(item_defaults)
+        item.update(plugin_defaults)
+        item.update(plugin.data)
+        item.update(plugin.to_json())
 
-        plugins = state.get("plugins", list())
-        context = state.get("context", dict(children=list()))
+        item["itemType"] = "plugin"
+        item["isToggled"] = not plugin.order < 1
+        item["hasCompatible"] = True
+        self.add_item(item)
 
-        for plugin in plugins:
-            properties = item_defaults.copy()
-            properties.update(plugin_defaults)
-            properties.update(plugin["data"])
-            properties["name"] = plugin["name"]
-            properties["itemType"] = "plugin"
+    @QtCore.pyqtSlot(QtCore.QVariant)
+    def add_instance(self, instance):
+        item = {}
+        item.update(item_defaults)
+        item.update(instance_defaults)
+        item.update(instance.to_json()["data"])
+        item.update(instance.to_json())
 
-            if properties["order"] < 1:
-                properties["isToggled"] = False
-
-            if properties.get("doc"):
-                properties["doc"] = util.format_text(properties.get("doc"))
-
-            self.add_item(**properties)
-
-        for instance in context["children"]:
-            properties = item_defaults.copy()
-            properties.update(instance_defaults)
-            properties.update(instance.get("data", {}))
-            properties["name"] = instance["name"]
-            properties["itemType"] = "instance"
-
-            if properties.get("publish") is False:
-                properties["isToggled"] = False
-
-            self.add_item(**properties)
+        item["itemType"] = "instance"
+        item["isToggled"] = instance.data("publish", True)
+        item["hasCompatible"] = True
+        self.add_item(item)
 
     def update_current(self, pair):
         """Update the currently processing pair
@@ -392,12 +384,13 @@ class ItemModel(AbstractModel):
             item.isProcessing = False
 
         for type in ("instance", "plugin"):
-            name = result[type]["name"]
-            item = self.items.get(name)
+            obj = result[type]
 
-            if not item:
+            if not obj:
                 assert type == "instance"
                 continue
+
+            item = self.items.get(obj["name"])
 
             item.isProcessing = True
             item.currentProgress = 1
@@ -460,21 +453,6 @@ class ResultModel(AbstractModel):
             return super(ResultModel, self).add_item(**item_)
         finally:
             self.added.emit()
-
-    # def update_with_state(self, state):
-    #     self.reset()
-
-    #     data = state["context"]["data"]
-
-    #     properties = result_defaults.copy()
-    #     properties.update(data)
-    #     properties.update({
-    #         "type": "context",
-    #         "name": "Pyblish",
-    #         "filter": "Pyblish"
-    #     })
-
-    #     self.add_item(**properties)
 
     def update_with_result(self, result):
         parsed = self.parse_result(result)

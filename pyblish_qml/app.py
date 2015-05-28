@@ -282,22 +282,24 @@ in order to bypass validation.
         # log.setLevel(logging.INFO)
 
     if debug:
+        util.echo("Starting in debug-mode")
+        util.echo("Looking for server..")
         import pyblish_rpc.client
         proxy = pyblish_rpc.client.Proxy(port)
 
         if not proxy.ping():
-            util.echo("No existing client found, creating..")
+            util.echo("No existing server found, creating..")
             import pyblish_rpc.server
             os.environ["PYBLISH_CLIENT_PORT"] = str(port)
 
             thread = threading.Thread(
                 target=pyblish_rpc.server.start_debug_server,
                 kwargs={"port": port})
-
             thread.daemon = True
             thread.start()
 
-            util.echo("Running debug app on port: %s" % port)
+            util.echo("Debug server created successfully.")
+            util.echo("Listening on port: %s" % port)
 
     util.echo("Starting Pyblish..")
     util.timer("application")

@@ -1,8 +1,9 @@
-from .. import control
-from .. import models
+import pyblish.api
+
+from pyblish_qml import control
+from pyblish_qml import models
 
 import lib
-import data
 
 # Vendor libraries
 from nose.tools import *
@@ -10,24 +11,16 @@ from nose.tools import *
 from PyQt5 import QtTest
 
 
-class Controller(control.Controller):
-    def __init__(self):
-        super(Controller, self).__init__(port=6000)
-
-
 def _setup():
-    lib.setup()
+    lib._setup()
 
 
 def _teardown():
-    lib.teardown()
-    lib._plugins[:] = []
+    lib._teardown()
 
 
-def reset(plugins, controller=None):
-    lib._plugins[:] = plugins
-
-    c = controller or Controller()
+def reset(controller=None):
+    c = controller or control.Controller(lib.port)
 
     ready = QtTest.QSignalSpy(c.ready)
     finished = QtTest.QSignalSpy(c.finished)
@@ -45,7 +38,7 @@ def reset(plugins, controller=None):
     return c
 
 
-def publish(plugins, controller=None):
+def publish(controller=None):
     """Publish current state
 
     Argument:
@@ -53,8 +46,6 @@ def publish(plugins, controller=None):
         plugin (str): Name of plug-in to repair
 
     """
-
-    lib._plugins[:] = plugins
 
     c = controller or Controller()
 
@@ -70,7 +61,7 @@ def publish(plugins, controller=None):
     return c
 
 
-def repair_plugin(plugins, plugin, controller=None):
+def repair_plugin(plugin, controller=None):
     """Repair single plug-in
 
     Argument:
@@ -78,8 +69,6 @@ def repair_plugin(plugins, plugin, controller=None):
         plugin (str): Name of plug-in to repair
 
     """
-
-    lib._plugins[:] = plugins
 
     c = controller or Controller()
 
@@ -98,25 +87,38 @@ def repair_plugin(plugins, plugin, controller=None):
 @with_setup(_setup, _teardown)
 def test_reset():
     """Reset works"""
-    c = reset(["Selector1", "Validator1", "Extractor1"])
+
+    count = {"#": 0}
+
+    class Selector(pyblish.api.Selector):
+        def process(self, context):
+            instance = context.create_instance("MyInstance")
+            instance.set_data("family", "myFamily")
+            count["#"] += 1
+
+    class Validator(pyblish.api.Validator):
+        def process(self, instance):
+            count["#"] += 1
+
+    class Extractor(pyblish.api.Extractor):
+        def process(self, instance):
+            count["#"] += 1
+
+    plugins = [Selector, Validator, Extractor]
+
+    for plugin in plugins:
+        pyblish.api.register_plugin(plugin)
+
+    c = reset()
 
     # At this point, the item-model is populated with
     # a number of instances.
 
-    plugins = list()
-    for plugin in c.item_model.plugins:
-        plugins.append(plugin.name)
+    assert_true(all([p.name in c.item_model.plugins
+                    for p in [_p.name for _p in plugins]]))
 
-    assert_equals(plugins, lib._plugins)
-
-    selector = data.load(type=data.Plugin, name="Selector1")
-    expected_instances = selector["__instances__"]
-
-    instances = list()
-    for instance in c.item_model.instances:
-        instances.append(instance.name)
-
-    assert_equals(instances, expected_instances)
+    assert_equals(count["#"], 3)
+    assert_equals(len(c.host.context()), 1)
 
 
 @with_setup(_setup, _teardown)

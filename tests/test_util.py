@@ -1,6 +1,6 @@
 import time
 
-from .. import util
+from pyblish_qml import util
 
 import lib
 
