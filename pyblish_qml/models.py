@@ -143,6 +143,12 @@ class AbstractItem(QtCore.QObject):
     __metaclass__ = PropertyType
     __datachanged__ = QtCore.pyqtSignal(QtCore.QObject)
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return u"%s.%s(%r)" % (__name__, type(self).__name__, self.__str__())
+
 
 def Item(**kwargs):
     """Factory function for QAbstractListModel items

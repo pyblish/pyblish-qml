@@ -92,6 +92,13 @@ class Controller(QtCore.QObject):
         self.host = None
 
     def on_client_changed(self, port):
+        """Establish a connection with client
+
+        A client registers interest to QML. Once registered,
+        the target host is altered dynamically.
+
+        """
+
         self.host = pyblish_rpc.client.Proxy(port=port)
 
     def setup_statemachine(self):

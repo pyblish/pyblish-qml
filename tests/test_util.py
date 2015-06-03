@@ -8,7 +8,7 @@ import lib
 from nose.tools import *
 
 
-@with_setup(lib.setup)
+@with_setup(lib._setup)
 def test_async():
     """util.async works as expected"""
 
@@ -20,12 +20,12 @@ def test_async():
 
     def on_expensive_function(result):
         mutable["result"] = result
-        lib._app.quit()
+        lib.app.quit()
 
     qthread = util.async(expensive_function,
                          callback=on_expensive_function)
 
-    lib._app.exec_()
+    lib.app.exec_()
 
     assert_true(qthread.wait(200))
     assert_equals(mutable["result"], 5)

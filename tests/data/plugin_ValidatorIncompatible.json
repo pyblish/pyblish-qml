@@ -1,9 +1,0 @@
-{
-    "__fails__": false,
-
-    "data": {
-        "families": ["familyIncompatible"],
-        "order": 1,
-        "canProcessInstance": true
-    }
-}

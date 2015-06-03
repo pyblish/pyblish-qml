@@ -3,6 +3,9 @@ import threading
 
 import pyblish.api
 
+import pyblish_rpc.server
+import pyblish_rpc.service
+
 from PyQt5 import QtCore
 
 app = None
@@ -20,10 +23,8 @@ def _setup():
     if self.app is None:
         self.app = QtCore.QCoreApplication(sys.argv)
 
-    import pyblish_rpc.server
-    import pyblish_rpc.service
 
-    service = pyblish_rpc.service.MockRpcService(delay=0.001)
+    service = pyblish_rpc.service.RpcService()
     self.server = pyblish_rpc.server._server(self.port, service)
 
     self.thread = threading.Thread(target=self.server.serve_forever)
