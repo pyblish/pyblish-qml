@@ -1,5 +1,6 @@
 
 import time
+import collections
 
 # Dependencies
 from PyQt5 import QtCore
@@ -11,6 +12,7 @@ import pyblish.logic
 # Local libraries
 import util
 import models
+import pyblish_qml
 
 
 def pyqtConstantProperty(fget):
@@ -20,15 +22,7 @@ def pyqtConstantProperty(fget):
 
 
 class Controller(QtCore.QObject):
-    """Handle events coming from QML
-
-    Attributes:
-        error (str): [Signal] Outgoing error
-        info (str): [Signal] Outgoing message
-        processed (dict): [Signal] Finished results from processing
-        finished: [Signal] Upon finished publish
-
-    """
+    """Communicate with QML"""
 
     # PyQt Signals
     info = QtCore.pyqtSignal(str, arguments=["message"])
@@ -62,7 +56,7 @@ class Controller(QtCore.QObject):
     resultModel = pyqtConstantProperty(lambda self: self.result_model)
     resultProxy = pyqtConstantProperty(lambda self: self.result_proxy)
 
-    def __init__(self, port, parent=None):
+    def __init__(self, parent=None):
         super(Controller, self).__init__(parent)
 
         self._temp = [1, 2, 3, 4]
@@ -92,7 +86,12 @@ class Controller(QtCore.QObject):
 
         self.state_changed.connect(self.on_state_changed)
 
+        pyblish_qml.register_client_changed_callback(self.on_client_changed)
+
         # Connect to host
+        self.host = None
+
+    def on_client_changed(self, port):
         self.host = pyblish_rpc.client.Proxy(port=port)
 
     def setup_statemachine(self):
@@ -219,9 +218,13 @@ class Controller(QtCore.QObject):
         qindex = self.instance_proxy.index(index, 0, QtCore.QModelIndex())
         source_qindex = self.instance_proxy.mapToSource(qindex)
         source_index = source_qindex.row()
+        item = self.item_model.items[source_index]
 
-        self.__toggle_item(self.item_model, source_index)
-        # self.item_model.update_compatibility()
+        if item.optional:
+            self.__toggle_item(self.item_model, source_index)
+            self.item_model.update_compatibility()
+        else:
+            self.error.emit("Cannot toggle")
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def pluginData(self, index):
@@ -242,14 +245,12 @@ class Controller(QtCore.QObject):
         qindex = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
         source_qindex = self.plugin_proxy.mapToSource(qindex)
         source_index = source_qindex.row()
-
-        model = self.item_model
-        item = model.items[source_index]
+        item = self.item_model.items[source_index]
 
         if item.optional:
             self.__toggle_item(self.item_model, source_index)
         else:
-            self.error.emit("Plug-in is mandatory")
+            self.error.emit("Cannot toggle")
 
     @QtCore.pyqtSlot(str, str, str, str)
     def exclude(self, target, operation, role, value):
@@ -308,7 +309,7 @@ class Controller(QtCore.QObject):
 
     def echo(self, data):
         """Append `data` to result model"""
-        self.result_model.add_item(**data)
+        self.result_model.add_item(data)
 
     # Event handlers
 
@@ -390,83 +391,6 @@ class Controller(QtCore.QObject):
     # Slots
 
     @QtCore.pyqtSlot()
-    def publish(self):
-        if "ready" not in self.states:
-            self.error.emit("Not ready")
-            return
-
-        def generate_message(vars):
-            return ("Test data:\n" + "\n".join(["{0}={1}".format(k, v)
-                    for k, v in vars.iteritems()]))
-
-        self.publishing.emit()
-        self.is_running = True
-        self.save()
-
-        # Setup statistics
-        util.timer("publishing")
-        stats = {"requestCount": self.host.stats()["totalRequestCount"]}
-
-        # Get available items from host
-        plugins = self.host.discover()
-        context = self.host.context()
-
-        # Filter items in GUI with items from host
-        _plugins = [x.name for x in models.PluginIterator(self.item_model)]
-        _context = [x.name for x in models.InstanceIterator(self.item_model)]
-
-        plugins = [p for p in plugins if p.name in _plugins]
-        context[:] = [x for x in context if x.name in _context]
-
-        def on_next(result):
-            if not self.is_running:
-                return on_finished()
-
-            if isinstance(result, StopIteration):
-                return on_finished()
-
-            if isinstance(result, pyblish.logic.TestFailed):
-                msg = generate_message(result.vars)
-                self.error.emit(str(result))
-                self.echo({"type": "message", "message": msg})
-                return on_finished()
-
-            if isinstance(result, Exception):
-                self.error.emit("Unknown error occured; check terminal")
-                self.echo({"type": "message", "message": str(result)})
-                return on_finished()
-
-            self.update_with_result(result)
-
-            # Highlight upcoming pair
-            # next_plugin = pyblish.logic.process.next_plugin
-            # next_instance = pyblish.logic.process.next_instance
-            # pair = {"plugin": next_plugin.name,
-            #         "instance": getattr(next_instance, "name", None)}
-
-            # self.item_model.update_current(pair)
-
-            # Run next again
-            util.async(iterator.next, callback=on_next)
-
-        def on_finished():
-            self.is_running = False
-            self.finished.emit()
-            self.on_finished()
-
-            # Report statistics
-            stats["requestCount"] -= self.host.stats()["totalRequestCount"]
-            util.timer_end("publishing", "Spent %.2f ms resetting")
-            util.echo("Made %i requests during publish."
-                      % abs(stats["requestCount"]))
-
-        # # Publish
-        iterator = pyblish.logic.process(func=self.host.process,
-                                         plugins=plugins,
-                                         context=context)
-        util.async(iterator.next, callback=on_next)
-
-    @QtCore.pyqtSlot()
     def stop(self):
         self.is_running = False
         self.stopping.emit()
@@ -491,30 +415,18 @@ class Controller(QtCore.QObject):
         self.item_model.reset()
         self.result_model.reset()
         self.changes.clear()
+        self.host.reset()
 
         # Append Context
         context = self.host.context()
-
-        item = models.result_defaults.copy()
-        item.update(context.to_json()["data"])
-        item.update({
-            "type": "context",
-            "name": "Pyblish",
-            "filter": "Pyblish",
-        })
-        self.result_model.add_item(**item)
+        self.result_model.add_context(context)
 
         # Perform selection
         def on_next(result):
             if isinstance(result, StopIteration):
                 return on_finished()
 
-            if isinstance(result, pyblish.logic.TestFailed):
-                return on_finished()
-
-            if isinstance(result, Exception):
-                self.error.emit("Got an exception: %s" % str(result))
-                return on_finished()
+            assert not isinstance(result, Exception), result
 
             self.result_model.update_with_result(result)
             util.async(iterator.next, callback=on_next)
@@ -523,30 +435,25 @@ class Controller(QtCore.QObject):
             for plugin in plugins:
                 self.item_model.add_plugin(plugin)
 
-            for instance in self.host.context():
-                self.item_model.add_instance(instance)
+            context = self.host.context()
+            self.item_model.add_context(context)
 
-            # item = models.item_defaults.copy()
-            # item.update(models.instance_defaults)
-            # item.update(context.to_json()["data"])
-            # item["name"] = "Context"
-            # item["itemType"] = "instance"
-            # item["isToggled"] = True
-            # item["hasCompatible"] = True
-            # item["family"] = None
-            # self.item_model.add_item(**item)
+            for instance in context:
+                self.item_model.add_instance(instance)
 
             # Compute compatibility
             for plugin in self.item_model.plugins:
                 compatible = pyblish.logic.instances_by_plugin(context, plugin)
-                plugin.compatibleInstances = [
-                    getattr(i, "id") for i in compatible]
+                if plugin.contextEnabled:
+                    compatible += [type("Context", (object,), {"id": "Context"})]
+                plugin.compatibleInstances = [i.id for i in compatible]
 
             for instance in self.item_model.instances:
-                compatible = pyblish.logic.plugins_by_family(plugins,
-                                                             instance.family)
-                instance.compatiblePlugins = [
-                    getattr(i, "id") for i in compatible]
+                compatible = pyblish.logic.plugins_by_family(
+                    plugins, instance.family)
+                instance.compatiblePlugins = [i.id for i in compatible]
+
+            self.item_model.update_compatibility()
 
             # Report statistics
             stats["requestCount"] -= self.host.stats()["totalRequestCount"]
@@ -561,20 +468,16 @@ class Controller(QtCore.QObject):
 
         iterator = pyblish.logic.process(
                 func=self.host.process,
-                plugins=[p for p in plugins if p.order < 1],
-                context=self.host.context())
+                plugins=[p for p in plugins if 0 <= p.order < 1],
+                context=self.host.context)
 
         util.async(iterator.next, callback=on_next)
 
-    @QtCore.pyqtSlot(int)
-    def repairPlugin(self, index):
-        if "finished" not in self.states:
+    @QtCore.pyqtSlot()
+    def publish(self):
+        if "ready" not in self.states:
             self.error.emit("Not ready")
             return
-
-        def generate_message(vars):
-            return ("Test data:\n" + "\n".join(["{0}={1}".format(k, v)
-                    for k, v in vars.iteritems()]))
 
         self.publishing.emit()
         self.is_running = True
@@ -588,17 +491,84 @@ class Controller(QtCore.QObject):
         plugins = self.host.discover()
         context = self.host.context()
 
+        _plugins = [x.name for x in models.ItemIterator(self.item_model.plugins)]
+        _context = [x.name for x in models.ItemIterator(self.item_model.instances)]
+
+        plugins = [x for x in plugins if x.name in _plugins]
+        context = [x for x in context if x.name in _context]
+
+        iterator = pyblish.logic.process(func=self.host.process,
+                                         plugins=plugins,
+                                         context=context)
+
+        def on_next(result):
+            if isinstance(result, StopIteration):
+                return on_finished()
+
+            if not self.is_running:
+                return on_finished("Stopped")
+
+            if isinstance(result, pyblish.logic.TestFailed):
+                return on_finished("Stopped due to %s" % result)
+
+            if isinstance(result, Exception):
+                self.error.emit("Unknown error occured; check terminal")
+                self.echo({"type": "message", "message": str(result)})
+                return on_finished("Stopped due to unknown error")
+
+            self.update_with_result(result)
+
+            # TODO(marcus): Highlight upcoming pair
+
+            # Run next
+            util.async(iterator.next, callback=on_next)
+
+        def on_finished(message=None):
+            self.is_running = False
+            self.finished.emit()
+
+            if message:
+                self.echo({"message": message, "type": "message"})
+
+            # Report statistics
+            stats["requestCount"] -= self.host.stats()["totalRequestCount"]
+            util.timer_end("publishing", "Spent %.2f ms resetting")
+            util.echo("Made %i requests during publish."
+                      % abs(stats["requestCount"]))
+
+        # Publish
+        util.async(iterator.next, callback=on_next)
+
+    @QtCore.pyqtSlot(int)
+    def repairPlugin(self, index):
+        if "finished" not in self.states:
+            self.error.emit("Not ready")
+            return
+
+        self.publishing.emit()
+        self.is_running = True
+        self.save()
+
+        # Setup statistics
+        util.timer("publishing")
+        stats = {"requestCount": self.host.stats()["totalRequestCount"]}
+
+        # Get available items from host
+        plugins = collections.OrderedDict((p.name, p) for p in self.host.discover())
+        context = collections.OrderedDict((p.name, p) for p in self.host.context())
+
         # Filter items in GUI with items from host
         index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
         index = self.plugin_proxy.mapToSource(index)
         plugin = self.item_model.items[index.row()]
-        instances = [x.name for x in models.InstanceIterator(self.item_model)
-                     if x.hasError]
+        plugin.hasError = False
 
-        plugins = [p for p in plugins if p.name == plugin.name]
-        context[:] = [x for x in context if x.name in instances]
+        plugin = plugins[plugin.name]
 
-        assert len(plugins) == 1
+        iterator = pyblish.logic.process(
+            func=self.host.repair,
+            plugins=[plugin],
+            context=context.values())
 
         def on_next(result):
             if not self.is_running:
@@ -608,9 +578,7 @@ class Controller(QtCore.QObject):
                 return on_finished()
 
             if isinstance(result, pyblish.logic.TestFailed):
-                msg = generate_message(result.vars)
                 self.error.emit(str(result))
-                self.echo({"type": "message", "message": msg})
                 return on_finished()
 
             if isinstance(result, Exception):
@@ -626,7 +594,6 @@ class Controller(QtCore.QObject):
         def on_finished():
             self.is_running = False
             self.finished.emit()
-            self.on_finished()
 
             # Report statistics
             stats["requestCount"] -= self.host.stats()["totalRequestCount"]
@@ -634,38 +601,8 @@ class Controller(QtCore.QObject):
             util.echo("Made %i requests during publish."
                       % abs(stats["requestCount"]))
 
-        # Publish
-        iterator = pyblish.logic.process(func=self.host.repair,
-                                         plugins=plugins,
-                                         context=context)
+        # Reset state
         util.async(iterator.next, callback=on_next)
-
-        # if "finished" not in self.states:
-        #     return self.error.emit("Not ready")
-
-        # index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
-        # index = self.plugin_proxy.mapToSource(index)
-
-        # def iterator(plugin):
-        #     if plugin.canRepairContext:
-        #         yield plugin, None
-
-        #     for instance in self.item_model.instances:
-        #         if not instance.hasError:
-        #             continue
-
-        #         if instance.name not in plugin.compatibleInstances:
-        #             continue
-
-        #         yield plugin, instance
-
-        # self.publishing.emit()
-        # self.is_running = True
-
-        # plugin = self.item_model.items[index.row()]
-        # plugin.hasError = False
-
-        # self.repair_next(iterator=iterator(plugin))
 
     def update_with_result(self, result):
         self.item_model.update_with_result(result)

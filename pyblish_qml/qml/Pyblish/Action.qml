@@ -7,6 +7,9 @@ QtObject {
     property string name
 
     property string iconName
+    property real iconSize: 14
+    
+    property string tooltip
 
     property bool visible: true
 

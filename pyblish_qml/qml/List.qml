@@ -19,7 +19,7 @@ ListView {
     pixelAligned: true
 
     delegate: ListItem.StandardActions {
-        text: object.name
+        text: object.label || object.name
         active: object.optional
         checked: object.isToggled
 
@@ -44,6 +44,14 @@ ListView {
                 iconName: "wrench"
                 enabled: object.hasError && object.hasRepair ? true : false
                 onTriggered: actionTriggered(this, index)
+            },
+
+            Action {
+                name: "legacyWarning"
+                iconName: "exclamation-triangle"
+                iconSize: 12
+                tooltip: "This plug-in uses deprecated functionality"
+                enabled: object.pre11 ? true : false
             },
 
             Action {

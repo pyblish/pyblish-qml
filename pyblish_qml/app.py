@@ -4,18 +4,17 @@
 import os
 import sys
 import time
-import logging
 import threading
 
 # Dependencies
 from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 
-import pyblish_rpc.client
-
 # Local libraries
 import util
 import compat
+import server
 import control
+import pyblish_qml
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
@@ -43,14 +42,14 @@ class Window(QtQuick.QQuickView):
             modifiers = self.parent.queryKeyboardModifiers()
             shift_pressed = QtCore.Qt.ShiftModifier & modifiers
 
-            if shift_pressed:
+            if hasattr(self.parent, "__debugging__"):
+                event.accept()
+
+            elif shift_pressed:
                 event.accept()
 
             elif "publishing" in self.parent.controller.states:
                 event.ignore()
-
-            elif not self.parent.keep_alive:
-                event.accept()
 
             else:
                 event.ignore()
@@ -67,12 +66,13 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    server_unresponsive = QtCore.pyqtSignal()
-    show_signal = QtCore.pyqtSignal()
+    show_signal = QtCore.pyqtSignal(int)
+    hide_signal = QtCore.pyqtSignal()
     quit_signal = QtCore.pyqtSignal()
-    keep_alive = False
+    app_message = QtCore.pyqtSignal(str)
+    standalone_signal = QtCore.pyqtSignal()
 
-    def __init__(self, source, port):
+    def __init__(self, source):
         super(Application, self).__init__(sys.argv)
 
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
@@ -83,7 +83,7 @@ class Application(QtGui.QGuiApplication):
         engine = window.engine()
         engine.addImportPath(QML_IMPORT_DIR)
 
-        controller = control.Controller(port)
+        controller = control.Controller()
 
         context = engine.rootContext()
         context.setContextProperty("app", controller)
@@ -91,11 +91,12 @@ class Application(QtGui.QGuiApplication):
         self.window = window
         self.engine = engine
         self.controller = controller
-        self.port = port
-        self.host = pyblish_rpc.client.Proxy(port)
+        self.clients = dict()
 
-        self.server_unresponsive.connect(self.on_server_unresponsive)
         self.show_signal.connect(self.show)
+        self.hide_signal.connect(self.hide)
+        self.quit_signal.connect(self.quit)
+        self.standalone_signal.connect(self.on_standalone)
 
         window.setSource(QtCore.QUrl.fromLocalFile(source))
 
@@ -103,22 +104,42 @@ class Application(QtGui.QGuiApplication):
         if status == QtQuick.QQuickView.Error:
             self.quit()
 
-    def show(self):
+    def register_heartbeat(self, port):
+        if port not in self.clients:
+            self.register_client(port)
+        self.clients[port]["lastSeen"] = time.time()
+
+    def register_client(self, port):
+        self.clients[port] = {
+            "lastSeen": time.time()
+        }
+
+    def deregister_client(self, port):
+        self.clients.pop(port)
+
+    def show(self, port):
         """Display GUI
 
         Once the QML interface has been loaded, use this
         to display it.
 
+        Arguments:
+            port (int, optional): Client asking to show GUI.
+                If no port is passed, the GUI cannot do anything.
+
         """
 
         window = self.window
 
-        previously_hidden = False
-        if not window.isVisible():
-            previously_hidden = True
+        previously_hidden = not window.isVisible()
 
         window.requestActivate()
         window.showNormal()
+
+        new_client = False
+        if pyblish_qml.current_port() != port:
+            new_client = True
+            pyblish_qml.set_current_port(port)
 
         if os.name == "nt":
             # Work-around for window appearing behind
@@ -127,7 +148,7 @@ class Application(QtGui.QGuiApplication):
             window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
             window.setFlags(previous_flags)
 
-        if previously_hidden:
+        if previously_hidden or new_client:
             # Give statemachine enough time to boot up
             if not any(state in self.controller.states
                        for state in ["ready", "finished"]):
@@ -153,96 +174,56 @@ class Application(QtGui.QGuiApplication):
 
         """
 
-        # self.controller.hide.emit()
         self.window.hide()
 
-    def on_server_unresponsive(self):
-        """Handle server unresponsive events"""
-
-        util.echo("Server unresponsive; shutting down")
-
-        self.quit()
+    def on_standalone(self):
+        """The process is running solo"""
+        self.app_message.emit("Running standalone")
+        if not hasattr(self, "__debugging__"):
+            print "Quitting due to loneliness"
+            time.sleep(1)
+            self.quit()
 
     def listen(self):
         """Listen on incoming messages from host
 
-        Two types of messages are handled here;
-            1. Heartbeat
-            2. Not heartbeat
-
-        In the event of a heartbeat not being received on-time,
-        the application is notified that the server might be
-        unresponsive.
-
-        Any other event is handled separately.
-
         Usage:
-            >> from pyblish_endpoint import client
-            >> client.request("show")  # Show a hidden GUI
-            >> client.request("close")  # Close GUI permanently
-            >> client.request("kill")  # Close GUI forcefully (careful)
+            >> from pyblish_qml import client
+            >> proxy = client.proxy()
+            >> proxy.show()   # Show a hidden GUI
+            >> proxy.close()  # Close GUI permanently
+            >> proxy.kill()   # Close GUI forcefully (careful)
 
         """
 
-        timer = {"time": 0,
-                 "count": 0,
-                 "interval": 1,
-                 "intervals_before_death": 2}
-
-        def message_monitor():
-            while True:
-                try:
-                    message = self.host.push()
-                except Exception as e:
-                    util.echo(getattr(e, "msg", str(e)))
-                    self.server_unresponsive.emit()
-                    break
-
-                if message == "heartbeat":
-                    timer["value"] = time.time()
-                    timer["count"] += 1
-
-                elif message == "show":
-                    self.show_signal.emit()
-
-                elif message == "close":
-                    self.quit_signal.emit()
-
-                elif message == "kill":
-                    util.echo(
-                        "Kill message received from "
-                        "server, shutting down NOW!")
-                    os._exit(1)
-
-                else:
-                    self.controller.info.emit(
-                        "Unhandled incoming message: \"%s\""
-                        % message)
-
-                # NOTE(marcus): If we don't sleep, signals get trapped
-                # TODO(marcus): Find a way around that.
-                time.sleep(0.1)
-
         def heartbeat_monitor():
             while True:
-                time.sleep(timer["interval"])
-                if timer["time"] > (timer["interval"] *
-                                    timer["intervals_before_death"]):
-                    util.echo("Timer interval elapsed")
-                    self.server_unresponsive.emit()
+                time.sleep(5)
+                for client, data in self.clients.copy().iteritems():
+                    if data["lastSeen"] < time.time() - 5:
+                        print "Bye bye %s!" % client
+                        self.clients.pop(client)
 
-        for thread in (message_monitor, heartbeat_monitor):
-            thread = threading.Thread(target=thread, name=thread.__name__)
-            thread.daemon = True
-            thread.start()
+                if not self.clients:
+                    self.standalone_signal.emit()
+
+        kwargs = {
+            "port": 9090,
+            "service": server.QmlApi(self),
+        }
+
+        rpc_worker = threading.Thread(target=server._serve, kwargs=kwargs)
+        heartbeat_worker = threading.Thread(target=heartbeat_monitor)
+
+        for worker in (rpc_worker, heartbeat_worker):
+            worker.daemon = True
+            worker.start()
 
 
-def main(port, source=None, pid=None,
-         preload=False, debug=False, validate=True):
+def main(source=None, debug=False, validate=True):
     """Start the Qt-runtime and show the window
 
     Arguments:
-        port (int): Port through which to communicate
         source (str): QML entry-point
         pid (int, optional): Process id of parent process. Deprecated
         preload (bool, optional): Load in backgrund. Defaults to False
@@ -265,52 +246,35 @@ in order to bypass validation.
     # Initialise OS compatiblity
     compat.main()
 
-    # Initialise logger for Endpoint
-    formatter = logging.Formatter(
-        '%(levelname)s - '
-        '%(name)s: '
-        '%(message)s',
-        '%H:%M:%S')
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
+    util.echo("Starting Pyblish..")
+    util.timer("application")
 
-    for logger in ("endpoint", "werkzeug"):
-        log = logging.getLogger(logger)
-        log.handlers[:] = []
-        log.addHandler(stream_handler)
-        log.setLevel(logging.DEBUG)
-        # log.setLevel(logging.INFO)
+    app = Application(source or APP_PATH)
+    app.listen()
 
     if debug:
+        app.__debugging__ = True
+
         util.echo("Starting in debug-mode")
         util.echo("Looking for server..")
         import pyblish_rpc.client
-        proxy = pyblish_rpc.client.Proxy(port)
+        proxy = pyblish_rpc.client.Proxy(6000)
 
         if not proxy.ping():
             util.echo("No existing server found, creating..")
             import pyblish_rpc.server
-            os.environ["PYBLISH_CLIENT_PORT"] = str(port)
+            os.environ["PYBLISH_CLIENT_PORT"] = str(6000)
 
             thread = threading.Thread(
                 target=pyblish_rpc.server.start_debug_server,
-                kwargs={"port": port})
+                kwargs={"port": 6000})
             thread.daemon = True
             thread.start()
 
             util.echo("Debug server created successfully.")
-            util.echo("Listening on port: %s" % port)
+            util.echo("Listening on port: %s" % 6000)
 
-    util.echo("Starting Pyblish..")
-    util.timer("application")
-
-    app = Application(source or APP_PATH, port)
-
-    app.keep_alive = not debug
-    app.listen()
-
-    if not preload:
-        app.show_signal.emit()
+        app.show_signal.emit(6000)
 
     util.timer_end("application",
                    "Spent %.2f ms creating the application")
@@ -319,9 +283,5 @@ in order to bypass validation.
 
 
 if __name__ == "__main__":
-    proxy = pyblish_rpc.client.Proxy(6000)
-    main(port=6000,
-         pid=os.getpid(),
-         preload=False,
-         debug=True,
+    main(debug=True,
          validate=False)

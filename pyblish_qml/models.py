@@ -15,11 +15,11 @@ item_defaults = {
     "duration": 0,  # Time (ms) to process pair
     "finishedAt": 0,  # Time (s) when finished
     "amountPassed": 0,  # Number of plug-ins/instances passed
-    "amountFailed": 0  # Number of plug-ins/instances failed
+    "amountFailed": 0,  # Number of plug-ins/instances failed
+    "optional": False,
 }
 
 plugin_defaults = {
-    "optional": False,
     "doc": "",
     "order": None,
     "hasRepair": False,
@@ -28,15 +28,14 @@ plugin_defaults = {
     "hosts": list(),
     "type": "unknown",
     "module": "unknown",
-    "canProcessContext": False,
-    "canProcessInstance": False,
-    "canRepairInstance": False,
-    "canRepairContext": False,
     "compatibleInstances": list(),
-    "__pre11__": False,
+    "contextEnabled": False,
+    "instanceEnabled": False,
+    "pre11": True,
 }
 
 instance_defaults = {
+    "optional": True,
     "family": "default",
     "niceName": "default",
     "compatiblePlugins": list(),
@@ -194,7 +193,7 @@ class AbstractModel(QtCore.QAbstractListModel):
     def item(self, index):
         return self.items[index]
 
-    def add_item(self, **item):
+    def add_item(self, item):
         """Add new item to model
 
         Each keyword argument is passed to the :func:Item
@@ -245,58 +244,15 @@ class AbstractModel(QtCore.QAbstractListModel):
         self.endResetModel()
 
 
-def ItemIterator(model):
-    """Item iterator
-
-    Yields items to be processed based on their
-    current state.
-
-    Yields:
-        tuple: (plugin, instance)
-
-    """
-
-    for plugin in model.plugins:
-        if not plugin.isToggled:
+def ItemIterator(items):
+    for i in items:
+        if not i.isToggled:
             continue
 
-        if not plugin.hasCompatible:
+        if not i.hasCompatible:
             continue
 
-        if not model.instances:
-            yield plugin, None
-
-        else:
-            for instance in model.instances:
-                if not instance.isToggled:
-                    continue
-
-                if instance.name not in plugin.compatibleInstances:
-                    continue
-
-                yield plugin, instance
-
-
-def PluginIterator(model):
-    for x in model.plugins:
-        if not x.isToggled:
-            continue
-
-        if not x.hasCompatible:
-            continue
-
-        yield x
-
-
-def InstanceIterator(model):
-    for x in model.instances:
-        if not x.isToggled:
-            continue
-
-        if not x.hasCompatible:
-            continue
-
-        yield x
+        yield i
 
 
 class ItemModel(AbstractModel):
@@ -306,33 +262,22 @@ class ItemModel(AbstractModel):
         self.instances = util.ItemList(key="name")
 
     @QtCore.pyqtSlot(QtCore.QVariant)
-    def add_item(self, item):
-        item = super(ItemModel, self).add_item(**item)
-        type = item.itemType
-
-        if type == "plugin":
-            self.plugins.append(item)
-
-        elif type == "instance":
-            self.instances.append(item)
-
-        else:
-            raise TypeError("item not instance nore plug-in")
-
-        return item
-
-    @QtCore.pyqtSlot(QtCore.QVariant)
     def add_plugin(self, plugin):
         item = {}
         item.update(item_defaults)
         item.update(plugin_defaults)
-        item.update(plugin.data)
-        item.update(plugin.to_json())
 
+        plugin = plugin.to_json()
+        for member in plugin["__all__"]:
+            item[member] = plugin[member]
+
+        # Append GUI-only data
         item["itemType"] = "plugin"
-        item["isToggled"] = not plugin.order < 1
+        item["isToggled"] = not (0 <= plugin["order"] < 1)  # Not selectors
         item["hasCompatible"] = True
-        self.add_item(item)
+
+        item = self.add_item(item)
+        self.plugins.append(item)
 
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_instance(self, instance):
@@ -345,7 +290,25 @@ class ItemModel(AbstractModel):
         item["itemType"] = "instance"
         item["isToggled"] = instance.data("publish", True)
         item["hasCompatible"] = True
-        self.add_item(item)
+
+        item = self.add_item(item)
+        self.instances.append(item)
+
+    @QtCore.pyqtSlot(QtCore.QVariant)
+    def add_context(self, context):
+        item = {}
+        item.update(item_defaults)
+        item.update(instance_defaults)
+
+        item["family"] = None
+        item["name"] = "Context"
+        item["itemType"] = "instance"
+        item["isToggled"] = True
+        item["optional"] = False
+        item["hasCompatible"] = True
+
+        item = self.add_item(item)
+        self.instances.append(item)
 
     def update_current(self, pair):
         """Update the currently processing pair
@@ -384,13 +347,12 @@ class ItemModel(AbstractModel):
             item.isProcessing = False
 
         for type in ("instance", "plugin"):
-            obj = result[type]
+            name = (result[type] or {}).get("name")
 
-            if not obj:
-                assert type == "instance"
-                continue
+            if not name:
+                name = "Context"
 
-            item = self.items.get(obj["name"])
+            item = self.items.get(name)
 
             item.isProcessing = True
             item.currentProgress = 1
@@ -445,14 +407,24 @@ class ResultModel(AbstractModel):
 
     added = QtCore.pyqtSignal()
 
-    def add_item(self, **item):
+    def add_item(self, item):
         item_ = result_defaults.copy()
         item_.update(item)
 
         try:
-            return super(ResultModel, self).add_item(**item_)
+            return super(ResultModel, self).add_item(item_)
         finally:
             self.added.emit()
+
+    def add_context(self, context):
+        item = result_defaults.copy()
+        item.update(context.to_json()["data"])
+        item.update({
+            "type": "context",
+            "name": "Pyblish",
+            "filter": "Pyblish",
+        })
+        self.add_item(item)
 
     def update_with_result(self, result):
         parsed = self.parse_result(result)
@@ -464,15 +436,15 @@ class ResultModel(AbstractModel):
 
         if getattr(self, "_last_plugin", None) != plugin["plugin"]:
             self._last_plugin = plugin["plugin"]
-            self.add_item(**plugin)
+            self.add_item(plugin)
 
-        self.add_item(**instance)
+        self.add_item(instance)
 
         for record in records:
-            self.add_item(**record)
+            self.add_item(record)
 
         if error is not None:
-            self.add_item(**error)
+            self.add_item(error)
 
     def parse_result(self, result):
         plugin_name = result["plugin"]["name"]

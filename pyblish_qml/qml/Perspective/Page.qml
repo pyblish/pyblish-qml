@@ -90,7 +90,7 @@ Item {
                 // }
 
                 Gadget {
-                    title: item.name
+                    title: item.label || item.name
                     subheading: item.family || "Plug-in"
                     duration: item.duration
                     finishedAt: item.finishedAt

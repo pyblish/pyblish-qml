@@ -4,8 +4,11 @@ Changelog
 Version 0.2.10
 --------------
 
+- Feature: Talkback (see #95)
+- Feature: Shared instance (see #96)
+- Feature: Context visible in list of items
 - API: Added Pyblish.Graphs module
-- API: Pyblish.Graphs.Timeline contributed by @madoodia
+- Known issue: Inactive plug-ins appear to process
 
 Version 0.2.9
 -------------
