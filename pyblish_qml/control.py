@@ -451,7 +451,7 @@ class Controller(QtCore.QObject):
             # Compute compatibility
             for plugin in self.item_model.plugins:
                 compatible = pyblish.logic.instances_by_plugin(context, plugin)
-                if plugin.contextEnabled:
+                if not plugin.instanceEnabled:
                     compatible += [type("Context", (object,), {"id": "Context"})]
                 plugin.compatibleInstances = [i.id for i in compatible]
 
