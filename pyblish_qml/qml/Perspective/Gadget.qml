@@ -134,7 +134,7 @@ View {
                     text: title
                     style: "subheading"
                     font.weight: Font.Bold
-                    width: parent.width
+                    width: parent.width - parent.spacing * 4
                     elide: Text.ElideLeft
                     anchors.verticalCenter: parent.verticalCenter
                 }

@@ -15,11 +15,11 @@ item_defaults = {
     "duration": 0,  # Time (ms) to process pair
     "finishedAt": 0,  # Time (s) when finished
     "amountPassed": 0,  # Number of plug-ins/instances passed
-    "amountFailed": 0  # Number of plug-ins/instances failed
+    "amountFailed": 0,  # Number of plug-ins/instances failed
+    "optional": False,
 }
 
 plugin_defaults = {
-    "optional": False,
     "doc": "",
     "order": None,
     "hasRepair": False,
@@ -28,14 +28,14 @@ plugin_defaults = {
     "hosts": list(),
     "type": "unknown",
     "module": "unknown",
-    "canProcessContext": False,
-    "canProcessInstance": False,
-    "canRepairInstance": False,
-    "canRepairContext": False,
     "compatibleInstances": list(),
+    "contextEnabled": False,
+    "instanceEnabled": False,
+    "pre11": True,
 }
 
 instance_defaults = {
+    "optional": True,
     "family": "default",
     "niceName": "default",
     "compatiblePlugins": list(),
@@ -143,6 +143,12 @@ class AbstractItem(QtCore.QObject):
     __metaclass__ = PropertyType
     __datachanged__ = QtCore.pyqtSignal(QtCore.QObject)
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return u"%s.%s(%r)" % (__name__, type(self).__name__, self.__str__())
+
 
 def Item(**kwargs):
     """Factory function for QAbstractListModel items
@@ -193,7 +199,7 @@ class AbstractModel(QtCore.QAbstractListModel):
     def item(self, index):
         return self.items[index]
 
-    def add_item(self, **item):
+    def add_item(self, item):
         """Add new item to model
 
         Each keyword argument is passed to the :func:Item
@@ -244,38 +250,15 @@ class AbstractModel(QtCore.QAbstractListModel):
         self.endResetModel()
 
 
-def ItemIterator(model):
-    """Item iterator
-
-    Yields items to be processed based on their
-    current state.
-
-    Yields:
-        tuple: (plugin, instance)
-
-    """
-
-    for plugin in model.plugins:
-        if not plugin.isToggled:
+def ItemIterator(items):
+    for i in items:
+        if not i.isToggled:
             continue
 
-        if not plugin.hasCompatible:
+        if not i.hasCompatible:
             continue
 
-        if plugin.canProcessContext:
-            yield plugin, None
-
-        if not plugin.canProcessInstance:
-            continue
-
-        for instance in model.instances:
-            if not instance.isToggled:
-                continue
-
-            if instance.name not in plugin.compatibleInstances:
-                continue
-
-            yield plugin, instance
+        yield i
 
 
 class ItemModel(AbstractModel):
@@ -284,53 +267,54 @@ class ItemModel(AbstractModel):
         self.plugins = util.ItemList(key="name")
         self.instances = util.ItemList(key="name")
 
-    def add_item(self, **item):
-        item = super(ItemModel, self).add_item(**item)
-        type = item.itemType
+    @QtCore.pyqtSlot(QtCore.QVariant)
+    def add_plugin(self, plugin):
+        item = {}
+        item.update(item_defaults)
+        item.update(plugin_defaults)
 
-        if type == "plugin":
-            self.plugins.append(item)
+        plugin = plugin.to_json()
+        for member in plugin["__all__"]:
+            item[member] = plugin[member]
 
-        elif type == "instance":
-            self.instances.append(item)
+        # Append GUI-only data
+        item["itemType"] = "plugin"
+        item["isToggled"] = not (0 <= plugin["order"] < 1)  # Not selectors
+        item["hasCompatible"] = True
 
-        else:
-            raise TypeError("item not instance nore plug-in")
+        item = self.add_item(item)
+        self.plugins.append(item)
 
-        return item
+    @QtCore.pyqtSlot(QtCore.QVariant)
+    def add_instance(self, instance):
+        item = {}
+        item.update(item_defaults)
+        item.update(instance_defaults)
+        item.update(instance.to_json()["data"])
+        item.update(instance.to_json())
 
-    def update_with_state(self, state):
-        self.reset()
+        item["itemType"] = "instance"
+        item["isToggled"] = instance.data("publish", True)
+        item["hasCompatible"] = True
 
-        plugins = state.get("plugins", list())
-        context = state.get("context", dict(children=list()))
+        item = self.add_item(item)
+        self.instances.append(item)
 
-        for plugin in plugins:
-            properties = item_defaults.copy()
-            properties.update(plugin_defaults)
-            properties.update(plugin["data"])
-            properties["name"] = plugin["name"]
-            properties["itemType"] = "plugin"
+    @QtCore.pyqtSlot(QtCore.QVariant)
+    def add_context(self, context):
+        item = {}
+        item.update(item_defaults)
+        item.update(instance_defaults)
 
-            if properties["order"] < 1:
-                properties["isToggled"] = False
+        item["family"] = None
+        item["name"] = "Context"
+        item["itemType"] = "instance"
+        item["isToggled"] = True
+        item["optional"] = False
+        item["hasCompatible"] = True
 
-            if properties.get("doc"):
-                properties["doc"] = util.format_text(properties.get("doc"))
-
-            self.add_item(**properties)
-
-        for instance in context["children"]:
-            properties = item_defaults.copy()
-            properties.update(instance_defaults)
-            properties.update(instance.get("data", {}))
-            properties["name"] = instance["name"]
-            properties["itemType"] = "instance"
-
-            if properties.get("publish") is False:
-                properties["isToggled"] = False
-
-            self.add_item(**properties)
+        item = self.add_item(item)
+        self.instances.append(item)
 
     def update_current(self, pair):
         """Update the currently processing pair
@@ -369,12 +353,12 @@ class ItemModel(AbstractModel):
             item.isProcessing = False
 
         for type in ("instance", "plugin"):
-            name = result[type]
-            item = self.items.get(name)
+            name = (result[type] or {}).get("name")
 
-            if not item:
-                assert type == "instance"
-                continue
+            if not name:
+                name = "Context"
+
+            item = self.items.get(name)
 
             item.isProcessing = True
             item.currentProgress = 1
@@ -429,26 +413,24 @@ class ResultModel(AbstractModel):
 
     added = QtCore.pyqtSignal()
 
-    def add_item(self, **item):
+    def add_item(self, item):
+        item_ = result_defaults.copy()
+        item_.update(item)
+
         try:
-            return super(ResultModel, self).add_item(**item)
+            return super(ResultModel, self).add_item(item_)
         finally:
             self.added.emit()
 
-    def update_with_state(self, state):
-        self.reset()
-
-        data = state["context"]["data"]
-
-        properties = result_defaults.copy()
-        properties.update(data)
-        properties.update({
+    def add_context(self, context):
+        item = result_defaults.copy()
+        item.update(context.to_json()["data"])
+        item.update({
             "type": "context",
             "name": "Pyblish",
-            "filter": "Pyblish"
+            "filter": "Pyblish",
         })
-
-        self.add_item(**properties)
+        self.add_item(item)
 
     def update_with_result(self, result):
         parsed = self.parse_result(result)
@@ -460,35 +442,41 @@ class ResultModel(AbstractModel):
 
         if getattr(self, "_last_plugin", None) != plugin["plugin"]:
             self._last_plugin = plugin["plugin"]
-            self.add_item(**plugin)
+            self.add_item(plugin)
 
-        self.add_item(**instance)
+        self.add_item(instance)
 
         for record in records:
-            self.add_item(**record)
+            self.add_item(record)
 
         if error is not None:
-            self.add_item(**error)
+            self.add_item(error)
 
     def parse_result(self, result):
+        plugin_name = result["plugin"]["name"]
+
+        try:
+            instance_name = result["instance"]["name"]
+        except:
+            instance_name = None
+
         plugin_msg = {
             "type": "plugin",
-            "message": result["plugin"],
-            "filter": result["plugin"],
-            "doc": result["doc"],
+            "message": plugin_name,
+            "filter": plugin_name,
 
-            "plugin": result["plugin"],
-            "instance": result["instance"]
+            "plugin": plugin_name,
+            "instance": instance_name
         }
 
         instance_msg = {
             "type": "instance",
-            "message": result["instance"],
-            "filter": result["instance"],
+            "message": instance_name or "Context",
+            "filter": instance_name,
             "duration": result["duration"],
 
-            "plugin": result["plugin"],
-            "instance": result["instance"]
+            "plugin": plugin_name,
+            "instance": instance_name
         }
 
         record_msgs = list()
@@ -498,8 +486,8 @@ class ResultModel(AbstractModel):
             record["filter"] = record["message"]
             record["message"] = util.format_text(str(record["message"]))
 
-            record["plugin"] = result["plugin"]
-            record["instance"] = result["instance"]
+            record["plugin"] = plugin_name
+            record["instance"] = instance_name
 
             record_msgs.append(record)
 
@@ -508,8 +496,8 @@ class ResultModel(AbstractModel):
             "message": "No error",
             "filter": "",
 
-            "plugin": result["plugin"],
-            "instance": result["instance"]
+            "plugin": plugin_name,
+            "instance": instance_name
         }
 
         error_msg = None
@@ -520,8 +508,8 @@ class ResultModel(AbstractModel):
             error["message"] = util.format_text(error["message"])
             error["filter"] = error["message"]
 
-            error["plugin"] = result["plugin"]
-            error["instance"] = result["instance"]
+            error["plugin"] = plugin_name
+            error["instance"] = instance_name
 
             error_msg = error
 
@@ -694,6 +682,10 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 
         return super(ProxyModel, self).filterAcceptsRow(
             source_row, source_parent)
+
+    @QtCore.pyqtSlot(result=int)
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return super(ProxyModel, self).rowCount(parent)
 
 
 class InstanceProxy(ProxyModel):

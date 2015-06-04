@@ -13,6 +13,7 @@ Item {
     property alias status: indicator.status
 
     property alias text: label.text
+    // property alias tag: tag.name
 
     property int margins: 5
 
@@ -72,8 +73,9 @@ Item {
             
             AwesomeButton {
                 action: modelData
-                size: 14
+                size: action.iconSize
                 visible: action.enabled
+                tooltip: action.tooltip
             }
         }
     }
