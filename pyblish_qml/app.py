@@ -272,7 +272,7 @@ in order to bypass validation.
             thread.start()
 
             util.echo("Debug server created successfully.")
-            util.echo("Listening on port: %s" % 6000)
+            util.echo("Running mocked RPC server @ 127.0.0.1:%s" % 6000)
 
         app.show_signal.emit(6000)
 
