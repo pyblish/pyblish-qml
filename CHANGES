@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Version 0.2.11
+--------------
+
+- Added support for Pyblish RPC 0.1.1
+
 Version 0.2.10
 --------------
 

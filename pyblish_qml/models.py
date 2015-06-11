@@ -36,7 +36,7 @@ plugin_defaults = {
 
 instance_defaults = {
     "optional": True,
-    "family": "default",
+    "family": None,
     "niceName": "default",
     "compatiblePlugins": list(),
 }
