@@ -7,6 +7,8 @@ Item {
 
     z: 2
 
+    clip: true
+
     /*!
        Optional tooltip to be displayed when
        hovering this component

@@ -32,10 +32,6 @@ BaseDelegate {
                     "value": object.pythonVersion.split(" ")[0]
                 },
                 {
-                    "key": "Endpoint",
-                    "value": object.endpointVersion
-                },
-                {
                     "key": "Port",
                     "value": object.port
                 },
