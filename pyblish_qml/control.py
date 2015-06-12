@@ -433,14 +433,20 @@ class Controller(QtCore.QObject):
             if isinstance(result, StopIteration):
                 return on_finished()
 
-            assert not isinstance(result, Exception), result
+            if isinstance(result, Exception):
+                self.error.emit("Unknown error occured; check terminal")
+                self.echo({"type": "message", "message": str(result)})
+                return on_finished("Stopped resetting due to unknown result, check your test?")
 
             self.result_model.update_with_result(result)
             util.async(iterator.next, callback=on_next)
 
-        def on_finished():
+        def on_finished(message=None):
             for plugin in plugins:
                 self.item_model.add_plugin(plugin)
+
+            if message:
+                self.echo({"message": message, "type": "message"})
 
             context = self.host.context()
             self.item_model.add_context(context)
@@ -476,7 +482,8 @@ class Controller(QtCore.QObject):
         iterator = pyblish.logic.process(
                 func=self.host.process,
                 plugins=[p for p in plugins if 0 <= p.order < 1],
-                context=self.host.context)
+                context=self.host.context,
+                test=self.host.test)
 
         util.async(iterator.next, callback=on_next)
 
@@ -506,7 +513,8 @@ class Controller(QtCore.QObject):
 
         iterator = pyblish.logic.process(func=self.host.process,
                                          plugins=plugins,
-                                         context=context)
+                                         context=context,
+                                         test=self.host.test)
 
         def on_next(result):
             if isinstance(result, StopIteration):
@@ -575,7 +583,8 @@ class Controller(QtCore.QObject):
         iterator = pyblish.logic.process(
             func=self.host.repair,
             plugins=[plugin],
-            context=context.values())
+            context=context.values(),
+            test=self.host.test)
 
         def on_next(result):
             if not self.is_running:
