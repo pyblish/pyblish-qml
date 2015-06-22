@@ -135,6 +135,8 @@ class Application(QtGui.QGuiApplication):
         if client_settings:
             # Apply client-side settings
             settings.from_dict(client_settings)
+            window.setWidth(client_settings["WindowSize"][0])
+            window.setHeight(client_settings["WindowSize"][1])
             window.setTitle(client_settings["WindowTitle"])
 
         previously_hidden = not window.isVisible()
@@ -282,7 +284,8 @@ in order to bypass validation.
 
         app.show_signal.emit(6000, {
             "ContextLabel": "The World",
-            "WindowTitle": "My Pyblish"
+            "WindowTitle": "My Pyblish",
+            "WindowSize": (430, 600)
         })
 
     else:
