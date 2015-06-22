@@ -69,6 +69,10 @@ BaseDelegate {
 
                     model: [
                         {
+                            "key": "Instance",
+                            "value": object.instance || "Context"
+                        },
+                        {
                             "key": "Levelname",
                             "value": object.levelname
                         },
