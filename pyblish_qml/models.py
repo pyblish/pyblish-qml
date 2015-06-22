@@ -359,9 +359,11 @@ class ItemModel(AbstractModel):
             name = (result[type] or {}).get("name")
 
             if not name:
-                name = "Context"
-
-            item = self.items.get(name)
+                # A name is not provided in cases where
+                # the Context has been processed.
+                item = self.instances[0]
+            else:
+                item = self.items.get(name)
 
             item.isProcessing = True
             item.currentProgress = 1
