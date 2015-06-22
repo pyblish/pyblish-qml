@@ -12,7 +12,8 @@ import pyblish.logic
 # Local libraries
 import util
 import models
-import pyblish_qml
+
+from pyblish_qml import settings
 
 
 def pyqtConstantProperty(fget):
@@ -86,7 +87,7 @@ class Controller(QtCore.QObject):
 
         self.state_changed.connect(self.on_state_changed)
 
-        pyblish_qml.register_client_changed_callback(self.on_client_changed)
+        settings.register_port_changed_callback(self.on_client_changed)
 
         # Connect to host
         self.host = None

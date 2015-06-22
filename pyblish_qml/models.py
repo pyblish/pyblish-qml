@@ -2,6 +2,7 @@ import time
 from PyQt5 import QtCore
 
 import util
+from pyblish_qml import settings
 
 item_defaults = {
     "name": "default",
@@ -301,13 +302,15 @@ class ItemModel(AbstractModel):
         self.instances.append(item)
 
     @QtCore.pyqtSlot(QtCore.QVariant)
-    def add_context(self, context):
+    def add_context(self, context, label=None):
         item = {}
         item.update(item_defaults)
         item.update(instance_defaults)
 
+        name = context.data("label") or settings.ContextLabel
+
         item["family"] = None
-        item["name"] = "Context"
+        item["name"] = name
         item["itemType"] = "instance"
         item["isToggled"] = True
         item["optional"] = False

@@ -14,7 +14,8 @@ import util
 import compat
 import server
 import control
-import pyblish_qml
+
+from pyblish_qml import settings
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
@@ -29,11 +30,11 @@ class Window(QtQuick.QQuickView):
         super(Window, self).__init__(None)
         self.parent = parent
 
-        self.setTitle("Pyblish")
+        self.setTitle(settings.WindowTitle)
         self.setResizeMode(self.SizeRootObjectToView)
 
-        self.setWidth(430)
-        self.setHeight(600)
+        self.setWidth(settings.WindowSize[0])
+        self.setHeight(settings.WindowSize[1])
         self.setMinimumSize(QtCore.QSize(430, 300))
 
     def event(self, event):
@@ -66,7 +67,7 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    show_signal = QtCore.pyqtSignal(int)
+    show_signal = QtCore.pyqtSignal(int, QtCore.QVariant)
     hide_signal = QtCore.pyqtSignal()
     quit_signal = QtCore.pyqtSignal()
     app_message = QtCore.pyqtSignal(str)
@@ -117,7 +118,7 @@ class Application(QtGui.QGuiApplication):
     def deregister_client(self, port):
         self.clients.pop(port)
 
-    def show(self, port):
+    def show(self, port, client_settings=None):
         """Display GUI
 
         Once the QML interface has been loaded, use this
@@ -131,15 +132,20 @@ class Application(QtGui.QGuiApplication):
 
         window = self.window
 
+        if client_settings:
+            # Apply client-side settings
+            settings.from_dict(client_settings)
+            window.setTitle(client_settings["WindowTitle"])
+
         previously_hidden = not window.isVisible()
 
         window.requestActivate()
         window.showNormal()
 
         new_client = False
-        if pyblish_qml.current_port() != port:
+        if settings.current_port() != port:
             new_client = True
-            pyblish_qml.set_current_port(port)
+            settings.set_current_port(port)
 
         if os.name == "nt":
             # Work-around for window appearing behind
@@ -249,10 +255,9 @@ in order to bypass validation.
     util.echo("Starting Pyblish..")
     util.timer("application")
 
-    app = Application(source or APP_PATH)
-    app.listen()
-
     if debug:
+        app = Application(source or APP_PATH)
+        app.listen()
         app.__debugging__ = True
 
         util.echo("Starting in debug-mode")
@@ -261,10 +266,11 @@ in order to bypass validation.
         proxy = pyblish_rpc.client.Proxy(6000)
 
         if not proxy.ping():
-            util.echo("No existing server found, creating..")
             import pyblish_rpc.server
+
             os.environ["PYBLISH_CLIENT_PORT"] = str(6000)
 
+            util.echo("No existing server found, creating..")
             thread = threading.Thread(
                 target=pyblish_rpc.server.start_debug_server,
                 kwargs={"port": 6000})
@@ -274,7 +280,14 @@ in order to bypass validation.
             util.echo("Debug server created successfully.")
             util.echo("Running mocked RPC server @ 127.0.0.1:%s" % 6000)
 
-        app.show_signal.emit(6000)
+        app.show_signal.emit(6000, {
+            "ContextLabel": "The World",
+            "WindowTitle": "My Pyblish"
+        })
+
+    else:
+        app = Application(source or APP_PATH)
+        app.listen()
 
     util.timer_end("application",
                    "Spent %.2f ms creating the application")
