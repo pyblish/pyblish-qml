@@ -9,9 +9,16 @@ class QmlApi(object):
         self.app = app
         self.ctrl = CtrlApi(app.controller)
 
-    def show(self, port):
-        """Show the GUI"""
-        self.app.show_signal.emit(port)
+    def show(self, port, settings=None):
+        """Show the GUI
+
+        Arguments:
+            port (int): Port with which to communicate with client
+            settings (optional, dict): Client settings
+
+        """
+
+        self.app.show_signal.emit(port, settings)
         return True
 
     def hide(self):
