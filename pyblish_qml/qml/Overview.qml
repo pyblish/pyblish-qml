@@ -93,7 +93,7 @@ Item {
                 width: Math.floor(parent.width / 2.0)
                 height: parent.height
 
-                section.property: "object.type"
+                section.property: "object.verb"
 
                 onActionTriggered: {
                     if (action.name == "repair")

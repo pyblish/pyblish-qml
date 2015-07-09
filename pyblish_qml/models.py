@@ -33,6 +33,7 @@ plugin_defaults = {
     "contextEnabled": False,
     "instanceEnabled": False,
     "pre11": True,
+    "verb": "unknown"
 }
 
 instance_defaults = {
@@ -282,6 +283,15 @@ class ItemModel(AbstractModel):
         item["itemType"] = "plugin"
         item["isToggled"] = not (0 <= plugin["order"] < 1)  # Not selectors
         item["hasCompatible"] = True
+
+        item["verb"] = {
+            "Selector": "Collect",
+            "Collector": "Collect",
+            "Validator": "Validate",
+            "Extractor": "Extract",
+            "Integrator": "Integrate",
+            "Conformer": "Integrate",
+        }[item["type"]]
 
         item = self.add_item(item)
         self.plugins.append(item)
