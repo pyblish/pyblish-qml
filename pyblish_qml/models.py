@@ -286,12 +286,13 @@ class ItemModel(AbstractModel):
 
         item["verb"] = {
             "Selector": "Collect",
+            "Selector": "Collect",
             "Collector": "Collect",
             "Validator": "Validate",
             "Extractor": "Extract",
             "Integrator": "Integrate",
             "Conformer": "Integrate",
-        }[item["type"]]
+        }.get(item["type"], "")
 
         item = self.add_item(item)
         self.plugins.append(item)
