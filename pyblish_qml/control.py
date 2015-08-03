@@ -482,7 +482,11 @@ class Controller(QtCore.QObject):
 
         iterator = pyblish.logic.process(
                 func=self.host.process,
-                plugins=[p for p in plugins if 0 <= p.order < 1],
+                plugins=[p for p in plugins
+                         if pyblish.lib.inrange(
+                            number=p.order,
+                            base=pyblish.api.Collector.order,
+                            offset=0.5)],
                 context=self.host.context,
                 test=self.host.test)
 
