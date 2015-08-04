@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 0.2.12
+--------------
+- Bugfix: GUI hangs on plug-ins subclassed from Plugin (#110)
+
 Version 0.2.11
 --------------
 
