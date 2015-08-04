@@ -437,7 +437,8 @@ class Controller(QtCore.QObject):
             if isinstance(result, Exception):
                 self.error.emit("Unknown error occured; check terminal")
                 self.echo({"type": "message", "message": str(result)})
-                return on_finished("Stopped resetting due to unknown result, check your test?")
+                return on_finished("Stopped resetting due to unknown "
+                                   "result, check your test?")
 
             self.result_model.update_with_result(result)
             util.async(iterator.next, callback=on_next)
@@ -459,7 +460,9 @@ class Controller(QtCore.QObject):
             for plugin in self.item_model.plugins:
                 compatible = pyblish.logic.instances_by_plugin(context, plugin)
                 if not plugin.instanceEnabled:
-                    compatible += [type("Context", (object,), {"id": "Context"})]
+                    compatible += [type("Context",
+                                   (object,),
+                                   {"id": "Context"})]
                 plugin.compatibleInstances = [i.id for i in compatible]
 
             for instance in self.item_model.instances:
@@ -510,8 +513,10 @@ class Controller(QtCore.QObject):
         plugins = self.host.discover()
         context = self.host.context()
 
-        _plugins = [x.name for x in models.ItemIterator(self.item_model.plugins)]
-        _context = [x.name for x in models.ItemIterator(self.item_model.instances)]
+        _plugins = [x.name for x in models.ItemIterator(
+            self.item_model.plugins)]
+        _context = [x.name for x in models.ItemIterator(
+            self.item_model.instances)]
 
         plugins = [x for x in plugins if x.name in _plugins]
         context = [x for x in context if x.name in _context]
@@ -574,8 +579,10 @@ class Controller(QtCore.QObject):
         stats = {"requestCount": self.host.stats()["totalRequestCount"]}
 
         # Get available items from host
-        plugins = collections.OrderedDict((p.name, p) for p in self.host.discover())
-        context = collections.OrderedDict((p.name, p) for p in self.host.context())
+        plugins = collections.OrderedDict(
+            (p.name, p) for p in self.host.discover())
+        context = collections.OrderedDict(
+            (p.name, p) for p in self.host.context())
 
         # Filter items in GUI with items from host
         index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
