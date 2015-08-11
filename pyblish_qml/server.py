@@ -1,7 +1,15 @@
+"""Pyblish QML RPC server
+
+Attributes:
+    first_port (int): Port at which to start distributing
+        available ports to clients who ask for one.
+
+"""
+
 import os
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
-first_port = 6001
+first_port = 9001
 
 
 class QmlApi(object):
@@ -39,11 +47,34 @@ class QmlApi(object):
         """Tell QML that someone is listening at `port`"""
         self.app.register_heartbeat(port)
 
-    def find_available_port(self):
-        """Return the next available port at which a client may listen"""
-        available = first_port
-        while available in self.app.clients:
+    def find_available_port(self, start=first_port):
+        """Return the next available port at which a client may listen
+
+        If module "psutil" is available, this also takes into
+        account any externally used ports such that no occupied
+        port is accidentally used. This is generally recommended.
+
+        Arguments:
+            start (int, optional): Port from which to start
+                looking, defaults to 6001
+
+        """
+
+        print("Finding available port..")
+        occupied_ports = list(self.app.clients)
+
+        try:
+            import psutil
+            occupied_ports += list(
+                c.laddr[-1] for c in psutil.net_connections())
+        except ImportError:
+            pass
+
+        available = start
+        while available in occupied_ports:
             available += 1
+
+        print("Distributing new port %i" % available)
         return available
 
 
