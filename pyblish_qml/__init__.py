@@ -17,7 +17,7 @@ class _Settings(object):
 
     def __str__(self):
         return str(self.to_dict())
-    
+
     def __repr__(self):
         return self.__str__()
 
