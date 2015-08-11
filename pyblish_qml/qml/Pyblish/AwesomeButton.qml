@@ -10,6 +10,7 @@ Ink {
 
     property string name: action ? action.iconName : ""
     property int size: 14
+    property double iconSize: 0
 
     property string style: "button"
 
@@ -36,7 +37,7 @@ Ink {
 
             anchors.centerIn: parent
 
-            size: button.size
+            size: button.iconSize || button.size
         }
     }
 }

@@ -497,18 +497,6 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def publish(self):
-        if "ready" not in self.states:
-            self.error.emit("Not ready")
-            return
-
-        self.publishing.emit()
-        self.is_running = True
-        self.save()
-
-        # Setup statistics
-        util.timer("publishing")
-        stats = {"requestCount": self.host.stats()["totalRequestCount"]}
-
         # Get available items from host
         plugins = self.host.discover()
         context = self.host.context()
@@ -525,6 +513,44 @@ class Controller(QtCore.QObject):
                                          plugins=plugins,
                                          context=context,
                                          test=self.host.test)
+
+        return self.run(iterator)
+
+    @QtCore.pyqtSlot()
+    def validate(self):
+        context = [p.name for p in models.ItemIterator(
+            self.item_model.instances)]
+
+        plugins = list()
+        for plugin in models.ItemIterator(self.item_model.plugins):
+            if not pyblish.lib.inrange(
+                    plugin.order, base=pyblish.api.Validator.order):
+                continue
+
+            plugins.append(plugin.name)
+
+        plugins = [p for p in self.host.discover() if p.name in plugins]
+        context = [p for p in self.host.context() if p.name in context]
+
+        iterator = pyblish.logic.process(func=self.host.process,
+                                         plugins=plugins,
+                                         context=context,
+                                         test=self.host.test)
+
+        return self.run(iterator)
+
+    def run(self, iterator):
+        if "ready" not in self.states:
+            self.error.emit("Not ready")
+            return
+
+        self.publishing.emit()
+        self.is_running = True
+        self.save()
+
+        # Setup statistics
+        util.timer("publishing")
+        stats = {"requestCount": self.host.stats()["totalRequestCount"]}
 
         def on_next(result):
             if isinstance(result, StopIteration):

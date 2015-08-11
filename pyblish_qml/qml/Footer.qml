@@ -12,6 +12,7 @@ View {
     property bool paused: false
 
     signal publish
+    signal validate
     signal pause
     signal stop
     signal reset
@@ -44,30 +45,50 @@ View {
         //     onClicked: footer.save()
         // }
 
-        Button {
+        AwesomeButton {
             elevation: 1
+
+            size: 25
+            iconSize: 14
 
             tooltip: visible ? "Stop" : ""
 
-            icon: "button-stop"
+            name: "stop"
             visible: mode === 1 ? true : false
             onClicked: footer.stop()
         }
 
-        Button {
+        AwesomeButton {
             elevation: 1
+            size: 25
+            iconSize: 14
 
             tooltip: visible ? "Reset" : ""
 
-            icon: "button-reset"
+            name: "refresh"
             visible: mode == 0 || mode == 2 ? true : false
             onClicked: footer.reset()
         }
 
-        Button {
+        AwesomeButton {
             elevation: 1
 
-            icon: "button-publish"
+            size: 25
+            iconSize: 14
+
+            tooltip: visible ? "Validate" : ""
+
+            name: "flask"
+            visible: mode === 0 ? true : false
+            onClicked: footer.validate()
+        }
+
+        AwesomeButton {
+            elevation: 1
+            size: 25
+            iconSize: 14
+
+            name: "play"
 
             tooltip: visible ? "Publish" : ""
 
@@ -75,20 +96,6 @@ View {
 
             visible: mode == 0 ? true : false
 
-            // /*
-            //  * Disable publish-button
-            // */
-            // Rectangle {
-            //     anchors.fill: parent
-            //     color: "gray"
-            //     opacity: 0.5
-            //     visible: mode == 0 ? false : true
-
-            //     MouseArea {
-            //         // Steal focus from default button
-            //         anchors.fill: parent
-            //     }
-            // }
         }
     }
 }

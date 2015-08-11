@@ -133,6 +133,7 @@ Item {
         anchors.bottom: parent.bottom
 
         onPublish: app.publish()
+        onValidate: app.validate()
         onReset: app.reset()
         onStop: app.stop()
         onSave: app.save()
