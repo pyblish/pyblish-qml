@@ -1,6 +1,13 @@
 Changelog
 =========
 
+Version 0.3.0
+-------------
+
+- Feature: Added button Validate (#115)
+- Enhancement: Added the ability to customise the port
+    at which QML distributes ports for connecting clients. (#114)
+
 Version 0.2.12
 --------------
 - Bugfix: GUI hangs on plug-ins subclassed from Plugin (#110)
