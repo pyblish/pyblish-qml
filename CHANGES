@@ -7,6 +7,7 @@ Version 0.3.0
 - Feature: Added button Validate (#115)
 - Enhancement: Added the ability to customise the port
     at which QML distributes ports for connecting clients. (#114)
+- Enhancement: Added additional metadata to terminal
 
 Version 0.2.12
 --------------
