@@ -20,7 +20,7 @@ BaseDelegate {
             spacing: 2
 
             Label {
-                text: object.name + " " + object.pyblishVersion
+                text: object.name + " " + object.pyblishServerVersion
                 style: "title"
                 elide: Text.ElideRight
             }
@@ -42,6 +42,14 @@ BaseDelegate {
                 {
                     "key": "Host",
                     "value": object.host
+                },
+                {
+                    "key": "RPC version",
+                    "value": object.pyblishRPCVersion
+                },
+                {
+                    "key": "Connected",
+                    "value": object.connectTime
                 }]
 
                 Row {
