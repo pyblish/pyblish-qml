@@ -4,7 +4,12 @@ from PyQt5 import QtCore
 import util
 from pyblish_qml import settings
 
+import pyblish.api
+import pyblish.lib
+
+
 item_defaults = {
+    "id": "default",
     "name": "default",
     "isProcessing": False,
     "isToggled": True,
@@ -281,8 +286,10 @@ class ItemModel(AbstractModel):
 
         # Append GUI-only data
         item["itemType"] = "plugin"
-        item["isToggled"] = not (0 <= plugin["order"] < 1)  # Not selectors
         item["hasCompatible"] = True
+        item["isToggled"] = not pyblish.lib.inrange(
+            number=plugin["order"],
+            base=pyblish.api.Collector.order)  # Everything but collectors
 
         item["verb"] = {
             "Selector": "Collect",
