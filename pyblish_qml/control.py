@@ -497,17 +497,19 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def publish(self):
-        # Get available items from host
+        # 1. Get available items from host
         plugins = self.host.discover()
         context = self.host.context()
 
-        _plugins = [x.name for x in models.ItemIterator(
+        # 2. Get toggled items
+        _plugins = [x.id for x in models.ItemIterator(
             self.item_model.plugins)]
-        _context = [x.name for x in models.ItemIterator(
+        _context = [x.id for x in models.ItemIterator(
             self.item_model.instances)]
 
-        plugins = [x for x in plugins if x.name in _plugins]
-        context = [x for x in context if x.name in _context]
+        # 3. Map toggled items to items from host
+        plugins = [x for x in plugins if x.id in _plugins]
+        context = [x for x in context if x.id in _context]
 
         iterator = pyblish.logic.process(func=self.host.process,
                                          plugins=plugins,
@@ -518,7 +520,7 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def validate(self):
-        context = [p.name for p in models.ItemIterator(
+        context = [p.id for p in models.ItemIterator(
             self.item_model.instances)]
 
         plugins = list()
@@ -527,10 +529,10 @@ class Controller(QtCore.QObject):
                     plugin.order, base=pyblish.api.Validator.order):
                 continue
 
-            plugins.append(plugin.name)
+            plugins.append(plugin.id)
 
-        plugins = [p for p in self.host.discover() if p.name in plugins]
-        context = [p for p in self.host.context() if p.name in context]
+        plugins = [p for p in self.host.discover() if p.id in plugins]
+        context = [p for p in self.host.context() if p.id in context]
 
         iterator = pyblish.logic.process(func=self.host.process,
                                          plugins=plugins,
@@ -606,9 +608,9 @@ class Controller(QtCore.QObject):
 
         # Get available items from host
         plugins = collections.OrderedDict(
-            (p.name, p) for p in self.host.discover())
+            (p.id, p) for p in self.host.discover())
         context = collections.OrderedDict(
-            (p.name, p) for p in self.host.context())
+            (p.id, p) for p in self.host.context())
 
         # Filter items in GUI with items from host
         index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
@@ -616,7 +618,7 @@ class Controller(QtCore.QObject):
         plugin = self.item_model.items[index.row()]
         plugin.hasError = False
 
-        plugin = plugins[plugin.name]
+        plugin = plugins[plugin.id]
 
         iterator = pyblish.logic.process(
             func=self.host.repair,

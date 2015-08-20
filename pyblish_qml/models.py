@@ -200,7 +200,7 @@ def Item(**kwargs):
 class AbstractModel(QtCore.QAbstractListModel):
     def __init__(self, parent=None):
         super(AbstractModel, self).__init__(parent)
-        self.items = util.ItemList(key="name")
+        self.items = util.ItemList(key="id")
 
     @QtCore.pyqtSlot(int, result=QtCore.QObject)
     def item(self, index):
@@ -271,8 +271,8 @@ def ItemIterator(items):
 class ItemModel(AbstractModel):
     def __init__(self, *args, **kwargs):
         super(ItemModel, self).__init__(*args, **kwargs)
-        self.plugins = util.ItemList(key="name")
-        self.instances = util.ItemList(key="name")
+        self.plugins = util.ItemList(key="id")
+        self.instances = util.ItemList(key="id")
 
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_plugin(self, plugin):
@@ -306,12 +306,14 @@ class ItemModel(AbstractModel):
 
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_instance(self, instance):
+        instance_json = instance.to_json()
         item = {}
         item.update(item_defaults)
         item.update(instance_defaults)
-        item.update(instance.to_json()["data"])
-        item.update(instance.to_json())
+        item.update(instance_json["data"])
+        item.update(instance_json)
 
+        item["name"] = instance.data("name")
         item["itemType"] = "instance"
         item["isToggled"] = instance.data("publish", True)
         item["hasCompatible"] = True
@@ -374,14 +376,14 @@ class ItemModel(AbstractModel):
             item.isProcessing = False
 
         for type in ("instance", "plugin"):
-            name = (result[type] or {}).get("name")
+            id = (result[type] or {}).get("id")
 
-            if not name:
-                # A name is not provided in cases where
+            if not id:
+                # A id is not provided in cases where
                 # the Context has been processed.
                 item = self.instances[0]
             else:
-                item = self.items.get(name)
+                item = self.items.get(id)
 
             item.isProcessing = True
             item.currentProgress = 1
@@ -420,7 +422,7 @@ class ItemModel(AbstractModel):
                 if not instance.isToggled:
                     continue
 
-                if instance.name in plugin.compatibleInstances:
+                if instance.id in plugin.compatibleInstances:
                     has_compatible = True
                     break
 
@@ -476,30 +478,30 @@ class ResultModel(AbstractModel):
             self.add_item(error)
 
     def parse_result(self, result):
-        plugin_name = result["plugin"]["name"]
+        plugin_id = result["plugin"]["id"]
 
         try:
-            instance_name = result["instance"]["name"]
+            instance_id = result["instance"]["id"]
         except:
-            instance_name = None
+            instance_id = None
 
         plugin_msg = {
             "type": "plugin",
-            "message": plugin_name,
-            "filter": plugin_name,
+            "message": plugin_id,
+            "filter": plugin_id,
 
-            "plugin": plugin_name,
-            "instance": instance_name
+            "plugin": plugin_id,
+            "instance": instance_id
         }
 
         instance_msg = {
             "type": "instance",
-            "message": instance_name or "Context",
-            "filter": instance_name,
+            "message": instance_id or "Context",
+            "filter": instance_id,
             "duration": result["duration"],
 
-            "plugin": plugin_name,
-            "instance": instance_name
+            "plugin": plugin_id,
+            "instance": instance_id
         }
 
         record_msgs = list()
@@ -509,8 +511,8 @@ class ResultModel(AbstractModel):
             record["filter"] = record["message"]
             record["message"] = util.format_text(str(record["message"]))
 
-            record["plugin"] = plugin_name
-            record["instance"] = instance_name
+            record["plugin"] = plugin_id
+            record["instance"] = instance_id
 
             record_msgs.append(record)
 
@@ -519,8 +521,8 @@ class ResultModel(AbstractModel):
             "message": "No error",
             "filter": "",
 
-            "plugin": plugin_name,
-            "instance": instance_name
+            "plugin": plugin_id,
+            "instance": instance_id
         }
 
         error_msg = None
@@ -531,8 +533,8 @@ class ResultModel(AbstractModel):
             error["message"] = util.format_text(error["message"])
             error["filter"] = error["message"]
 
-            error["plugin"] = plugin_name
-            error["instance"] = instance_name
+            error["plugin"] = plugin_id
+            error["instance"] = instance_id
 
             error_msg = error
 
