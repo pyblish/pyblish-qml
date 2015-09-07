@@ -299,7 +299,7 @@ class ItemModel(AbstractModel):
             "Extractor": "Extract",
             "Integrator": "Integrate",
             "Conformer": "Integrate",
-        }.get(item["type"], "")
+        }.get(item["type"], "Other")
 
         item = self.add_item(item)
         self.plugins.append(item)
