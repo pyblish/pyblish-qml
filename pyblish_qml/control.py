@@ -558,11 +558,16 @@ class Controller(QtCore.QObject):
         util.timer("publishing")
         stats = {"requestCount": self.host.stats()["totalRequestCount"]}
 
+        instance_iterator = models.ItemIterator(self.item_model.instances)
+        failed_instances = [p.id for p in instance_iterator
+                            if p.hasError]
+
         # Get available items from host
         plugins = collections.OrderedDict(
             (p.id, p) for p in self.host.discover())
         context = collections.OrderedDict(
-            (p.id, p) for p in self.host.context())
+            (p.id, p) for p in self.host.context()
+            if p.id in failed_instances)
 
         # Filter items in GUI with items from host
         index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
