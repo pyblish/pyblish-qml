@@ -83,7 +83,6 @@ class Controller(QtCore.QObject):
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
         self.finished.connect(self.on_finished)
-        # self.item_model.data_changed.connect(self.on_data_changed)
 
         self.state_changed.connect(self.on_state_changed)
 
@@ -329,53 +328,6 @@ class Controller(QtCore.QObject):
 
         self._state = state
         self._states = list(s.name for s in self.machine.configuration())
-
-    def on_data_changed(self, item, key, old, new):
-        """Handler for changes to data within `model`
-
-        Changes include toggling instances along with any
-        arbitrary change to members of items within `model`.
-
-        """
-
-        if not self.changes:
-            self.changed.emit()
-            self.changes = {"plugins": dict(), "context": dict()}
-
-        if key not in ("isToggled",):
-            return
-
-        remap = {
-            "isToggled": "publish"
-        }
-
-        key = remap.get(key) or key
-
-        if isinstance(item, models.PluginItem):
-            changes = self.changes["plugins"]
-        else:
-            changes = self.changes["context"]
-
-        name = item.name
-        if name not in changes:
-            changes[name] = {}
-
-        if key in changes[name]:
-
-            # If the new value equals the old one,
-            # we can assume that there was no change.
-            if changes[name][key]["old"] == new:
-                changes[name].pop(key)
-
-                # It's possible that this discarded change
-                # was the only change made to this item.
-                # If so, discard the item entirely.
-                if not changes[name]:
-                    changes.pop(name)
-            else:
-                changes[name][key]["new"] = new
-        else:
-            changes[name][key] = {"new": new, "old": old}
 
     def on_finished(self):
         self.item_model.reset_status()
