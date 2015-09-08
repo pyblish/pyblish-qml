@@ -93,6 +93,7 @@ class Application(QtGui.QGuiApplication):
         self.engine = engine
         self.controller = controller
         self.clients = dict()
+        self.current_client = None
 
         self.show_signal.connect(self.show)
         self.hide_signal.connect(self.hide)
@@ -111,6 +112,7 @@ class Application(QtGui.QGuiApplication):
         self.clients[port]["lastSeen"] = time.time()
 
     def register_client(self, port):
+        self.current_client = port
         self.clients[port] = {
             "lastSeen": time.time()
         }
@@ -209,8 +211,12 @@ class Application(QtGui.QGuiApplication):
                 time.sleep(5)
                 for client, data in self.clients.copy().iteritems():
                     if data["lastSeen"] < time.time() - 5:
-                        print "Bye bye %s!" % client
+                        print("Bye bye %s!" % client)
                         self.clients.pop(client)
+
+                        if client == self.current_client:
+                            self.hide_signal.emit()
+                            self.current_client = None
 
                 if not self.clients:
                     self.standalone_signal.emit()
