@@ -1,4 +1,4 @@
-from .version import *
+from .version import version, version_info
 
 
 class _Settings(object):
@@ -8,6 +8,7 @@ class _Settings(object):
         self.WindowTitle = "Pyblish"
         self.WindowSize = (430, 600)
         self.WindowPosition = (100, 100)
+        self.HeartbeatInterval = 60
 
         self._callbacks = dict()
         self._current_port = 0

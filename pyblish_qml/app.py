@@ -141,6 +141,13 @@ class Application(QtGui.QGuiApplication):
             window.setHeight(client_settings["WindowSize"][1])
             window.setTitle(client_settings["WindowTitle"])
 
+        util.echo("Settings:")
+        for setting in ("WindowTitle",
+                        "WindowSize",
+                        "WindowPosition",
+                        "HeartbeatInterval"):
+            util.echo("  %s = %s" % (setting, getattr(settings, setting)))
+
         previously_hidden = not window.isVisible()
 
         window.requestActivate()
@@ -208,9 +215,10 @@ class Application(QtGui.QGuiApplication):
 
         def heartbeat_monitor():
             while True:
-                time.sleep(5)
+                interval = settings.HeartbeatInterval
+                time.sleep(interval)
                 for client, data in self.clients.copy().iteritems():
-                    if data["lastSeen"] < time.time() - 5:
+                    if data["lastSeen"] < time.time() - interval:
                         print("Bye bye %s!" % client)
                         self.clients.pop(client)
 
