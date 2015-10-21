@@ -3,21 +3,25 @@ import Pyblish 0.1
 import Pyblish.ListItems 0.1
 
 
-Item {
+MouseArea {
     id: listItem
 
     signal toggled(var mouse)
+    signal rightClicked(var mouse)
 
     property bool active: false
     property bool checked: false
     property alias status: indicator.status
 
     property alias text: label.text
-    // property alias tag: tag.name
 
     property int margins: 5
 
     property list<Action> actions
+
+    acceptedButtons: Qt.RightButton
+
+    onClicked: rightClicked(mouse)
 
     Row {
         id: body

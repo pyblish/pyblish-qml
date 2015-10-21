@@ -38,7 +38,8 @@ plugin_defaults = {
     "contextEnabled": False,
     "instanceEnabled": False,
     "pre11": True,
-    "verb": "unknown"
+    "verb": "unknown",
+    "actions": list()
 }
 
 instance_defaults = {
@@ -284,6 +285,8 @@ class ItemModel(AbstractModel):
         for member in plugin["__all__"]:
             item[member] = plugin[member]
 
+        print("%s.actions: %s" % (item["id"], item["actions"]))
+
         # Append GUI-only data
         item["itemType"] = "plugin"
         item["hasCompatible"] = True
@@ -292,7 +295,6 @@ class ItemModel(AbstractModel):
             base=pyblish.api.Collector.order)  # Everything but collectors
 
         item["verb"] = {
-            "Selector": "Collect",
             "Selector": "Collect",
             "Collector": "Collect",
             "Validator": "Validate",

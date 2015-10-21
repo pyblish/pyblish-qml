@@ -6,8 +6,9 @@ import Pyblish.ListItems 0.1 as ListItem
 ListView {
     id: list
 
-    signal itemClicked(int index)
+    signal itemToggled(int index)
     signal itemDoubleClicked(int index)
+    signal itemRightClicked(int index)
     signal actionTriggered(Action action, int index)
 
     width: 200
@@ -36,7 +37,8 @@ ListView {
             return "default"
         }
 
-        onToggled: itemClicked(index)
+        onToggled: itemToggled(index)
+        onPressed: itemRightClicked(index)
 
         actions: [
             Action {

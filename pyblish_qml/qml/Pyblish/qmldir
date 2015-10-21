@@ -1,6 +1,7 @@
 module Pyblish
 
 singleton Theme 0.1 Theme.qml
+singleton Global 0.1 Global.qml
 
 Action 0.1 Action.qml
 ActionBar 0.1 ActionBar.qml
