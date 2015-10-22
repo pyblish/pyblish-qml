@@ -285,8 +285,6 @@ class ItemModel(AbstractModel):
         for member in plugin["__all__"]:
             item[member] = plugin[member]
 
-        print("%s.actions: %s" % (item["id"], item["actions"]))
-
         # Append GUI-only data
         item["itemType"] = "plugin"
         item["hasCompatible"] = True
