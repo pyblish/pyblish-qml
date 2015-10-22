@@ -25,7 +25,7 @@ MouseArea {
     property int menuY: 0
 
     property int restWidth: 150
-    property int restHeight: children.length * 25 + 10
+    property int restHeight: children.length * 25
 
     function show() { currentMenuOpenAnimation.start() }
     function hide() { currentMenuCloseAnimation.start() }
@@ -59,17 +59,20 @@ MouseArea {
                 active: modelData.active
                 icon: modelData.icon
                 available: modelData.__error__ ? false : true
-
+                type: modelData.type
                 height: 25
                 width: parent.width
 
                 onPressed: {
-                    if (active && available) {
+                    if (type !== "action") {
+                        return
+                    }
+                    else if (active && available) {
                         toggled(modelData)
                         hide()
                     } else if (!available) {
                         app.info(modelData.__error__)
-                        app.info("Action not available, see terminal.")
+                        app.info("There is a problem with this Action, see terminal.")
                     } else {
                         app.info("Action not active.")
                     }
@@ -77,16 +80,16 @@ MouseArea {
             }
         }
 
-        Rectangle {
-            x: 30
-            width: 1
-            color: "black"
-            opacity: 0.1
-            anchors {
-                top: parent.top
-                bottom: parent.bottom
-            }
-        }
+        // Rectangle {
+        //     x: 30
+        //     width: 1
+        //     color: "black"
+        //     opacity: 0.1
+        //     anchors {
+        //         top: parent.top
+        //         bottom: parent.bottom
+        //     }
+        // }
     }
 
     PropertyAnimation {

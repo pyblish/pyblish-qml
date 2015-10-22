@@ -274,6 +274,34 @@ class Controller(QtCore.QObject):
             if action["on"] == "processed" and not item.processed:
                 actions.remove(action)
 
+        # Discard empty groups
+        index = 0
+        try:
+            action = actions[index]
+        except IndexError:
+            pass
+        else:
+            while action:
+                try:
+                    action = actions[index]
+                except IndexError:
+                    break
+
+                isempty = False
+
+                if action["type"] == "category":
+                    try:
+                        next_ = actions[index + 1]
+                        if next_["type"] != "action":
+                            isempty = True
+                    except IndexError:
+                        isempty = True
+
+                    if isempty:
+                        actions.pop(index)
+
+                index += 1
+
         return actions
 
     @QtCore.pyqtSlot(str)
@@ -289,7 +317,7 @@ class Controller(QtCore.QObject):
         action = json.loads(action)
 
         def run():
-            print("Running with states.. %s" % self.states)
+            util.echo("Running with states.. %s" % self.states)
             self.acting.emit()
             self.is_running = True
 
@@ -309,14 +337,14 @@ class Controller(QtCore.QObject):
             return result
 
         def on_finished(result):
-            print("Finished, finishing up..")
+            util.echo("Finished, finishing up..")
             self.is_running = False
             self.acted.emit()
 
             # Allow running action upon action, without resetting
             self.result_model.update_with_result(result)
             self.info.emit("Success" if result["success"] else "Failed")
-            print("Finished with states.. %s" % self.states)
+            util.echo("Finished with states.. %s" % self.states)
 
         util.async(run, callback=on_finished)
 
@@ -421,7 +449,7 @@ class Controller(QtCore.QObject):
     # Event handlers
 
     def on_state_changed(self, state):
-        print "Entering state: \"%s\"" % state
+        util.echo("Entering state: \"%s\"" % state)
 
         if state == "ready":
             self.ready.emit()
