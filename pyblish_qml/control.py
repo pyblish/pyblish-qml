@@ -265,13 +265,26 @@ class Controller(QtCore.QObject):
             for action in item.actions
         ]
 
+        # Context specific actions
+        for action in list(actions):
+            if action["on"] == "failed" and not item.hasError:
+                actions.remove(action)
+            if action["on"] == "succeeded" and not item.succeeded:
+                actions.remove(action)
+            if action["on"] == "processed" and not item.processed:
+                actions.remove(action)
+
         return actions
 
     @QtCore.pyqtSlot(str)
     def runPluginAction(self, action):
-        if not any(state in self.states for state in ["ready", "finished"]):
-            self.error.emit("Busy")
-            return
+        if "acting" in self.states:
+            return self.error.emit("Busy")
+
+        elif not any(state in self.states
+                     for state in ["ready",
+                                   "finished"]):
+            return self.error.emit("Busy")
 
         action = json.loads(action)
 

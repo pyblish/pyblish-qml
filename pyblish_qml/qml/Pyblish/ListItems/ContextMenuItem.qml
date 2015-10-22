@@ -6,12 +6,12 @@ import Pyblish.ListItems 0.1
 
 
 MouseArea {
-    id: listItem
+    id: root
 
-    hoverEnabled: true
-
-    property bool active: false
+    property bool active: true
+    property bool available: true
     property bool checked: false
+    property string icon: ""
 
     property alias text: label.text
     property int margins: 5
@@ -19,21 +19,22 @@ MouseArea {
     RowLayout {
         id: body
 
-        spacing: 0
         anchors.fill: parent
 
-        Item {
-            id: icon
+        AwesomeIcon {
             Layout.fillHeight: true
             width: 30
+            name: icon
+            opacity: 0.5
         }
 
         Label {
             id: label
-            opacity: active ? 1.0 : 0.5
+            opacity: (active && available) ? 1.0 : 0.5
 
             Layout.fillWidth: true
             anchors.verticalCenter: parent.verticalCenter
+            font.strikeout: !available
         }
     }
 

@@ -297,8 +297,8 @@ in order to bypass validation.
             util.echo("Running mocked RPC server @ 127.0.0.1:%s" % 6000)
 
         app.show_signal.emit(6000, {
-            "ContextLabel": "The World",
-            "WindowTitle": "My Pyblish",
+            "ContextLabel": "World",
+            "WindowTitle": "Pyblish",
             "WindowSize": (430, 600)
         })
 

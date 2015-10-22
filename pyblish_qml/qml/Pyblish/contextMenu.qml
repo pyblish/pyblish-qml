@@ -25,7 +25,7 @@ MouseArea {
     property int menuY: 0
 
     property int restWidth: 150
-    property int restHeight: 150
+    property int restHeight: children.length * 25 + 10
 
     function show() { currentMenuOpenAnimation.start() }
     function hide() { currentMenuCloseAnimation.start() }
@@ -33,7 +33,7 @@ MouseArea {
     onPressed: hide()
 
     View {
-        id: menu
+        id: backdrop
 
         property var window: Utils.findRoot(this)
 
@@ -48,6 +48,7 @@ MouseArea {
         color: "#333"
 
         ListView {
+            id: menuList
             anchors.fill: parent
 
             model: root.children
@@ -56,15 +57,34 @@ MouseArea {
             delegate: ListItem.ContextMenuItem {
                 text: modelData.label
                 active: modelData.active
-                checked: true
+                icon: modelData.icon
+                available: modelData.__error__ ? false : true
 
                 height: 25
                 width: parent.width
 
                 onPressed: {
-                    toggled(modelData)
-                    hide()
+                    if (active && available) {
+                        toggled(modelData)
+                        hide()
+                    } else if (!available) {
+                        app.info(modelData.__error__)
+                        app.info("Action not available, see terminal.")
+                    } else {
+                        app.info("Action not active.")
+                    }
                 }
+            }
+        }
+
+        Rectangle {
+            x: 30
+            width: 1
+            color: "black"
+            opacity: 0.1
+            anchors {
+                top: parent.top
+                bottom: parent.bottom
             }
         }
     }
@@ -72,7 +92,7 @@ MouseArea {
     PropertyAnimation {
         id: currentMenuOpenAnimation
         properties: "opacity"
-        target: menu
+        target: backdrop
         from: 0
         to: 1
         duration: 300
@@ -82,7 +102,7 @@ MouseArea {
     PropertyAnimation {
         id: currentMenuCloseAnimation
         properties: "opacity"
-        target: menu
+        target: backdrop
         from: 1
         to: 0
         duration: 50
