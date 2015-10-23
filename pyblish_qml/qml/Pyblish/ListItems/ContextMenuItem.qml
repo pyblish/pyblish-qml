@@ -45,6 +45,7 @@ MouseArea {
             Layout.fillWidth: true
             anchors.verticalCenter: parent.verticalCenter
             font.strikeout: !available
+            elide: Text.ElideRight
         }
     }
 
