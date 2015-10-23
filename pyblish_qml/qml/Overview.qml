@@ -5,6 +5,12 @@ import Pyblish 0.1
 Item {
     id: overview
 
+    MouseArea {
+        id: pluginMouse
+        anchors.fill: parent
+        hoverEnabled: true
+    }
+
     property string __lastPlugin
 
     signal instanceEntered(int index)
@@ -84,10 +90,12 @@ Item {
                         overview.instanceEntered(index)
                 }
 
-                onItemClicked: app.toggleInstance(index)
+                onItemToggled: app.toggleInstance(index)
             }
 
             List {
+                id: pluginList
+
                 model: app.pluginProxy
 
                 width: Math.floor(parent.width / 2.0)
@@ -102,7 +110,39 @@ Item {
                         overview.pluginEntered(index)
                 }
 
-                onItemClicked: app.togglePlugin(index)
+                onItemToggled: app.togglePlugin(index)
+                onItemRightClicked: {
+                    var actions = app.getPluginActions(index)
+
+                    if (actions.length === 0)
+                        return
+
+                    function show() {
+                        return Utils.showContextMenu(
+                            overview,           // Parent
+                            actions,            // Children
+                            pluginMouse.mouseX, // X Position
+                            pluginMouse.mouseY) // Y Position
+                    }
+
+                    if (Global.currentContextMenu !== null) {
+                            function callback() {
+                                Global.currentContextMenu.beingHidden.disconnect(callback)
+                                Global.currentContextMenu = show()
+                          }
+
+                          Global.currentContextMenu.beingHidden.connect(callback)
+                          Global.currentContextMenu.hide()
+
+                    } else {
+                        Global.currentContextMenu = show()
+                    }
+                }
+
+                Connections {
+                    target: Global.currentContextMenu
+                    onToggled: app.runPluginAction(JSON.stringify(data))
+                }
             }
         }
 
@@ -178,6 +218,11 @@ Item {
 
             if (state == "dirty") {
                 setMessage("Dirty..")
+            }
+
+            if (state == "acting") {
+                setMessage("Acting")
+                overview.state = "publishing"
             }
         }
     }

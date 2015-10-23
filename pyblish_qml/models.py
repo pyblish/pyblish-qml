@@ -38,7 +38,8 @@ plugin_defaults = {
     "contextEnabled": False,
     "instanceEnabled": False,
     "pre11": True,
-    "verb": "unknown"
+    "verb": "unknown",
+    "actions": list()
 }
 
 instance_defaults = {
@@ -293,7 +294,6 @@ class ItemModel(AbstractModel):
 
         item["verb"] = {
             "Selector": "Collect",
-            "Selector": "Collect",
             "Collector": "Collect",
             "Validator": "Validate",
             "Extractor": "Extract",
@@ -313,9 +313,9 @@ class ItemModel(AbstractModel):
         item.update(instance_json["data"])
         item.update(instance_json)
 
-        item["name"] = instance.data("name")
+        item["name"] = instance.data.get("name")
         item["itemType"] = "instance"
-        item["isToggled"] = instance.data("publish", True)
+        item["isToggled"] = instance.data.get("publish", True)
         item["hasCompatible"] = True
 
         item = self.add_item(item)
@@ -327,7 +327,7 @@ class ItemModel(AbstractModel):
         item.update(item_defaults)
         item.update(instance_defaults)
 
-        name = context.data("label") or settings.ContextLabel
+        name = context.data.get("label") or settings.ContextLabel
 
         item["family"] = None
         item["name"] = name

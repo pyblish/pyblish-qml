@@ -1,4 +1,5 @@
 
+import json
 import time
 import collections
 
@@ -37,6 +38,8 @@ class Controller(QtCore.QObject):
     stopping = QtCore.pyqtSignal()
     saving = QtCore.pyqtSignal()
     initialising = QtCore.pyqtSignal()
+    acting = QtCore.pyqtSignal()
+    acted = QtCore.pyqtSignal()
 
     changed = QtCore.pyqtSignal()
 
@@ -88,7 +91,7 @@ class Controller(QtCore.QObject):
 
         settings.register_port_changed_callback(self.on_client_changed)
 
-        # Connect to host
+        # Connection to host
         self.host = None
 
     def on_client_changed(self, port):
@@ -157,6 +160,20 @@ class Controller(QtCore.QObject):
         # | ____     ____ |
         # ||    |---|    ||
         # ||____|---|____||
+        # |_______________| - Parallell State
+
+        # States that block the underlying GUI
+        suspended = util.QState("suspended", group)
+
+        alive = util.QState("alive", suspended)
+        acting = util.QState("acting", suspended)
+        acted = QtCore.QHistoryState(operation)
+        acted.setDefaultState(ready)
+
+        #  _______________
+        # | ____     ____ |
+        # ||    |---|    ||
+        # ||____|---|____||
         # |_______________|
         # | ____     ____ |
         # ||    |---|    ||
@@ -167,6 +184,7 @@ class Controller(QtCore.QObject):
         hidden.addTransition(self.show, visible)
         visible.addTransition(self.hide, hidden)
 
+        ready.addTransition(self.acting, acting)
         ready.addTransition(self.publishing, publishing)
         ready.addTransition(self.initialising, initialising)
         ready.addTransition(self.repairing, repairing)
@@ -175,17 +193,23 @@ class Controller(QtCore.QObject):
         publishing.addTransition(self.stopping, stopping)
         publishing.addTransition(self.finished, finished)
         finished.addTransition(self.initialising, initialising)
+        finished.addTransition(self.acting, acting)
         initialising.addTransition(self.initialised, ready)
+        stopping.addTransition(self.acted, acted)
         stopping.addTransition(self.finished, finished)
 
         dirty.addTransition(self.initialising, clean)
         clean.addTransition(self.changed, dirty)
 
+        alive.addTransition(self.acting, acting)
+        acting.addTransition(self.acted, acted)
+
         # Set initial states
         for compound, state in {machine: group,
                                 visibility: hidden,
                                 operation: ready,
-                                errored: clean}.items():
+                                errored: clean,
+                                suspended: alive}.items():
             compound.setInitialState(state)
 
         # Make connections
@@ -200,12 +224,14 @@ class Controller(QtCore.QObject):
                       saving,
                       stopped,
                       dirty,
-                      clean):
+                      clean,
+                      acting,
+                      alive,
+                      acted):
             state.entered.connect(
                 lambda state=state: self.state_changed.emit(state.name))
 
         machine.start()
-
         return machine
 
     @QtCore.pyqtProperty(str, notify=state_changed)
@@ -219,6 +245,108 @@ class Controller(QtCore.QObject):
     @QtCore.pyqtSlot(result=float)
     def time(self):
         return time.time()
+
+    @QtCore.pyqtSlot(int, result=QtCore.QVariant)
+    def getPluginActions(self, index):
+        """Return actions from plug-in at `index`
+
+        Arguments:
+            index (int): Index at which item is located in model
+
+        """
+
+        index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
+        index = self.plugin_proxy.mapToSource(index).row()
+        item = self.item_model.items[index]
+
+        # Inject reference to the original index
+        actions = [
+            dict(action, **{"index": index})
+            for action in item.actions
+        ]
+
+        # Context specific actions
+        for action in list(actions):
+            if action["on"] == "failed" and not item.hasError:
+                actions.remove(action)
+            if action["on"] == "succeeded" and not item.succeeded:
+                actions.remove(action)
+            if action["on"] == "processed" and not item.processed:
+                actions.remove(action)
+
+        # Discard empty groups
+        index = 0
+        try:
+            action = actions[index]
+        except IndexError:
+            pass
+        else:
+            while action:
+                try:
+                    action = actions[index]
+                except IndexError:
+                    break
+
+                isempty = False
+
+                if action["__type__"] == "category":
+                    try:
+                        next_ = actions[index + 1]
+                        if next_["__type__"] != "action":
+                            isempty = True
+                    except IndexError:
+                        isempty = True
+
+                    if isempty:
+                        actions.pop(index)
+
+                index += 1
+
+        return actions
+
+    @QtCore.pyqtSlot(str)
+    def runPluginAction(self, action):
+        if "acting" in self.states:
+            return self.error.emit("Busy")
+
+        elif not any(state in self.states
+                     for state in ["ready",
+                                   "finished"]):
+            return self.error.emit("Busy")
+
+        action = json.loads(action)
+
+        def run():
+            util.echo("Running with states.. %s" % self.states)
+            self.acting.emit()
+            self.is_running = True
+
+            item = self.item_model.items[action["index"]]
+
+            context = self.host.context()
+            plugins = self.host.discover()
+            plugin = next(x for x in plugins if x.id == item.id)
+
+            result = self.host.process(**{
+                "context": context,
+                "plugin": plugin,
+                "instance": None,
+                "action": action["id"]
+            })
+
+            return result
+
+        def on_finished(result):
+            util.echo("Finished, finishing up..")
+            self.is_running = False
+            self.acted.emit()
+
+            # Allow running action upon action, without resetting
+            self.result_model.update_with_result(result)
+            self.info.emit("Success" if result["success"] else "Failed")
+            util.echo("Finished with states.. %s" % self.states)
+
+        util.async(run, callback=on_finished)
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
@@ -321,7 +449,7 @@ class Controller(QtCore.QObject):
     # Event handlers
 
     def on_state_changed(self, state):
-        print "Entering state: \"%s\"" % state
+        util.echo("Entering state: \"%s\"" % state)
 
         if state == "ready":
             self.ready.emit()

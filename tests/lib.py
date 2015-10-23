@@ -23,7 +23,6 @@ def _setup():
     if self.app is None:
         self.app = QtCore.QCoreApplication(sys.argv)
 
-
     service = pyblish_rpc.service.RpcService()
     self.server = pyblish_rpc.server._server(self.port, service)
 

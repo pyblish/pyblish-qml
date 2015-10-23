@@ -151,10 +151,11 @@ class _Async(QtCore.QThread):
         self.args = args or list()
         self.kwargs = kwargs or dict()
         self.target = target
+        self.callback = callback
 
         if callback:
             connection = QtCore.Qt.BlockingQueuedConnection
-            self.done.connect(callback, type=connection)
+            self.done.connect(self.callback, type=connection)
 
     def run(self, *args, **kwargs):
         try:

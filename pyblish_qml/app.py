@@ -33,8 +33,7 @@ class Window(QtQuick.QQuickView):
         self.setTitle(settings.WindowTitle)
         self.setResizeMode(self.SizeRootObjectToView)
 
-        self.setWidth(settings.WindowSize[0])
-        self.setHeight(settings.WindowSize[1])
+        self.setSize(*settings.WindowSize)
         self.setMinimumSize(QtCore.QSize(430, 300))
 
     def event(self, event):
@@ -57,6 +56,10 @@ class Window(QtQuick.QQuickView):
                 self.parent.hide()
 
         return super(Window, self).event(event)
+
+    def setSize(self, width, height):
+        self.setWidth(width)
+        self.setHeight(height)
 
 
 class Application(QtGui.QGuiApplication):
@@ -297,8 +300,8 @@ in order to bypass validation.
             util.echo("Running mocked RPC server @ 127.0.0.1:%s" % 6000)
 
         app.show_signal.emit(6000, {
-            "ContextLabel": "The World",
-            "WindowTitle": "My Pyblish",
+            "ContextLabel": "World",
+            "WindowTitle": "Pyblish",
             "WindowSize": (430, 600)
         })
 
