@@ -59,7 +59,7 @@ MouseArea {
                 active: modelData.active
                 icon: modelData.icon
                 available: modelData.__error__ ? false : true
-                type: modelData.type
+                type: modelData.__type__
                 height: 25
                 width: parent.width
 

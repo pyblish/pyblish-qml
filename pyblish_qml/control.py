@@ -289,10 +289,10 @@ class Controller(QtCore.QObject):
 
                 isempty = False
 
-                if action["type"] == "category":
+                if action["__type__"] == "category":
                     try:
                         next_ = actions[index + 1]
-                        if next_["type"] != "action":
+                        if next_["__type__"] != "action":
                             isempty = True
                     except IndexError:
                         isempty = True
