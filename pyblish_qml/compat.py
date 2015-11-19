@@ -92,19 +92,24 @@ def test_qtconf_correctness():
     config = ConfigParser.ConfigParser()
     config.read(qtconf_path)
 
+    prefix_dir = config.get("Paths", "prefix")
+
     try:
-        prefix_dir = config.get("Paths", "prefix")
         binaries_dir = config.get("Paths", "binaries")
-
-        assert binaries_dir == prefix_dir
-        assert os.path.isdir(prefix_dir)
-        assert prefix_dir.endswith("PyQt5")
-
-        if os.name == "nt":
-            assert "designer.exe" in os.listdir(prefix_dir)
-
     except:
-        raise Exception("qt.conf misconfigured")
+        binaries_dir = prefix_dir
+
+    assert binaries_dir == prefix_dir, (
+        "qt.conf misconfigured, binaries not in prefix directory")
+    assert os.path.isdir(prefix_dir), (
+        "qt.conf misconfigured, prefix directory is not a directory")
+    assert prefix_dir.endswith("PyQt5"), (
+        "qt.conf misconfigured, prefix should end with PyQt5")
+
+    if os.name == "nt":
+        assert "designer.exe" in os.listdir(prefix_dir), (
+            "qt.conf misconfigured, designer.exe was missing "
+            "(and possibly others)")
 
 
 def test_qt_availability():
@@ -293,4 +298,4 @@ def main():
 
 
 if __name__ == '__main__':
-    print validate()
+    validate()
