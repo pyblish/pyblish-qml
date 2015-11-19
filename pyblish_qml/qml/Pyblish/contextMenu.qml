@@ -79,17 +79,6 @@ MouseArea {
                 }
             }
         }
-
-        // Rectangle {
-        //     x: 30
-        //     width: 1
-        //     color: "black"
-        //     opacity: 0.1
-        //     anchors {
-        //         top: parent.top
-        //         bottom: parent.bottom
-        //     }
-        // }
     }
 
     PropertyAnimation {

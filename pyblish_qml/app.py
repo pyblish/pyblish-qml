@@ -42,10 +42,7 @@ class Window(QtQuick.QQuickView):
             modifiers = self.parent.queryKeyboardModifiers()
             shift_pressed = QtCore.Qt.ShiftModifier & modifiers
 
-            if hasattr(self.parent, "__debugging__"):
-                event.accept()
-
-            elif shift_pressed:
+            if shift_pressed or hasattr(self.parent, "__debugging__"):
                 event.accept()
 
             elif "publishing" in self.parent.controller.states:
@@ -216,33 +213,14 @@ class Application(QtGui.QGuiApplication):
 
         """
 
-        def heartbeat_monitor():
-            while True:
-                interval = settings.HeartbeatInterval
-                time.sleep(interval)
-                for client, data in self.clients.copy().iteritems():
-                    if data["lastSeen"] < time.time() - interval:
-                        print("Bye bye %s!" % client)
-                        self.clients.pop(client)
-
-                        if client == self.current_client:
-                            self.hide_signal.emit()
-                            self.current_client = None
-
-                if not self.clients:
-                    self.standalone_signal.emit()
-
         kwargs = {
             "port": 9090,
             "service": server.QmlApi(self),
         }
 
-        rpc_worker = threading.Thread(target=server._serve, kwargs=kwargs)
-        heartbeat_worker = threading.Thread(target=heartbeat_monitor)
-
-        for worker in (rpc_worker, heartbeat_worker):
-            worker.daemon = True
-            worker.start()
+        t = threading.Thread(target=server._serve, kwargs=kwargs)
+        t.daemon = True
+        t.start()
 
 
 def main(source=None, debug=False, validate=True):
