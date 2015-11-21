@@ -76,9 +76,9 @@ def test_pyblish_availability():
     try:
         __import__("pyblish")
         __import__("pyblish_qml")
-        __import__("pyblish_endpoint")
+        __import__("pyblish_rpc")
     except:
-        raise Exception("Pyblish Suite not found")
+        raise Exception("Pyblish not found")
 
 
 def test_qtconf_availability():
@@ -101,7 +101,7 @@ def test_qtconf_correctness():
 
     assert binaries_dir == prefix_dir, (
         "qt.conf misconfigured, binaries not in prefix directory")
-    assert os.path.isdir(prefix_dir), (
+    assert os.path.isdir(os.path.abspath(prefix_dir)), (
         "qt.conf misconfigured, prefix directory is not a directory")
     assert prefix_dir.endswith("PyQt5"), (
         "qt.conf misconfigured, prefix should end with PyQt5")
