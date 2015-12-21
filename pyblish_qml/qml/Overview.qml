@@ -56,6 +56,70 @@ Item {
         ]
     }
 
+    Component {
+        id: sectionInstance
+
+        Item {
+            id: sectionRectangle
+            property bool checkState: true
+            height: 20
+            width: parent.width
+
+            Label {
+                id: sectionLabel
+                text: section
+                opacity: 0.5
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            MouseArea{
+                anchors.fill: parent
+                hoverEnabled: true
+
+                onClicked: {
+                    if(sectionRectangle.checkState){
+                        sectionRectangle.checkState = false
+                    }else{
+                        sectionRectangle.checkState = true
+                    }
+
+                    app.toggleSection(sectionRectangle.checkState, sectionLabel.text)
+                }
+
+                onEntered: {
+                    sectionLabel.opacity = 0.75
+                }
+
+                onExited: {
+                    sectionLabel.opacity = 0.5
+                }
+
+                onPressed: {
+                    sectionLabel.opacity = 1
+                }
+
+                onReleased: {
+                    sectionLabel.opacity = 0.5
+                }
+            }
+        }
+    }
+
+    Component {
+        id: sectionPlugin
+
+        Item {
+            height: 20
+            width: parent.width
+
+            Label {
+                text: section
+                opacity: 0.5
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+    }
+
     View {
         id: tabView
 
@@ -82,6 +146,7 @@ Item {
                 height: parent.height
 
                 section.property: "object.family"
+                section.delegate: sectionInstance
 
                 onActionTriggered: {
                     if (action.name == "repair")
@@ -102,6 +167,7 @@ Item {
                 height: parent.height
 
                 section.property: "object.verb"
+                section.delegate: sectionPlugin
 
                 onActionTriggered: {
                     if (action.name == "repair")
@@ -151,7 +217,7 @@ Item {
 
             anchors.fill: parent
             anchors.margins: 2
-            
+
             visible: tabBar.currentIndex == 1
         }
 
