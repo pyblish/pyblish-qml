@@ -361,6 +361,18 @@ class Controller(QtCore.QObject):
         else:
             self.error.emit("Cannot toggle")
 
+    @QtCore.pyqtSlot(bool, str)
+    def toggleSection(self, checkState, sectionLabel):
+        for item in self.item_model.items:
+            if item.itemType == 'instance' and sectionLabel == item.family:
+                item.isToggled = checkState
+
+            if item.itemType == 'plugin' and item.optional:
+                if item.verb == sectionLabel:
+                    item.isToggled = checkState
+
+        self.item_model.update_compatibility()
+
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def pluginData(self, index):
         qindex = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())

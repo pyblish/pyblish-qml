@@ -56,6 +56,59 @@ Item {
         ]
     }
 
+    Component {
+        id: sectionInstance
+        Item {
+            height: 20
+            width: parent.width
+
+            Item {
+                anchors.fill: parent
+                anchors.leftMargin: 5
+
+                Row {
+                    spacing: 5
+
+                    CheckBox {
+                        id: indicator
+                        checked: true
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        onClicked: {
+                            app.toggleSection(!indicator.checked, sectionLabel.text)
+                            indicator.checked = !indicator.checked
+                        }
+                    }
+
+                    Label {
+                        id: sectionLabel
+                        text: section
+                        opacity: 0.5
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: sectionPlugin
+        Item {
+            height: 20
+            width: parent.width
+
+            Item {
+                anchors.fill: parent
+
+                Label {
+                    text: section
+                    opacity: 0.5
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+        }
+    }
+
     View {
         id: tabView
 
@@ -82,6 +135,7 @@ Item {
                 height: parent.height
 
                 section.property: "object.family"
+                section.delegate: sectionInstance
 
                 onActionTriggered: {
                     if (action.name == "repair")
@@ -102,6 +156,7 @@ Item {
                 height: parent.height
 
                 section.property: "object.verb"
+                section.delegate: sectionPlugin
 
                 onActionTriggered: {
                     if (action.name == "repair")

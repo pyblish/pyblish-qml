@@ -27,7 +27,7 @@ MouseArea {
         id: body
         spacing: 5
         anchors.left: parent.left
-        anchors.leftMargin: listItem.margins
+        anchors.leftMargin: listItem.margins + 15
 
         width: parent.width - parent.margins - head.width
         height: parent.height
