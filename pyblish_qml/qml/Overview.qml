@@ -87,7 +87,7 @@ Item {
                 }
 
                 onEntered: {
-                    sectionLabel.opacity = 1
+                    sectionLabel.opacity = 0.75
                 }
 
                 onExited: {
@@ -95,11 +95,11 @@ Item {
                 }
 
                 onPressed: {
-                    sectionLabel.color = "black"
+                    sectionLabel.opacity = 1
                 }
 
                 onReleased: {
-                    sectionLabel.color = "white"
+                    sectionLabel.opacity = 0.5
                 }
             }
         }
