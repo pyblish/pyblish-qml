@@ -27,7 +27,7 @@ MouseArea {
         id: body
         spacing: 5
         anchors.left: parent.left
-        anchors.leftMargin: listItem.margins + 15
+        anchors.leftMargin: listItem.margins
 
         width: parent.width - parent.margins - head.width
         height: parent.height
@@ -37,7 +37,7 @@ MouseArea {
 
             active: listItem.active
             checked: listItem.checked
-            
+
             height: parent.height
 
             anchors.verticalCenter: parent.verticalCenter
@@ -74,7 +74,7 @@ MouseArea {
 
         Repeater {
             model: listItem.actions
-            
+
             AwesomeButton {
                 action: modelData
                 size: action.iconSize

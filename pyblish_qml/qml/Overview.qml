@@ -58,34 +58,48 @@ Item {
 
     Component {
         id: sectionInstance
+
         Item {
+            id: sectionRectangle
+            property bool checkState: true
             height: 20
             width: parent.width
 
-            Item {
+            Label {
+                id: sectionLabel
+                text: section
+                opacity: 0.5
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            MouseArea{
                 anchors.fill: parent
-                anchors.leftMargin: 5
+                hoverEnabled: true
 
-                Row {
-                    spacing: 5
-
-                    CheckBox {
-                        id: indicator
-                        checked: true
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        onClicked: {
-                            app.toggleSection(!indicator.checked, sectionLabel.text)
-                            indicator.checked = !indicator.checked
-                        }
+                onClicked: {
+                    if(sectionRectangle.checkState){
+                        sectionRectangle.checkState = false
+                    }else{
+                        sectionRectangle.checkState = true
                     }
 
-                    Label {
-                        id: sectionLabel
-                        text: section
-                        opacity: 0.5
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
+                    app.toggleSection(sectionRectangle.checkState, sectionLabel.text)
+                }
+
+                onEntered: {
+                    sectionLabel.opacity = 1
+                }
+
+                onExited: {
+                    sectionLabel.opacity = 0.5
+                }
+
+                onPressed: {
+                    sectionLabel.color = "black"
+                }
+
+                onReleased: {
+                    sectionLabel.color = "white"
                 }
             }
         }
@@ -93,18 +107,15 @@ Item {
 
     Component {
         id: sectionPlugin
+
         Item {
             height: 20
             width: parent.width
 
-            Item {
-                anchors.fill: parent
-
-                Label {
-                    text: section
-                    opacity: 0.5
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+            Label {
+                text: section
+                opacity: 0.5
+                anchors.verticalCenter: parent.verticalCenter
             }
         }
     }
@@ -206,7 +217,7 @@ Item {
 
             anchors.fill: parent
             anchors.margins: 2
-            
+
             visible: tabBar.currentIndex == 1
         }
 
