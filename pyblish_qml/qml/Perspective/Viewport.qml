@@ -34,6 +34,13 @@ Item {
                         load: true,
                     },
                     {
+                        type: "path",
+                        name: "Path",
+                        closed: true,
+                        item: root.item,
+                        load: item.itemType == "plugin"
+                    },
+                    {
                         type: "documentation",
                         name: "Documentation",
                         closed: true,

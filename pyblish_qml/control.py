@@ -442,7 +442,8 @@ class Controller(QtCore.QObject):
         data = {
             "name": item.name,
             "data": item.data,
-            "doc": getattr(item, "doc", None)
+            "doc": getattr(item, "doc", None),
+            "path": getattr(item, "path", None),
         }
 
         return data

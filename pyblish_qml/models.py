@@ -39,7 +39,8 @@ plugin_defaults = {
     "instanceEnabled": False,
     "pre11": True,
     "verb": "unknown",
-    "actions": list()
+    "actions": list(),
+    "path": ""
 }
 
 instance_defaults = {
@@ -96,6 +97,7 @@ result_defaults = {
 
     # Plugin
     "doc": "default",
+    "path": "default",
 }
 
 
@@ -282,7 +284,22 @@ class ItemModel(AbstractModel):
         item.update(plugin_defaults)
 
         plugin = plugin.to_json()
-        for member in plugin["__all__"]:
+        for member in ["pre11",
+                       "name",
+                       "label",
+                       "optional",
+                       "category",
+                       "actions",
+                       "id",
+                       "order",
+                       "doc",
+                       "type",
+                       "module",
+                       "hasRepair",
+                       "families",
+                       "contextEnabled",
+                       "instanceEnabled",
+                       "path"]:
             item[member] = plugin[member]
 
         # Append GUI-only data
