@@ -16,8 +16,7 @@ Item {
     Label {
         text: root.text
         opacity: ma.containsPress ? 1 :
-                 ma.containsMouse ? 0.75
-                                         : 0.5
+                 ma.containsMouse ? 0.75 : 0.5
         anchors.verticalCenter: parent.verticalCenter
     }
 
