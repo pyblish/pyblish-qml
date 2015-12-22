@@ -11,7 +11,7 @@ BaseGroupDelegate {
 
             anchors.fill: parent
             anchors.margins: 10
-            text: modelData.item.doc || "No documentation"
+            text: modelData.item.path || "No documentation"
         }
     }
 }

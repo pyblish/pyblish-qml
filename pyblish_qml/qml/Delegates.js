@@ -16,6 +16,7 @@ var components = {
     "records":       Qt.createComponent("delegates/RecordsDelegate.qml"),
     "gadget":        Qt.createComponent("delegates/GadgetDelegate.qml"),
     "documentation": Qt.createComponent("delegates/DocumentationDelegate.qml"),
+    "path":          Qt.createComponent("delegates/PathDelegate.qml"),
     "spacer":        Qt.createComponent("delegates/SpacerDelegate.qml"),
     "results":       Qt.createComponent("delegates/ResultsDelegate.qml"),
     "items":         Qt.createComponent("delegates/ItemsDelegate.qml"),

@@ -39,7 +39,8 @@ plugin_defaults = {
     "instanceEnabled": False,
     "pre11": True,
     "verb": "unknown",
-    "actions": list()
+    "actions": list(),
+    "path": ""
 }
 
 instance_defaults = {
@@ -96,6 +97,7 @@ result_defaults = {
 
     # Plugin
     "doc": "default",
+    "path": "default",
 }
 
 
