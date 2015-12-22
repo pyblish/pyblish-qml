@@ -37,7 +37,7 @@ MouseArea {
 
             active: listItem.active
             checked: listItem.checked
-            
+
             height: parent.height
 
             anchors.verticalCenter: parent.verticalCenter
@@ -74,7 +74,7 @@ MouseArea {
 
         Repeater {
             model: listItem.actions
-            
+
             AwesomeButton {
                 action: modelData
                 size: action.iconSize

@@ -63,19 +63,4 @@ ListView {
             }
         ]
     }
-
-    section.delegate: Item {
-        height: 20
-        width: parent.width
-
-        Item {
-            anchors.fill: parent
-
-            Label {
-                text: section
-                opacity: 0.5
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
-    }
 }
