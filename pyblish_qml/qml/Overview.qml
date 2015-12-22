@@ -113,6 +113,11 @@ Item {
                 section.property: "object.verb"
                 section.delegate: SectionItem {
                     text: section
+
+                    onClicked: {
+                        checkState = !checkState
+                        app.toggleSection(checkState, text)
+                    }
                 }
 
                 onActionTriggered: {
