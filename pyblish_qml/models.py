@@ -100,23 +100,6 @@ result_defaults = {
     "path": "default",
 }
 
-rpc_data = ["pre11",
-            "name",
-            "label",
-            "optional",
-            "category",
-            "actions",
-            "id",
-            "order",
-            "doc",
-            "type",
-            "module",
-            "hasRepair",
-            "families",
-            "contextEnabled",
-            "instanceEnabled",
-            "path"]
-
 
 class PropertyType(QtCore.pyqtWrapperType):
     """Metaclass for converting class attributes into pyqtProperties
@@ -301,7 +284,22 @@ class ItemModel(AbstractModel):
         item.update(plugin_defaults)
 
         plugin = plugin.to_json()
-        for member in rpc_data:
+        for member in ["pre11",
+                       "name",
+                       "label",
+                       "optional",
+                       "category",
+                       "actions",
+                       "id",
+                       "order",
+                       "doc",
+                       "type",
+                       "module",
+                       "hasRepair",
+                       "families",
+                       "contextEnabled",
+                       "instanceEnabled",
+                       "path"]:
             item[member] = plugin[member]
 
         # Append GUI-only data
