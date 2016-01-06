@@ -54,6 +54,10 @@ BaseDelegate {
 
                     model: [
                         {
+                            "key": "Instance",
+                            "value": object.instance || "Context"
+                        },
+                        {
                             "key": "Filename",
                             "value": object.fname
                         },
