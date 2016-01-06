@@ -1,7 +1,13 @@
 Changelog
 =========
 
-Version 0.3.1
+Version 0.3.3
+-------------
+
+- Feature: Instance in exceptions (#106)
+- Feature: Default on/off option for Plugins (#92)
+
+Version 0.3.2
 -------------
 
 - Feature: Actions (#128)
