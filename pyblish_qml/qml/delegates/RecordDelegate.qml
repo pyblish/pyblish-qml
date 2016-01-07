@@ -60,6 +60,13 @@ BaseDelegate {
                        spacing -
                        root.toggle.width -
                        10
+               onLinkActivated: Qt.openUrlExternally(link)
+
+               MouseArea {
+                   anchors.fill: parent
+                   acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+                   cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+               }
             }
 
             Column {

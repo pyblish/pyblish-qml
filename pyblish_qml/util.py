@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import re
 
 from PyQt5 import QtCore
 
@@ -195,5 +196,12 @@ def format_text(text):
         result += " ".join(paragraph.split()) + "\n\n"
 
     result = result.rstrip("\n")  # Remove last newlines
+
+    # converting links to HTML
+    pattern = r"(https?:\/\/(?:w{1,3}.)?[^\s]*?(?:\.[a-z]+)+)"
+    pattern += r"(?![^<]*?(?:<\/\w+>|\/?>))"
+    if re.search(pattern, result):
+        html = r"<a href='\1'><font color='FF00CC'>\1</font></a>"
+        result = re.sub(pattern, html, result)
 
     return result
