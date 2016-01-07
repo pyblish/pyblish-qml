@@ -1,4 +1,5 @@
 import time
+import re
 from PyQt5 import QtCore
 
 import util
@@ -301,6 +302,13 @@ class ItemModel(AbstractModel):
                        "instanceEnabled",
                        "path"]:
             item[member] = plugin[member]
+
+        # converting links to HTML
+        pattern = r"(https?:\/\/(?:w{1,3}.)?[^\s]*?(?:\.[a-z]+)+)"
+        pattern += r"(?![^<]*?(?:<\/\w+>|\/?>))"
+        if item["doc"] and re.search(pattern, item["doc"]):
+            html = r"<a href='\1'><font color='FF00CC'>\1</font></a>"
+            item["doc"] = re.sub(pattern, html, item["doc"])
 
         # Append GUI-only data
         item["itemType"] = "plugin"

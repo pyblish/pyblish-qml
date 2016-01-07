@@ -12,6 +12,13 @@ BaseGroupDelegate {
             anchors.fill: parent
             anchors.margins: 10
             text: modelData.item.doc || "No documentation"
+            onLinkActivated: Qt.openUrlExternally(link)
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+                cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
         }
     }
 }

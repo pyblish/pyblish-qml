@@ -45,6 +45,14 @@ BaseDelegate {
                 wrapMode: root.expanded ? Text.WordWrap : Text.NoWrap
 
                 width: parent.width
+
+                onLinkActivated: Qt.openUrlExternally(link)
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.NoButton // we don't want to eat clicks on the Text
+                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                }
             }
 
             Column {
