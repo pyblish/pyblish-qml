@@ -453,6 +453,11 @@ class Controller(QtCore.QObject):
             return self.error.emit("Not ready")
 
         item = model.items[index]
+
+        self.host.emit("publish", {"item": item,
+                                   "new_value": not item.isToggled,
+                                   "old_value": item.isToggled})
+
         item.isToggled = not item.isToggled
 
     def echo(self, data):
