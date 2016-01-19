@@ -454,9 +454,8 @@ class Controller(QtCore.QObject):
 
         item = model.items[index]
 
-        self.host.emit("publish", {"item": item,
-                                   "new_value": not item.isToggled,
-                                   "old_value": item.isToggled})
+        self.host.emit("publish", item=item, new_value=not item.isToggled,
+                       old_value=item.isToggled)
 
         item.isToggled = not item.isToggled
 
