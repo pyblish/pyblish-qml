@@ -38,13 +38,6 @@ View {
 
         spacing: 3
 
-        // Button {
-        //     elevation: 1
-
-        //     icon: "button-save"
-        //     onClicked: footer.save()
-        // }
-
         AwesomeButton {
             elevation: 1
 

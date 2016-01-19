@@ -57,15 +57,7 @@ Rectangle {
         
         asynchronous: true
 
-        opacity: running.active ? 1 : 0
-
         source: "app.qml"
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: 200
-            }
-        }
 
         onStatusChanged: {
             if (status == Loader.Loading)
@@ -74,31 +66,6 @@ Rectangle {
                 console.timeEnd("Polishing")
             if (status == Loader.Error)
                 errored()
-        }
-    }
-
-    Item {
-        id: loadingView
-        
-        anchors.centerIn: parent
-
-        visible: loader.status == Loader.Loading
-
-        Rectangle {
-            width: 10
-            height: 1
-
-            anchors.centerIn: parent
-
-            color: "white"
-            antialiasing: true
-
-            RotationAnimation on rotation {
-                duration: 2000
-                loops: Animation.Infinite
-                from: 0
-                to: 360
-            }
         }
     }
 
