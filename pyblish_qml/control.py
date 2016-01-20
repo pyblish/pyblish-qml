@@ -282,7 +282,6 @@ class Controller(QtCore.QObject):
             try:
                 # Notify GUI before commencing remote processing
                 self.about_to_process.emit(plug, instance)
-                print("PROCESSSING: %s" % plug)
 
                 result = self.host.process(plug, context, instance)
 
@@ -535,10 +534,10 @@ class Controller(QtCore.QObject):
     def on_about_to_process(self, plugin, instance):
         """Reflect currently running pair in GUI"""
 
-        if not instance:
+        if instance is None:
             instance_item = self.item_model.instances[0]
         else:
-            instance_item = self.item_model.instances[instance.id].id
+            instance_item = self.item_model.instances[instance.id]
 
         plugin_item = self.item_model.plugins[plugin.id]
 
@@ -636,14 +635,21 @@ class Controller(QtCore.QObject):
             util.echo("Made %i requests during reset."
                       % abs(stats["requestCount"]))
 
-            self.item_model.reset_status()
+            # Reset Context
+            context = self.item_model.instances[0]
+            context.hasError = False
+            context.succeeded = False
+            context.processed = False
+            context.isProcessing = False
+            context.currentProgress = 0
+
             self.initialised.emit()
 
         def on_run(plugins, context):
             util.async(self.host.context,
                        callback=lambda context: on_finished(plugins, context))
 
-        def get_plugins(plugins, context):
+        def on_discover(plugins, context):
             collectors = list()
 
             for plugin in plugins:
@@ -661,15 +667,15 @@ class Controller(QtCore.QObject):
                      callback=on_run,
                      callback_args=[plugins, context])
 
-        def get_context(context):
+        def on_context(context):
             self.item_model.add_context(context)
             self.result_model.add_context(context)
             util.async(
                 self.host.discover,
-                callback=lambda plugins: get_plugins(plugins, context)
+                callback=lambda plugins: on_discover(plugins, context)
             )
 
-        util.async(self.host.context, callback=get_context)
+        util.async(self.host.context, callback=on_context)
 
     @QtCore.pyqtSlot()
     def publish(self):
@@ -684,13 +690,20 @@ class Controller(QtCore.QObject):
             # Communicate with host to retrieve current plugins and instances
             # This can potentially take a very long time; it is run
             # asynchonously and initiates processing once complete.
-            host_plugins = dict((p.id, p) for p in self.host.discover())
-            host_context = dict((i.id, i) for i in self.host.context())
+            host_plugins = dict((p.id, p) for p in self.host.cached_discover)
+            host_context = dict((i.id, i) for i in self.host.cached_context)
 
             plugins = list()
             instances = list()
 
             for plugin in models.ItemIterator(self.item_model.plugins):
+
+                # Exclude Collectors
+                if pyblish.lib.inrange(
+                        number=plugin.order,
+                        base=pyblish.api.Collector.order):
+                    continue
+
                 plugins.append(host_plugins[plugin.id])
 
             for instance in models.ItemIterator(self.item_model.instances):
@@ -713,8 +726,8 @@ class Controller(QtCore.QObject):
             # Communicate with host to retrieve current plugins and instances
             # This can potentially take a very long time; it is run
             # asynchonously and initiates processing once complete.
-            host_plugins = dict((p.id, p) for p in self.host.discover())
-            host_context = dict((i.id, i) for i in self.host.context())
+            host_plugins = dict((p.id, p) for p in self.host.cached_discover)
+            host_context = dict((i.id, i) for i in self.host.cached_context)
 
             plugins = list()
             instances = list()
