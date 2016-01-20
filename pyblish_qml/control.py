@@ -356,6 +356,10 @@ class Controller(QtCore.QObject):
         item = self.item_model.items[source_index]
 
         if item.optional:
+            self.host.emit("instanceToggled", instance=item.name,
+                           new_value=item.isToggled,
+                           old_value=not item.isToggled)
+
             self.__toggle_item(self.item_model, source_index)
             self.item_model.update_compatibility()
         else:
@@ -365,10 +369,20 @@ class Controller(QtCore.QObject):
     def toggleSection(self, checkState, sectionLabel):
         for item in self.item_model.items:
             if item.itemType == 'instance' and sectionLabel == item.family:
+                if item.isToggled != checkState:
+                    self.host.emit("instanceToggled", instance=item.name,
+                                   new_value=item.isToggled,
+                                   old_value=not item.isToggled)
+
                 item.isToggled = checkState
 
             if item.itemType == 'plugin' and item.optional:
                 if item.verb == sectionLabel:
+                    if item.isToggled != checkState:
+                        self.host.emit("pluginToggled", plugin=item.id,
+                                       new_value=item.isToggled,
+                                       old_value=not item.isToggled)
+
                     item.isToggled = checkState
 
         self.item_model.update_compatibility()
@@ -395,6 +409,10 @@ class Controller(QtCore.QObject):
         item = self.item_model.items[source_index]
 
         if item.optional:
+            self.host.emit("pluginToggled", plugin=item.id,
+                           new_value=item.isToggled,
+                           old_value=not item.isToggled)
+
             self.__toggle_item(self.item_model, source_index)
         else:
             self.error.emit("Cannot toggle")
@@ -453,6 +471,7 @@ class Controller(QtCore.QObject):
             return self.error.emit("Not ready")
 
         item = model.items[index]
+
         item.isToggled = not item.isToggled
 
     def echo(self, data):
