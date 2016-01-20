@@ -14,7 +14,7 @@ Version 0.4.0
 - Bugfix: Both family and families are represented in the GUI
 - Bugfix: Plug-ins only compatible with the Context are more accurately represented. (#101)
 
-Version 0.3.1
+Version 0.3.3
 -------------
 
 - Feature: Instance in exceptions (#106)
