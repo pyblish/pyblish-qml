@@ -356,7 +356,7 @@ class Controller(QtCore.QObject):
         item = self.item_model.items[source_index]
 
         if item.optional:
-            self.host.emit("instanceToggled", instance=item,
+            self.host.emit("instanceToggled", instance=item.name,
                            new_value=item.isToggled,
                            old_value=not item.isToggled)
 
@@ -369,8 +369,8 @@ class Controller(QtCore.QObject):
     def toggleSection(self, checkState, sectionLabel):
         for item in self.item_model.items:
             if item.itemType == 'instance' and sectionLabel == item.family:
-                if item.isToggled !=checkState:
-                    self.host.emit("instanceToggled", instance=item,
+                if item.isToggled != checkState:
+                    self.host.emit("instanceToggled", instance=item.name,
                                    new_value=item.isToggled,
                                    old_value=not item.isToggled)
 
@@ -378,8 +378,8 @@ class Controller(QtCore.QObject):
 
             if item.itemType == 'plugin' and item.optional:
                 if item.verb == sectionLabel:
-                    if item.isToggled !=checkState:
-                        self.host.emit("pluginToggled", plugin=item,
+                    if item.isToggled != checkState:
+                        self.host.emit("pluginToggled", plugin=item.id,
                                        new_value=item.isToggled,
                                        old_value=not item.isToggled)
 
@@ -409,7 +409,7 @@ class Controller(QtCore.QObject):
         item = self.item_model.items[source_index]
 
         if item.optional:
-            self.host.emit("pluginToggled", plugin=item,
+            self.host.emit("pluginToggled", plugin=item.id,
                            new_value=item.isToggled,
                            old_value=not item.isToggled)
 
