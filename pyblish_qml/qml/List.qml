@@ -29,7 +29,7 @@ ListView {
 
         status: {
             if (object.isProcessing)
-                return "selected"
+                return "processing"
             if (object.hasError)
                 return "error"
             if (object.succeeded)
