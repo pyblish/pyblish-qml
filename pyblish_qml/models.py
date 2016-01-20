@@ -319,15 +319,6 @@ class ItemModel(AbstractModel):
         # Append GUI-only data
         item["itemType"] = "plugin"
         item["hasCompatible"] = True
-
-        # setting toggle state from "active" attribute
-        # on everything but collectors
-        if pyblish.lib.inrange(number=plugin["order"],
-                               base=pyblish.api.Collector.order):
-            item["isToggled"] = False
-        else:
-            item["isToggled"] = plugin["active"]
-
         item["verb"] = {
             "Selector": "Collect",
             "Collector": "Collect",
@@ -742,7 +733,6 @@ class PluginProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
         super(PluginProxy, self).__init__(*args, **kwargs)
         self.add_inclusion("itemType", "plugin")
-        self.add_exclusion("type", "Selector")
         self.add_exclusion("hasCompatible", False)
 
 
