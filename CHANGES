@@ -1,7 +1,20 @@
 Changelog
 =========
 
-Version 0.3.3
+Version 0.4.0
+-------------
+
+- Feature: Callbacks (#148)
+- Enhancement: Collectors visible during reset (#133)
+- Enhancement: Animated feedback on currently running items
+- Enhancement: More visible indicator of which is currently running
+- Optimisation: Start-up performance; the Window pops up faster thanks for not having to wait for Collectors
+- Optimisation: Interactivity performance; pressing buttons doesn't lag anymore (#134)
+- Bugfix: Accurate representation of currently running items
+- Bugfix: Both family and families are represented in the GUI
+- Bugfix: Plug-ins only compatible with the Context are more accurately represented. (#101)
+
+Version 0.3.1
 -------------
 
 - Feature: Instance in exceptions (#106)
