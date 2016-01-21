@@ -41,6 +41,9 @@ class Controller(QtCore.QObject):
     acting = QtCore.pyqtSignal()
     acted = QtCore.pyqtSignal()
 
+    # A plug-in/instance pair is about to be processed
+    about_to_process = QtCore.pyqtSignal(object, object)
+
     changed = QtCore.pyqtSignal()
 
     ready = QtCore.pyqtSignal()
@@ -86,6 +89,10 @@ class Controller(QtCore.QObject):
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
         self.finished.connect(self.on_finished)
+
+        # NOTE: Listeners to this signal are run in the main thread
+        self.about_to_process.connect(self.on_about_to_process,
+                                      QtCore.Qt.QueuedConnection)
 
         self.state_changed.connect(self.on_state_changed)
 
@@ -245,6 +252,50 @@ class Controller(QtCore.QObject):
     @QtCore.pyqtSlot(result=float)
     def time(self):
         return time.time()
+
+    def iterator(self, plugins, context):
+        """Primary iterator
+
+        CAUTION: THIS RUNS IN A SEPARATE THREAD
+
+        This is the brains of publishing. It handles logic related
+        to which plug-in to process with which Instance or Context,
+        in addition to stopping when necessary.
+
+        """
+
+        test = pyblish.logic.registered_test()
+        state = {
+            "nextOrder": None,
+            "ordersWithError": set()
+        }
+
+        for plug, instance in pyblish.logic.Iterator(plugins, context):
+            state["nextOrder"] = plug.order
+
+            if not self.is_running:
+                raise StopIteration("Stopped")
+
+            if test(**state):
+                raise StopIteration("Stopped due to %s" % test(**state))
+
+            try:
+                # Notify GUI before commencing remote processing
+                self.about_to_process.emit(plug, instance)
+
+                result = self.host.process(plug, context, instance)
+
+            except Exception as e:
+                raise StopIteration("Unknown error: %s" % e)
+
+            else:
+                # Make note of the order at which the
+                # potential error error occured.
+                has_error = result["error"] is not None
+                if has_error:
+                    state["ordersWithError"].add(plug.order)
+
+            yield result
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def getPluginActions(self, index):
@@ -480,6 +531,19 @@ class Controller(QtCore.QObject):
 
     # Event handlers
 
+    def on_about_to_process(self, plugin, instance):
+        """Reflect currently running pair in GUI"""
+
+        if instance is None:
+            instance_item = self.item_model.instances[0]
+        else:
+            instance_item = self.item_model.instances[instance.id]
+
+        plugin_item = self.item_model.plugins[plugin.id]
+
+        instance_item.isProcessing = True
+        plugin_item.isProcessing = True
+
     def on_state_changed(self, state):
         util.echo("Entering state: \"%s\"" % state)
 
@@ -524,62 +588,43 @@ class Controller(QtCore.QObject):
 
         """
 
-        if not any(state in self.states for state in ("ready",
-                                                      "finished")):
+        if not any(state in self.states for state in ("ready", "finished")):
             return self.error.emit("Not ready")
+
+        self.initialising.emit()
 
         util.timer("resetting..")
         stats = {"requestCount": self.host.stats()["totalRequestCount"]}
 
-        self.initialising.emit()
+        # Clear models
         self.item_model.reset()
         self.result_model.reset()
         self.changes.clear()
+
+        # Clear host
         self.host.reset()
 
-        # Append Context
-        context = self.host.context()
-        self.result_model.add_context(context)
-
-        # Perform selection
-        def on_next(result):
-            if isinstance(result, StopIteration):
-                return on_finished()
-
-            if isinstance(result, Exception):
-                self.error.emit("Unknown error occured; check terminal")
-                self.echo({"type": "message", "message": str(result)})
-                return on_finished("Stopped resetting due to unknown "
-                                   "result, check your test?")
-
-            self.result_model.update_with_result(result)
-            util.async(iterator.next, callback=on_next)
-
-        def on_finished(message=None):
-            for plugin in plugins:
-                self.item_model.add_plugin(plugin)
-
-            if message:
-                self.echo({"message": message, "type": "message"})
-
-            context = self.host.context()
-            self.item_model.add_context(context)
-
+        def on_finished(plugins, context):
             for instance in context:
                 self.item_model.add_instance(instance)
 
             # Compute compatibility
             for plugin in self.item_model.plugins:
-                compatible = pyblish.logic.instances_by_plugin(context, plugin)
-                if not plugin.instanceEnabled:
-                    compatible += [type("Context",
-                                   (object,),
-                                   {"id": "Context"})]
+                compatible = pyblish.logic.instances_by_plugin(
+                    context, plugin)
+
+                if plugin.contextEnabled:
+                    c = type("Context", (object,), {"id": "Context"})
+                    compatible.append(c)
+
                 plugin.compatibleInstances = [i.id for i in compatible]
 
             for instance in self.item_model.instances:
-                compatible = pyblish.logic.plugins_by_family(
-                    plugins, instance.family)
+                compatible = list()
+                for family in (instance.families or []) + [instance.family]:
+                    compatible.extend(pyblish.logic.plugins_by_families(
+                        plugins, instance.families + [instance.family]))
+
                 instance.compatiblePlugins = [i.id for i in compatible]
 
             self.item_model.update_compatibility()
@@ -590,110 +635,169 @@ class Controller(QtCore.QObject):
             util.echo("Made %i requests during reset."
                       % abs(stats["requestCount"]))
 
+            # Reset Context
+            context = self.item_model.instances[0]
+            context.hasError = False
+            context.succeeded = False
+            context.processed = False
+            context.isProcessing = False
+            context.currentProgress = 0
+
             self.initialised.emit()
 
-        # Append plug-ins
-        plugins = self.host.discover()
+        def on_run(plugins, context):
+            util.async(self.host.context,
+                       callback=lambda context: on_finished(plugins, context))
 
-        iterator = pyblish.logic.process(
-                func=self.host.process,
-                plugins=[p for p in plugins
-                         if pyblish.lib.inrange(
-                            number=p.order,
-                            base=pyblish.api.Collector.order,
-                            offset=0.5)],
-                context=self.host.context,
-                test=self.host.test)
+        def on_discover(plugins, context):
+            collectors = list()
 
-        util.async(iterator.next, callback=on_next)
+            for plugin in plugins:
+                self.item_model.add_plugin(plugin)
+
+                # Sort out which of these are Collectors
+                if not pyblish.lib.inrange(
+                        number=plugin.order,
+                        base=pyblish.api.Collector.order):
+                    continue
+
+                collectors.append(plugin)
+
+            self.run(collectors, [],
+                     callback=on_run,
+                     callback_args=[plugins, context])
+
+        def on_context(context):
+            self.item_model.add_context(context)
+            self.result_model.add_context(context)
+            util.async(
+                self.host.discover,
+                callback=lambda plugins: on_discover(plugins, context)
+            )
+
+        util.async(self.host.context, callback=on_context)
 
     @QtCore.pyqtSlot()
     def publish(self):
-        # 1. Get available items from host
-        plugins = self.host.discover()
-        context = self.host.context()
+        """Start asynchonous publishing
 
-        # 2. Get toggled items
-        _plugins = [x.id for x in models.ItemIterator(
-            self.item_model.plugins)]
-        _context = [x.id for x in models.ItemIterator(
-            self.item_model.instances)]
+        Publishing takes into account all available and currently
+        toggled plug-ins and instances.
 
-        # 3. Map toggled items to items from host
-        plugins = [x for x in plugins if x.id in _plugins]
-        context = [x for x in context if x.id in _context]
+        """
 
-        iterator = pyblish.logic.process(func=self.host.process,
-                                         plugins=plugins,
-                                         context=context,
-                                         test=self.host.test)
+        def get_data():
+            # Communicate with host to retrieve current plugins and instances
+            # This can potentially take a very long time; it is run
+            # asynchonously and initiates processing once complete.
+            host_plugins = dict((p.id, p) for p in self.host.cached_discover)
+            host_context = dict((i.id, i) for i in self.host.cached_context)
 
-        return self.run(iterator)
+            plugins = list()
+            instances = list()
+
+            for plugin in models.ItemIterator(self.item_model.plugins):
+
+                # Exclude Collectors
+                if pyblish.lib.inrange(
+                        number=plugin.order,
+                        base=pyblish.api.Collector.order):
+                    continue
+
+                plugins.append(host_plugins[plugin.id])
+
+            for instance in models.ItemIterator(self.item_model.instances):
+                instances.append(host_context[instance.id])
+
+            return plugins, instances
+
+        util.async(get_data, callback=lambda args: self.run(*args))
 
     @QtCore.pyqtSlot()
     def validate(self):
-        context = [p.id for p in models.ItemIterator(
-            self.item_model.instances)]
+        """Start asynchonous validation
 
-        plugins = list()
-        for plugin in models.ItemIterator(self.item_model.plugins):
-            if not pyblish.lib.inrange(
-                    plugin.order, base=pyblish.api.Validator.order):
-                continue
+        Validation only takes into account currently available
+        and toggled Validators, and leaves all else behind.
 
-            plugins.append(plugin.id)
+        """
 
-        plugins = [p for p in self.host.discover() if p.id in plugins]
-        context = [p for p in self.host.context() if p.id in context]
+        def get_data():
+            # Communicate with host to retrieve current plugins and instances
+            # This can potentially take a very long time; it is run
+            # asynchonously and initiates processing once complete.
+            host_plugins = dict((p.id, p) for p in self.host.cached_discover)
+            host_context = dict((i.id, i) for i in self.host.cached_context)
 
-        iterator = pyblish.logic.process(func=self.host.process,
-                                         plugins=plugins,
-                                         context=context,
-                                         test=self.host.test)
+            plugins = list()
+            instances = list()
 
-        return self.run(iterator)
+            for plugin in models.ItemIterator(self.item_model.plugins):
+                # Consider Validators only.
+                if not pyblish.lib.inrange(plugin.order,
+                                           base=pyblish.api.Validator.order):
+                    continue
 
-    def run(self, iterator):
-        if "ready" not in self.states:
-            self.error.emit("Not ready")
-            return
+                plugins.append(host_plugins[plugin.id])
 
-        self.publishing.emit()
+            for instance in models.ItemIterator(self.item_model.instances):
+                instances.append(host_context[instance.id])
+
+            return plugins, instances
+
+        util.async(get_data, callback=lambda args: self.run(*args))
+
+    def run(self, plugins, context, callback=None, callback_args=[]):
+        """Commence asynchronous tasks
+
+        This method runs through the provided `plugins` in
+        an asynchronous manner, interrupted by either
+        completion or failure of a plug-in.
+
+        Inbetween processes, the GUI is fed information
+        from the task and redraws itself.
+
+        Arguments:
+            plugins (list): Plug-ins to process
+            context (list): Instances to process
+            callback (func, optional): Called on finish
+            callback_args (list, optional): Arguments passed to callback
+
+        """
+
+        # if "ready" not in self.states:
+        #     return self.error.emit("Not ready")
+
+        # Initial set-up
         self.is_running = True
+        self.publishing.emit()
         self.save()
 
-        # Setup statistics
+        # Setup statistics for better debugging.
+        # (To be finalised in `on_finished`)
         util.timer("publishing")
         stats = {"requestCount": self.host.stats()["totalRequestCount"]}
 
+        # For each completed task, update
+        # the GUI and commence next task.
         def on_next(result):
             if isinstance(result, StopIteration):
-                return on_finished()
+                return on_finished(str(result))
 
-            if not self.is_running:
-                return on_finished("Stopped")
+            self.item_model.update_with_result(result)
+            self.result_model.update_with_result(result)
 
-            if isinstance(result, pyblish.logic.TestFailed):
-                return on_finished("Stopped due to %s" % result)
-
-            if isinstance(result, Exception):
-                self.error.emit("Unknown error occured; check terminal")
-                self.echo({"type": "message", "message": str(result)})
-                return on_finished("Stopped due to unknown error")
-
-            self.update_with_result(result)
-
-            # TODO(marcus): Highlight upcoming pair
-
-            # Run next
+            # Once the main thread has finished updating
+            # the GUI, we can proceed handling of next task.
             util.async(iterator.next, callback=on_next)
 
         def on_finished(message=None):
+            """Locally running function"""
             self.is_running = False
             self.finished.emit()
 
             if message:
-                self.echo({"message": message, "type": "message"})
+                self.info.emit(message)
 
             # Report statistics
             stats["requestCount"] -= self.host.stats()["totalRequestCount"]
@@ -701,7 +805,14 @@ class Controller(QtCore.QObject):
             util.echo("Made %i requests during publish."
                       % abs(stats["requestCount"]))
 
-        # Publish
+            if callback:
+                callback(*callback_args)
+
+        # The iterator initiates processing and is
+        # executed one item at a time in a separate thread.
+        # Once the thread finishes execution, it signals
+        # the `callback`.
+        iterator = self.iterator(plugins, context)
         util.async(iterator.next, callback=on_next)
 
     @QtCore.pyqtSlot(int)
@@ -759,7 +870,8 @@ class Controller(QtCore.QObject):
                 self.echo({"type": "message", "message": str(result)})
                 return on_finished()
 
-            self.update_with_result(result)
+            self.item_model.update_with_result(result)
+            self.result_model.update_with_result(result)
 
             # Run next again
             util.async(iterator.next, callback=on_next)
@@ -776,7 +888,3 @@ class Controller(QtCore.QObject):
 
         # Reset state
         util.async(iterator.next, callback=on_next)
-
-    def update_with_result(self, result):
-        self.item_model.update_with_result(result)
-        self.result_model.update_with_result(result)

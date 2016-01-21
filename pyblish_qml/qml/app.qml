@@ -1,5 +1,4 @@
-/*
- * QML Application
+/*! QML Application
  *
  * This file represents the highest-level of content in the
  * presentation-layer of Pyblish QML.
@@ -8,6 +7,7 @@
 
 import QtQuick 2.3
 import QtQuick.Controls 1.3
+
 import Pyblish 0.1
 import Perspective 0.1 as Perspective
 
@@ -15,12 +15,10 @@ import Perspective 0.1 as Perspective
 StackView {
     id: stack
 
-    /*
-     * Setup next stack
+    /*! Setup next stack
      *
      * Format relevant proxy-models to display information
      * relevant to the currently entered item.
-     *
     */
     function setup(item) {
         app.recordProxy.clear_inclusion()

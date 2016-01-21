@@ -2,7 +2,7 @@ import QtQuick 2.3
 import Pyblish 0.1
 
 
-Ink {
+MouseArea {
     id: checkView
 
     width: 10

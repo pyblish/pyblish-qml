@@ -41,12 +41,14 @@ plugin_defaults = {
     "pre11": True,
     "verb": "unknown",
     "actions": list(),
-    "path": ""
+    "path": "",
+    "__instanceEnabled__": False
 }
 
 instance_defaults = {
     "optional": True,
     "family": None,
+    "families": list(),
     "niceName": "default",
     "compatiblePlugins": list(),
 }
@@ -263,6 +265,9 @@ class AbstractModel(QtCore.QAbstractListModel):
 
 def ItemIterator(items):
     for i in items:
+        if i.id == "Context":
+            continue
+
         if not i.isToggled:
             continue
 
@@ -300,6 +305,7 @@ class ItemModel(AbstractModel):
                        "families",
                        "contextEnabled",
                        "instanceEnabled",
+                       "__instanceEnabled__",
                        "path"]:
             item[member] = plugin[member]
 
@@ -313,15 +319,6 @@ class ItemModel(AbstractModel):
         # Append GUI-only data
         item["itemType"] = "plugin"
         item["hasCompatible"] = True
-
-        # setting toggle state from "active" attribute
-        # on everything but collectors
-        if pyblish.lib.inrange(number=plugin["order"],
-                               base=pyblish.api.Collector.order):
-            item["isToggled"] = False
-        else:
-            item["isToggled"] = plugin["active"]
-
         item["verb"] = {
             "Selector": "Collect",
             "Collector": "Collect",
@@ -359,6 +356,7 @@ class ItemModel(AbstractModel):
 
         name = context.data.get("label") or settings.ContextLabel
 
+        item["id"] = "Context"
         item["family"] = None
         item["name"] = name
         item["itemType"] = "instance"
@@ -368,27 +366,6 @@ class ItemModel(AbstractModel):
 
         item = self.add_item(item)
         self.instances.append(item)
-
-    def update_current(self, pair):
-        """Update the currently processing pair
-
-        Arguments:
-            pair (dict): {"instance": <str>, "plugin": <str>}
-
-        """
-
-        for item in self.items:
-            item.isProcessing = False
-
-        for type in ("instance", "plugin"):
-            name = pair[type]
-            item = self.items.get(name)
-
-            if not item:
-                continue
-
-            item.isProcessing = True
-            item.currentProgress = 1
 
     def update_with_result(self, result):
         """Update item-model with result from host
@@ -402,9 +379,6 @@ class ItemModel(AbstractModel):
 
         """
 
-        for item in self.items:
-            item.isProcessing = False
-
         for type in ("instance", "plugin"):
             id = (result[type] or {}).get("id")
 
@@ -415,7 +389,7 @@ class ItemModel(AbstractModel):
             else:
                 item = self.items.get(id)
 
-            item.isProcessing = True
+            item.isProcessing = False
             item.currentProgress = 1
             item.processed = True
 
@@ -448,13 +422,19 @@ class ItemModel(AbstractModel):
         for plugin in self.plugins:
             has_compatible = False
 
-            for instance in self.instances:
-                if not instance.isToggled:
-                    continue
+            # A special clause for plug-ins only compatible
+            # with the Context itself.
+            if "Context" in plugin.compatibleInstances:
+                has_compatible = True
 
-                if instance.id in plugin.compatibleInstances:
-                    has_compatible = True
-                    break
+            else:
+                for instance in self.instances:
+                    if not instance.isToggled:
+                        continue
+
+                    if instance.id in plugin.compatibleInstances:
+                        has_compatible = True
+                        break
 
             plugin.hasCompatible = has_compatible
 
@@ -753,7 +733,6 @@ class PluginProxy(ProxyModel):
     def __init__(self, *args, **kwargs):
         super(PluginProxy, self).__init__(*args, **kwargs)
         self.add_inclusion("itemType", "plugin")
-        self.add_exclusion("type", "Selector")
         self.add_exclusion("hasCompatible", False)
 
 

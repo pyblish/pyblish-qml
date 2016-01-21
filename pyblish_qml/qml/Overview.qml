@@ -171,18 +171,13 @@ Item {
 
             visible: tabBar.currentIndex == 1
         }
-
-        AwesomeIcon {
-            name: "circle-o-notch-rotate"
-            anchors.centerIn: parent
-            opacity: tabBar.currentIndex == 0 && overview.state == "initialising" ? 1.0 : 0.0
-            visible: opacity > 0 ? true : false
-        }
     }
 
 
     Footer {
         id: footer
+
+        visible: overview.state != "initialising"
 
         mode: overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
 
@@ -201,7 +196,6 @@ Item {
 
         onError: setMessage(message)
         onInfo: setMessage(message)
-        // onSaved: setMessage("Saved")
 
         onStateChanged: {
             if (state == "ready") {

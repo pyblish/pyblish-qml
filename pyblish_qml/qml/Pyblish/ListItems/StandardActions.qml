@@ -23,6 +23,41 @@ MouseArea {
 
     onClicked: rightClicked(mouse)
 
+    Rectangle {
+        anchors.fill: parent
+        color: Theme.alpha("#000", 0.4)
+        opacity: status == "processing" ? 1.0 : 0
+        radius: 3
+
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: "white"
+            border.width: 1
+            radius: 3
+            visible: status == "processing" ? 1 : 0
+
+            SequentialAnimation on opacity {
+                running: true
+
+                NumberAnimation {
+                    from: .4
+                    to: 1
+                    duration: 800
+                    easing.type: Easing.InOutElastic
+                }
+                NumberAnimation {
+                    from: 1
+                    to: .4
+                    duration: 800
+                    easing.type: Easing.InOutElastic
+                }
+
+                loops: Animation.Infinite
+            }
+        }
+    }
+
     Row {
         id: body
         spacing: 5
@@ -42,9 +77,7 @@ MouseArea {
 
             anchors.verticalCenter: parent.verticalCenter
 
-            onClicked: {
-                listItem.toggled(mouse)
-            }
+            onClicked: listItem.toggled(mouse)
         }
 
         Label {
@@ -65,7 +98,6 @@ MouseArea {
 
     Row {
         id: head
-
         anchors.right: parent.right
         anchors.rightMargin: listItem.margins
         anchors.verticalCenter: parent.verticalCenter
