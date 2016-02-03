@@ -8,19 +8,17 @@ from PyQt5 import QtCore
 import pyblish_rpc.client
 import pyblish_rpc.schema
 import pyblish.logic
-
+import pyblish.api
 
 # Local libraries
 import util
 import models
 
 from pyblish_qml import settings
-import pyblish.api
 
 
 def toggle_instance(instance, new_value, old_value):
     instance.data['publish'] = bool(new_value)
-    print instance.data
 
 pyblish.api.register_callback("instanceToggled", toggle_instance)
 
