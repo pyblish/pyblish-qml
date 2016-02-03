@@ -15,6 +15,14 @@ import util
 import models
 
 from pyblish_qml import settings
+import pyblish.api
+
+
+def toggle_instance(instance, new_value, old_value):
+    instance.data['publish'] = bool(new_value)
+    print instance.data
+
+pyblish.api.register_callback("instanceToggled", toggle_instance)
 
 
 def pyqtConstantProperty(fget):
@@ -408,8 +416,8 @@ class Controller(QtCore.QObject):
 
         if item.optional:
             self.host.emit("instanceToggled", instance=item.name,
-                           new_value=item.isToggled,
-                           old_value=not item.isToggled)
+                           new_value=not item.isToggled,
+                           old_value=item.isToggled)
 
             self.__toggle_item(self.item_model, source_index)
             self.item_model.update_compatibility()
@@ -422,8 +430,8 @@ class Controller(QtCore.QObject):
             if item.itemType == 'instance' and sectionLabel == item.family:
                 if item.isToggled != checkState:
                     self.host.emit("instanceToggled", instance=item.name,
-                                   new_value=item.isToggled,
-                                   old_value=not item.isToggled)
+                                   new_value=not item.isToggled,
+                                   old_value=item.isToggled)
 
                 item.isToggled = checkState
 
@@ -431,8 +439,8 @@ class Controller(QtCore.QObject):
                 if item.verb == sectionLabel:
                     if item.isToggled != checkState:
                         self.host.emit("pluginToggled", plugin=item.id,
-                                       new_value=item.isToggled,
-                                       old_value=not item.isToggled)
+                                       new_value=not item.isToggled,
+                                       old_value=item.isToggled)
 
                     item.isToggled = checkState
 
@@ -461,8 +469,8 @@ class Controller(QtCore.QObject):
 
         if item.optional:
             self.host.emit("pluginToggled", plugin=item.id,
-                           new_value=item.isToggled,
-                           old_value=not item.isToggled)
+                           new_value=not item.isToggled,
+                           old_value=item.isToggled)
 
             self.__toggle_item(self.item_model, source_index)
         else:
