@@ -7,6 +7,7 @@ from pyblish_qml import settings
 
 import pyblish.api
 import pyblish.lib
+import pyblish_rpc
 
 
 item_defaults = {
@@ -344,6 +345,9 @@ class ItemModel(AbstractModel):
         item["itemType"] = "instance"
         item["isToggled"] = instance.data.get("publish", True)
         item["hasCompatible"] = True
+
+        host = pyblish_rpc.client.Proxy(port=settings.current_port())
+        host.emit("instanceAdded", instance=instance.data.get("name"))
 
         item = self.add_item(item)
         self.instances.append(item)
