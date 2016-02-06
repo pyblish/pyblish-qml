@@ -11,7 +11,7 @@ from PyQt5 import QtCore
 app = None
 thread = None
 server = None
-port = 6000
+port = 50999
 
 self = sys.modules[__name__]
 
@@ -31,13 +31,17 @@ def _setup():
     self.thread.daemon = True
     self.thread.start()
 
-    pyblish.api.config["paths"][:] = []
-    pyblish.api.deregister_all_paths()
-    pyblish.api.deregister_all_plugins()
-    pyblish.api.deregister_all_services()
+    clean()
 
 
 def _teardown():
     self.server.shutdown()
     self.thread.join(timeout=1)
     assert not thread.isAlive()
+
+
+def clean():
+    pyblish.api.config["paths"][:] = []
+    pyblish.api.deregister_all_paths()
+    pyblish.api.deregister_all_plugins()
+    pyblish.api.deregister_all_services()

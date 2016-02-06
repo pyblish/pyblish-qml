@@ -1,13 +1,21 @@
-import pyblish.api
-
-from pyblish_qml import control
-
-import lib
+from PyQt5 import QtTest
 
 # Vendor libraries
-from nose.tools import *
+from pyblish.vendor.nose.tools import (
+    assert_in,
+    assert_true,
+    assert_equals,
+    with_setup
+)
 
-from PyQt5 import QtTest
+from pyblish_qml import control
+import pyblish.api
+
+from . import lib
+
+# Module-level setup and teardown
+setup = lib._setup
+teardown = lib._teardown
 
 
 def check_present(name, model):
@@ -15,21 +23,22 @@ def check_present(name, model):
 
 
 def reset(controller=None):
-    c = controller or control.Controller()
-    c.on_client_changed(lib.port)
+    if controller is None:
+        controller = control.Controller()
+        controller.on_client_changed(lib.port)
 
-    ready = QtTest.QSignalSpy(c.ready)
+    ready = QtTest.QSignalSpy(controller.ready)
 
     assert_true(ready.wait(1000))
 
     count = len(ready)
-    c.reset()
+    controller.reset()
 
     ready.wait(1000)
     assert_equals(len(ready), count + 1)
-    assert_true("ready" in c.states)
+    assert_true("ready" in controller.states)
 
-    return c
+    return controller
 
 
 def publish(controller=None):
@@ -41,75 +50,75 @@ def publish(controller=None):
 
     """
 
-    c = controller or control.Controller()
-    c.on_client_changed(lib.port)
+    if controller is None:
+        controller = control.Controller()
+        controller.on_client_changed(lib.port)
 
-    finished = QtTest.QSignalSpy(c.finished)
+    finished = QtTest.QSignalSpy(controller.finished)
 
     count = len(finished)
-    c.publish()
+    controller.publish()
 
     finished.wait(1000)
     assert_equals(len(finished), count + 1)
-    assert_true("finished" in c.states)
+    assert_true("finished" in controller.states)
 
-    return c
-
-
-def repair_plugin(plugin, controller=None):
-    """Repair single plug-in
-
-    Argument:
-        plugins (list): List of plug-ins to include
-        plugin (str): Name of plug-in to repair
-
-    """
-
-    c = controller or control.Controller()
-
-    finished = QtTest.QSignalSpy(c.finished)
-
-    count = len(finished)
-    c.repairPlugin(index)
-
-    finished.wait(1000)
-    assert_equals(len(finished), count + 1)
-    assert_true("finished" in c.states)
-
-    return c
+    return controller
 
 
-@with_setup(lib._setup, lib._teardown)
+# def repair_plugin(plugin, controller=None):
+#     """Repair single plug-in
+
+#     Argument:
+#         plugins (list): List of plug-ins to include
+#         plugin (str): Name of plug-in to repair
+
+#     """
+
+#     c = controller or control.Controller()
+
+#     finished = QtTest.QSignalSpy(c.finished)
+
+#     count = len(finished)
+#     c.repairPlugin(index)
+
+#     finished.wait(1000)
+#     assert_equals(len(finished), count + 1)
+#     assert_true("finished" in c.states)
+
+#     return c
+
+
+@with_setup(lib.clean)
 def test_reset():
     """Reset works"""
 
     count = {"#": 0}
 
-    class Selector(pyblish.api.Selector):
+    class MyCollector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
             instance.set_data("family", "myFamily")
             count["#"] += 1
 
-    pyblish.api.register_plugin(Selector)
+    pyblish.api.register_plugin(MyCollector)
 
     c = reset()
 
     # At this point, the item-model is populated with
     # a number of instances.
-
-    check_present("Selector", c.item_model)
+    check_present("MyCollector", c.item_model)
     check_present("MyInstance", c.item_model)
     assert_equals(count["#"], 1)
 
 
-@with_setup(lib._setup, lib._teardown)
+@with_setup(lib.clean)
 def test_publish():
     """Publishing works"""
 
     count = {"#": 0}
 
-    class Selector(pyblish.api.Selector):
+    class Collector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
             instance.set_data("family", "myFamily")
@@ -123,21 +132,21 @@ def test_publish():
         def process(self, instance):
             count["#"] += 100
 
-    plugins = [Selector, Validator, Extractor]
+    plugins = [Collector, Validator, Extractor]
 
     for plugin in plugins:
         pyblish.api.register_plugin(plugin)
 
     c = reset()
 
-    check_present("Selector", c.item_model)
+    check_present("Collector", c.item_model)
     check_present("MyInstance", c.item_model)
     assert_equals(count["#"], 1)
 
     # At this point, the item-model is populated with
     # a number of instances.
 
-    publish(controller=c)
+    publish(c)
 
     names = [p.__name__ for p in plugins]
     inmodel = [p.name for p in c.item_model.plugins]
@@ -153,32 +162,79 @@ def test_publish_only_toggled():
 
     count = {"#": 0}
 
-    class Selector(pyblish.api.Selector):
+    class MyCollector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
             instance.set_data("family", "myFamily")
             count["#"] += 1
 
-    class Validator(pyblish.api.Validator):
+    class MyValidator(pyblish.api.Validator):
         def process(self, instance):
             count["#"] += 10
 
-    class Extractor(pyblish.api.Extractor):
+    class MyExtractor(pyblish.api.Extractor):
         def process(self, instance):
             count["#"] += 100
 
-    plugins = [Selector, Validator, Extractor]
+    plugins = [MyCollector, MyValidator, MyExtractor]
 
     for plugin in plugins:
         pyblish.api.register_plugin(plugin)
 
     c = reset()
 
-    check_present("Selector", c.item_model)
+    check_present("MyCollector", c.item_model)
     check_present("MyInstance", c.item_model)
 
-    c.item_model.plugins["Validator"].isToggled = False
+    c.item_model.plugins["MyValidator"].isToggled = False
 
     publish(c)
 
     assert_equals(count["#"], 101)
+
+
+@with_setup(lib.clean)
+def test_cooperative_collection():
+    """Cooperative collection works
+
+    A collector should be able to run such that the following
+    collector "sees" the newly created instance so as to
+    query and/or modify it.
+
+    """
+
+    history = []
+    count = {"#": 0}
+
+    class CollectorA(pyblish.api.Collector):
+        order = 0.0
+
+        def process(self, context):
+            context.create_instance("myInstance1")
+            history.append(type(self).__name__)
+            count["#"] += 1
+
+    class CollectorB(pyblish.api.Collector):
+        order = 0.1
+
+        def process(self, context):
+            assert "myInstance1" in [i.data["name"] for i in context]
+
+            # This should run
+            history.append(type(self).__name__)
+            count["#"] += 10
+
+            context.create_instance("myInstance2")
+
+    pyblish.api.register_plugin(CollectorA)
+    pyblish.api.register_plugin(CollectorB)
+
+    c = reset()
+
+    check_present("CollectorA", c.item_model)
+    check_present("CollectorB", c.item_model)
+    check_present("myInstance1", c.item_model)
+    check_present("myInstance2", c.item_model)
+
+    assert count["#"] == 11, count
+    assert history == ["CollectorA", "CollectorB"]

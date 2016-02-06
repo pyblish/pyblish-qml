@@ -5,7 +5,11 @@ from pyblish_qml import util
 import lib
 
 # Vendor libraries
-from nose.tools import *
+from nose.tools import (
+    with_setup,
+    assert_true,
+    assert_equals
+)
 
 
 @with_setup(lib._setup)
