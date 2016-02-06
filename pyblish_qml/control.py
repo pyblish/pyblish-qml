@@ -613,7 +613,7 @@ class Controller(QtCore.QObject):
                 compatible = pyblish.logic.instances_by_plugin(
                     context, plugin)
 
-                if plugin.contextEnabled:
+                if plugin.contextEnabled and not plugin.instanceEnabled:
                     c = type("Context", (object,), {"id": "Context"})
                     compatible.append(c)
 
@@ -644,6 +644,8 @@ class Controller(QtCore.QObject):
             context.currentProgress = 0
 
             self.initialised.emit()
+
+            self.host.emit("reset", context=context)
 
         def on_run(plugins, context):
             util.async(self.host.context,

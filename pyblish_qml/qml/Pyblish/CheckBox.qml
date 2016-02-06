@@ -13,7 +13,7 @@ MouseArea {
 
     property var statuses: {
         "default": "white",
-        "selected": Theme.primaryColor,
+        "processing": Theme.primaryColor,
         "success": Theme.dark.successColor,
         "warning": Theme.dark.warningColor,
         "error": Theme.dark.errorColor
@@ -31,7 +31,7 @@ MouseArea {
 
         anchors.centerIn: parent
 
-        color: checkView.statuses[typeof checkView.status !== "undefined" ? checkView.status : "default"]
+        color: statuses[status]
         opacity: checkView.checked ? 1 : 0
 
         Behavior on opacity {
