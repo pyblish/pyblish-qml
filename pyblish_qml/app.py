@@ -10,10 +10,7 @@ import threading
 from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 
 # Local libraries
-import util
-import compat
-import server
-import control
+from . import util, compat, server, control
 
 from pyblish_qml import settings
 
@@ -197,7 +194,7 @@ class Application(QtGui.QGuiApplication):
         """The process is running solo"""
         self.app_message.emit("Running standalone")
         if not hasattr(self, "__debugging__"):
-            print "Quitting due to loneliness"
+            print("Quitting due to loneliness")
             time.sleep(1)
             self.quit()
 

@@ -7,7 +7,12 @@ Attributes:
 """
 
 import os
-from SimpleXMLRPCServer import SimpleXMLRPCServer
+
+try:
+    from SimpleXMLRPCServer import SimpleXMLRPCServer
+except ImportError:
+    # Python 3
+    from xmlrpc.server import SimpleXMLRPCServer
 
 first_port = 9001
 

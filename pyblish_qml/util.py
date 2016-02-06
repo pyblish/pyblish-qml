@@ -53,7 +53,7 @@ class ItemList(list):
         >>> try:
         ...   l["NotInList"]
         ... except KeyError:
-        ...   print True
+        ...   print(True)
         True
 
     """
@@ -79,7 +79,7 @@ class ItemList(list):
 
 
 def echo(text=""):
-    print text
+    print(text)
 
 
 def timer(name):
@@ -186,7 +186,7 @@ class Timer(object):
         self._time = time.time()
 
     def __exit__(self, type, value, tb):
-        print self._format % ((time.time() - self._time) * 1000)
+        print(self._format % ((time.time() - self._time) * 1000))
 
 
 def format_text(text):
