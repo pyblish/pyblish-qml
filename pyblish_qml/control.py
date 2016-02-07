@@ -713,7 +713,13 @@ class Controller(QtCore.QObject):
 
             return plugins, instances
 
-        util.async(get_data, callback=lambda args: self.run(*args))
+        def on_data_received(args):
+            self.run(*args, callback=on_finished)
+
+        def on_finished():
+            self.host.emit("published", context=None)
+
+        util.async(get_data, callback=on_data_received)
 
     @QtCore.pyqtSlot()
     def validate(self):
@@ -747,7 +753,13 @@ class Controller(QtCore.QObject):
 
             return plugins, instances
 
-        util.async(get_data, callback=lambda args: self.run(*args))
+        def on_data_received(args):
+            self.run(*args, callback=on_finished)
+
+        def on_finished():
+            self.host.emit("validated", context=None)
+
+        util.async(get_data, callback=on_data_received)
 
     def run(self, plugins, context, callback=None, callback_args=[]):
         """Commence asynchronous tasks
