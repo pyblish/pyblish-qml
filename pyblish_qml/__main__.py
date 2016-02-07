@@ -3,7 +3,7 @@
 import sys
 import argparse
 
-import app
+from . import app
 
 
 def cli():

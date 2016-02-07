@@ -1,7 +1,12 @@
 import os
 import sys
 import warnings
-import ConfigParser
+
+try:
+    import ConfigParser
+except ImportError:
+    import configparser as ConfigParser
+
 import xml.etree.ElementTree as ElementTree
 
 cwd = os.path.dirname(sys.executable)
@@ -32,25 +37,25 @@ def validate():
             errors[test] = e
 
     if not errors:
-        print "=" * 78
-        print
-        print """ - Success!
+        print("=" * 78)
+        print()
+        print(""" - Success!
 
-{exe} is well suited to run Pyblish QML""".format(exe=sys.executable)
-        print
-        print "=" * 78
+{exe} is well suited to run Pyblish QML""".format(exe=sys.executable))
+        print()
+        print("=" * 78)
 
         return True
 
-    print "=" * 78
-    print
-    print " - Failed"
-    print
+    print("=" * 78)
+    print()
+    print(" - Failed")
+    print()
     for test, error in errors.iteritems():
-        print test.__name__
-        print "    %s" % error
-    print
-    print "=" * 78
+        print(test.__name__)
+        print("    %s" % error)
+    print()
+    print("=" * 78)
 
     return False
 
@@ -115,7 +120,7 @@ def test_qtconf_correctness():
 def test_qt_availability():
     """If Qt is installed, is it the right version?"""
     if os.name == "nt" and os.path.exists(r"c:\Qt"):
-        print "Qt detected.."
+        print("Qt detected..")
 
         path = r"c:\Qt\components.xml"
 
@@ -164,7 +169,7 @@ def generate_safemode_windows():
         import PyQt5
 
     except ImportError:
-        print "Run this in a terminal with access to the Pyblish libraries and PyQt5"
+        print("Run this in a terminal with access to the Pyblish libraries and PyQt5")
         return
 
     template = r"""@echo off
@@ -205,7 +210,7 @@ def generate_safemode_windows():
     values["python"] = os.path.dirname(sys.executable)
 
     with open("run.bat", "w") as f:
-        print "Writing %s" % template.format(**values)
+        print("Writing %s" % template.format(**values))
         f.write(template.format(**values))
 
 
