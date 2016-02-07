@@ -8,6 +8,7 @@ import threading
 
 # Dependencies
 from PyQt5 import QtCore, QtGui, QtQuick, QtTest
+import pyblish.api
 
 # Local libraries
 from . import util, compat, server, control
@@ -245,6 +246,19 @@ in order to bypass validation.
     util.echo("Starting Pyblish..")
     util.timer("application")
 
+    # register callbacks
+    def toggle_instance(instance, new_value, old_value):
+        instance.data["publish"] = bool(new_value)
+
+    pyblish.api.register_callback("instanceToggled", toggle_instance)
+
+    def adding_instance(instance):
+        if "publish" not in instance.data:
+            instance.data["publish"] = True
+
+    pyblish.api.register_callback("instanceAdded", adding_instance)
+
+    # debug mode
     if debug:
         app = Application(source or APP_PATH)
         app.listen()
