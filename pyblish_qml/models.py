@@ -5,9 +5,6 @@ from PyQt5 import QtCore
 import util
 from pyblish_qml import settings
 
-import pyblish.api
-import pyblish.lib
-
 
 item_defaults = {
     "id": "default",

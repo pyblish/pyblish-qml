@@ -8,6 +8,7 @@ import threading
 
 # Dependencies
 from PyQt5 import QtCore, QtGui, QtQuick, QtTest
+import pyblish.api
 
 # Local libraries
 from . import util, compat, server, control
@@ -245,6 +246,7 @@ in order to bypass validation.
     util.echo("Starting Pyblish..")
     util.timer("application")
 
+    # debug mode
     if debug:
         app = Application(source or APP_PATH)
         app.listen()

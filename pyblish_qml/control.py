@@ -9,7 +9,6 @@ import pyblish_rpc.client
 import pyblish_rpc.schema
 import pyblish.logic
 
-
 # Local libraries
 import util
 import models
@@ -407,10 +406,6 @@ class Controller(QtCore.QObject):
         item = self.item_model.items[source_index]
 
         if item.optional:
-            self.host.emit("instanceToggled", instance=item.name,
-                           new_value=item.isToggled,
-                           old_value=not item.isToggled)
-
             self.__toggle_item(self.item_model, source_index)
             self.item_model.update_compatibility()
         else:
@@ -421,20 +416,14 @@ class Controller(QtCore.QObject):
         for item in self.item_model.items:
             if item.itemType == 'instance' and sectionLabel == item.family:
                 if item.isToggled != checkState:
-                    self.host.emit("instanceToggled", instance=item.name,
-                                   new_value=item.isToggled,
-                                   old_value=not item.isToggled)
-
-                item.isToggled = checkState
+                    self.__toggle_item(self.item_model,
+                                       self.item_model.items.index(item))
 
             if item.itemType == 'plugin' and item.optional:
                 if item.verb == sectionLabel:
                     if item.isToggled != checkState:
-                        self.host.emit("pluginToggled", plugin=item.id,
-                                       new_value=item.isToggled,
-                                       old_value=not item.isToggled)
-
-                    item.isToggled = checkState
+                        self.__toggle_item(self.item_model,
+                                           self.item_model.items.index(item))
 
         self.item_model.update_compatibility()
 
@@ -460,10 +449,6 @@ class Controller(QtCore.QObject):
         item = self.item_model.items[source_index]
 
         if item.optional:
-            self.host.emit("pluginToggled", plugin=item.id,
-                           new_value=item.isToggled,
-                           old_value=not item.isToggled)
-
             self.__toggle_item(self.item_model, source_index)
         else:
             self.error.emit("Cannot toggle")
@@ -523,7 +508,22 @@ class Controller(QtCore.QObject):
 
         item = model.items[index]
 
-        item.isToggled = not item.isToggled
+        new_value = not item.isToggled
+        old_value = item.isToggled
+
+        if item.itemType == 'plugin':
+            self.host.emit("pluginToggled",
+                           plugin=item.id,
+                           new_value=new_value,
+                           old_value=old_value)
+
+        if item.itemType == 'instance':
+            self.host.emit("instanceToggled",
+                           instance=item.id,
+                           new_value=new_value,
+                           old_value=old_value)
+
+        item.isToggled = new_value
 
     def echo(self, data):
         """Append `data` to result model"""
