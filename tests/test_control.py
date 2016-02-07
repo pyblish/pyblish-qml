@@ -1,7 +1,7 @@
 from PyQt5 import QtTest
 
 # Vendor libraries
-from pyblish.vendor.nose.tools import (
+from nose.tools import (
     assert_in,
     assert_true,
     assert_equals,
@@ -66,27 +66,29 @@ def publish(controller=None):
     return controller
 
 
-# def repair_plugin(plugin, controller=None):
-#     """Repair single plug-in
+def validate(controller=None):
+    """Publish current state
 
-#     Argument:
-#         plugins (list): List of plug-ins to include
-#         plugin (str): Name of plug-in to repair
+    Argument:
+        plugins (list): List of plug-ins to include
+        plugin (str): Name of plug-in to repair
 
-#     """
+    """
 
-#     c = controller or control.Controller()
+    if controller is None:
+        controller = control.Controller()
+        controller.on_client_changed(lib.port)
 
-#     finished = QtTest.QSignalSpy(c.finished)
+    finished = QtTest.QSignalSpy(controller.finished)
 
-#     count = len(finished)
-#     c.repairPlugin(index)
+    count = len(finished)
+    controller.validate()
 
-#     finished.wait(1000)
-#     assert_equals(len(finished), count + 1)
-#     assert_true("finished" in c.states)
+    finished.wait(1000)
+    assert_equals(len(finished), count + 1)
+    assert_true("finished" in controller.states)
 
-#     return c
+    return controller
 
 
 @with_setup(lib.clean)
@@ -238,3 +240,39 @@ def test_cooperative_collection():
 
     assert count["#"] == 11, count
     assert history == ["CollectorA", "CollectorB"]
+
+
+@with_setup(lib.clean)
+def test_published_event():
+    """published is emitted upon finished publish"""
+
+    count = {"#": 0}
+
+    def on_published(context):
+        assert isinstance(context, pyblish.api.Context)
+        count["#"] += 1
+
+    pyblish.api.register_callback("published", on_published)
+
+    c = reset()
+    publish(c)
+
+    assert count["#"] == 1, count
+
+
+@with_setup(lib.clean)
+def test_validated_event():
+    """validated is emitted upon finished validation"""
+
+    count = {"#": 0}
+
+    def on_validated(context):
+        assert isinstance(context, pyblish.api.Context)
+        count["#"] += 1
+
+    pyblish.api.register_callback("validated", on_validated)
+
+    c = reset()
+    validate(c)
+
+    assert count["#"] == 1, count
