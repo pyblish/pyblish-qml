@@ -30,7 +30,7 @@ class Window(QtQuick.QQuickView):
         self.setTitle(settings.WindowTitle)
         self.setResizeMode(self.SizeRootObjectToView)
 
-        self.setSize(*settings.WindowSize)
+        self.resize(*settings.WindowSize)
         self.setMinimumSize(QtCore.QSize(430, 300))
 
     def event(self, event):
@@ -50,10 +50,6 @@ class Window(QtQuick.QQuickView):
                 self.parent.hide()
 
         return super(Window, self).event(event)
-
-    def setSize(self, width, height):
-        self.setWidth(width)
-        self.setHeight(height)
 
 
 class Application(QtGui.QGuiApplication):
