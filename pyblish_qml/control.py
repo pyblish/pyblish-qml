@@ -605,9 +605,6 @@ class Controller(QtCore.QObject):
         self.host.reset()
 
         def on_finished(plugins, context):
-            for instance in context:
-                self.item_model.add_instance(instance)
-
             # Compute compatibility
             for plugin in self.item_model.plugins:
                 compatible = pyblish.logic.instances_by_plugin(
@@ -665,7 +662,7 @@ class Controller(QtCore.QObject):
 
                 collectors.append(plugin)
 
-            self.run(collectors, [],
+            self.run(collectors, context,
                      callback=on_run,
                      callback_args=[plugins, context])
 
@@ -803,6 +800,16 @@ class Controller(QtCore.QObject):
 
             # Once the main thread has finished updating
             # the GUI, we can proceed handling of next task.
+            util.async(self.host.context, callback=update_context)
+
+        def update_context(ctx):
+            for instance in ctx:
+                if instance.id in [i.id for i in self.item_model.instances]:
+                    continue
+
+                context.append(instance)
+                self.item_model.add_instance(instance)
+
             util.async(iterator.next, callback=on_next)
 
         def on_finished(message=None):
