@@ -614,6 +614,10 @@ class Controller(QtCore.QObject):
                     c = type("Context", (object,), {"id": "Context"})
                     compatible.append(c)
 
+                if (plugin.instanceEnabled and len(compatible) == 1 and
+                   isinstance(compatible[0], type)):
+                    compatible = []
+
                 plugin.compatibleInstances = [i.id for i in compatible]
 
             for instance in self.item_model.instances:
