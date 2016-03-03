@@ -276,3 +276,50 @@ def test_validated_event():
     validate(c)
 
     assert count["#"] == 1, count
+
+
+@with_setup(lib.clean)
+def test_gui_vs_host_order():
+    """gui order is the same as the host order"""
+
+    class Collector(pyblish.api.Collector):
+
+        def process(self, context):
+            instance = context.create_instance("AC")
+            instance.set_data("family", "FamilyA")
+            instance = context.create_instance("AB")
+            instance.set_data("family", "FamilyA")
+
+            instance = context.create_instance("BC")
+            instance.set_data("family", "FamilyB")
+            instance = context.create_instance("BA")
+            instance.set_data("family", "FamilyB")
+
+    class CollectSorting(pyblish.api.Collector):
+        """ Sorts the context by family and name """
+
+        order = pyblish.api.Collector.order + 0.1
+
+        def process(self, context):
+
+            context[:] = sorted(context,
+                                key=lambda instance: (instance.data("family"),
+                                                      instance.data("name")))
+
+    pyblish.api.register_plugin(Collector)
+    pyblish.api.register_plugin(CollectSorting)
+
+    c = reset()
+
+    host_order = []
+    for instance in c.host.context():
+        host_order.append(str(instance))
+
+    gui_order = []
+    for item in c.item_model.items:
+        if item.itemType == 'instance' and str(item) != 'Context':
+            gui_order.append(str(item.id))
+
+    msg = "\n%s >> GUI order" % gui_order
+    msg += "\n%s >> Host order" % host_order
+    assert host_order == gui_order, msg
