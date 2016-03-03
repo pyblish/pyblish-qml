@@ -525,6 +525,36 @@ class Controller(QtCore.QObject):
 
         item.isToggled = new_value
 
+    def refresh(self):
+
+        self.item_model.beginResetModel()
+
+        # getting instance names in host order
+        host_order = []
+        for instance in self.host.context():
+            host_order.append(str(instance))
+
+        # index order of item_model, organized to host order
+        plugin_index = len(self.item_model.plugins) + 1
+        index_reorder = [i for i in range(0, plugin_index)]
+        for instance in self.host.context():
+            for item in self.item_model.items:
+                if item.id == str(instance):
+                    index_reorder.append(self.item_model.items.index(item))
+
+        # constructing item_model in current host order
+        model_reorder = []
+        for i in index_reorder:
+            model_reorder.append(self.item_model.items[i])
+
+        # reordering item_model
+        for item in model_reorder:
+            index = model_reorder.index(item)
+            self.item_model.items[index] = item
+
+        self.item_model.endResetModel()
+
+
     def echo(self, data):
         """Append `data` to result model"""
         self.result_model.add_item(data)
@@ -641,6 +671,8 @@ class Controller(QtCore.QObject):
             context.currentProgress = 0
 
             self.initialised.emit()
+
+            self.refresh()
 
             self.host.emit("reset", context=context)
 
