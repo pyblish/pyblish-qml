@@ -109,6 +109,7 @@ MouseArea {
 
             AwesomeButton {
                 action: modelData
+                color: action.color
                 size: action.iconSize
                 visible: action.enabled
                 tooltip: action.tooltip

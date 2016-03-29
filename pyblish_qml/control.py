@@ -384,6 +384,11 @@ class Controller(QtCore.QObject):
                 "action": action["id"]
             })
 
+            if result["success"]:
+                print "turn green"
+            else:
+                print "turn red"
+
             return result
 
         def on_finished(result):

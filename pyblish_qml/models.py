@@ -38,6 +38,7 @@ plugin_defaults = {
     "pre11": True,
     "verb": "unknown",
     "actions": list(),
+    "actionsIcon": False,
     "path": "",
     "__instanceEnabled__": False
 }
@@ -325,6 +326,10 @@ class ItemModel(AbstractModel):
             "Conformer": "Integrate",
         }.get(item["type"], "Other")
 
+        for action in item["actions"]:
+            if action["on"] == "all":
+                item["actionsIcon"] = True
+
         item = self.add_item(item)
         self.plugins.append(item)
 
@@ -400,6 +405,21 @@ class ItemModel(AbstractModel):
 
             item.duration += result["duration"]
             item.finishedAt = time.time()
+
+            if item.itemType == "plugin":
+                actions = item.actions
+
+                # Context specific actions
+                for action in list(actions):
+                    if action["on"] == "failed" and not item.hasError:
+                        actions.remove(action)
+                    if action["on"] == "succeeded" and not item.succeeded:
+                        actions.remove(action)
+                    if action["on"] == "processed" and not item.processed:
+                        actions.remove(action)
+
+                if actions:
+                    item.actionsIcon = True
 
     def has_failed_validator(self):
         for validator in self.plugins:

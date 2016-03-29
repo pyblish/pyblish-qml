@@ -54,6 +54,16 @@ ListView {
                 iconSize: 12
                 tooltip: "This plug-in uses deprecated functionality"
                 enabled: object.pre11 ? true : false
+                color: "yellow"
+            },
+
+            Action {
+                name: "actionIcon"
+                iconName: "adn"
+                iconSize: 12
+                tooltip: "This plug-in has actions"
+                enabled: object.actionsIcon ? true : false
+                color: "green"
             },
 
             Action {
@@ -62,5 +72,6 @@ ListView {
                 onTriggered: actionTriggered(this, index)
             }
         ]
+
     }
 }
