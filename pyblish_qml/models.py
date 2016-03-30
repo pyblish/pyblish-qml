@@ -319,6 +319,7 @@ class ItemModel(AbstractModel):
         # Append GUI-only data
         item["itemType"] = "plugin"
         item["hasCompatible"] = True
+        item["isToggled"] = plugin.get("active", True)
         item["verb"] = {
             "Selector": "Collect",
             "Collector": "Collect",
