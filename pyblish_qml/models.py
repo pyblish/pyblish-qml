@@ -10,6 +10,8 @@ item_defaults = {
     "id": "default",
     "name": "default",
     "isProcessing": False,
+    "families": list(),
+    "familiesConcatenated": "",
     "isToggled": True,
     "optional": True,
     "hasError": False,
@@ -28,7 +30,6 @@ plugin_defaults = {
     "order": None,
     "hasRepair": False,
     "hasCompatible": False,
-    "families": list(),
     "hosts": list(),
     "type": "unknown",
     "module": "unknown",
@@ -45,7 +46,6 @@ plugin_defaults = {
 instance_defaults = {
     "optional": True,
     "family": None,
-    "families": list(),
     "niceName": "default",
     "compatiblePlugins": list(),
 }
@@ -306,6 +306,9 @@ class ItemModel(AbstractModel):
                        "path"]:
             item[member] = plugin[member]
 
+        # Visualised in Perspective
+        item["familiesConcatenated"] = ", ".join(plugin["families"])
+
         # converting links to HTML
         pattern = r"(https?:\/\/(?:w{1,3}.)?[^\s]*?(?:\.[a-z]+)+)"
         pattern += r"(?![^<]*?(?:<\/\w+>|\/?>))"
@@ -341,6 +344,11 @@ class ItemModel(AbstractModel):
         item["itemType"] = "instance"
         item["isToggled"] = instance.data.get("publish", True)
         item["hasCompatible"] = True
+
+        # Visualised in Perspective
+        item["familiesConcatenated"] = instance.data.get("family", "")
+        item["familiesConcatenated"] += ", ".join(
+            instance.data.get("families", []))
 
         item = self.add_item(item)
         self.instances.append(item)
