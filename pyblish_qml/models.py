@@ -387,12 +387,19 @@ class ItemModel(AbstractModel):
         for type in ("instance", "plugin"):
             id = (result[type] or {}).get("id")
 
-            if not id:
-                # A id is not provided in cases where
-                # the Context has been processed.
+            is_context = not id
+            if is_context:
                 item = self.instances[0]
             else:
                 item = self.items.get(id)
+
+            if item is None:
+                # If an item isn't there yet
+                # no worries. It's probably because
+                # reset is still running and the
+                # item in question is a new instance
+                # not yet added to the model.
+                continue
 
             item.isProcessing = False
             item.currentProgress = 1

@@ -524,34 +524,48 @@ class Controller(QtCore.QObject):
         item.isToggled = new_value
 
     def refresh(self):
+        """Update available instances in context at current time
 
-        self.item_model.beginResetModel()
+        This method is intended for when the context has changed
+        after collection has taken place.
 
-        # getting instance names in host order
-        host_order = []
-        for instance in self.host.context():
-            host_order.append(str(instance))
+        """
 
-        # index order of item_model, organized to host order
-        plugin_index = len(self.item_model.plugins) + 1
-        index_reorder = [i for i in range(0, plugin_index)]
-        for instance in self.host.context():
-            for item in self.item_model.items:
-                if item.id == str(instance):
-                    index_reorder.append(self.item_model.items.index(item))
+        def on_context(context):
+            self.item_model.beginResetModel()
 
-        # constructing item_model in current host order
-        model_reorder = []
-        for i in index_reorder:
-            model_reorder.append(self.item_model.items[i])
+            # getting instance names in host order
+            host_order = []
+            for instance in self.host.context():
+                host_order.append(str(instance))
 
-        # reordering item_model
-        for item in model_reorder:
-            index = model_reorder.index(item)
-            self.item_model.items[index] = item
+            # index order of item_model, organized to host order
+            plugin_index = len(self.item_model.plugins) + 1
+            index_reorder = [i for i in range(0, plugin_index)]
+            for instance in self.host.context():
+                for item in self.item_model.items:
+                    if item.id == str(instance):
+                        index_reorder.append(self.item_model.items.index(item))
 
-        self.item_model.endResetModel()
+            # constructing item_model in current host order
+            model_reorder = []
+            for i in index_reorder:
+                model_reorder.append(self.item_model.items[i])
 
+            # reordering item_model
+            for item in model_reorder:
+                index = model_reorder.index(item)
+                self.item_model.items[index] = item
+
+            self.item_model.endResetModel()
+            self.item_model.add_context(context)
+            self.result_model.add_context(context)
+
+            self.initialised.emit()
+
+        self.initialising.emit()
+
+        util.async(self.host.context, callback=on_context)
 
     def echo(self, data):
         """Append `data` to result model"""
@@ -629,9 +643,6 @@ class Controller(QtCore.QObject):
         self.result_model.reset()
         self.changes.clear()
 
-        # Clear host
-        self.host.reset()
-
         def on_finished(plugins, context):
             # Compute compatibility
             for plugin in self.item_model.plugins:
@@ -641,6 +652,20 @@ class Controller(QtCore.QObject):
                     plugin.compatibleInstances = list(i.id for i in instances)
                 else:
                     plugin.compatibleInstances = ["Context"]
+
+            # Reorder instances in support of "cooperative collection"
+            self.item_model.beginResetModel()
+
+            items = dict()
+            for instance in self.item_model.instances:
+                items[instance.id] = instance
+                self.item_model.items.remove(instance)
+
+            self.item_model.items.append(items.pop("Context"))
+            for instance in context:
+                self.item_model.items.append(items[instance.id])
+
+            self.item_model.endResetModel()
 
             # Report statistics
             stats["requestCount"] -= self.host.stats()["totalRequestCount"]
@@ -661,7 +686,8 @@ class Controller(QtCore.QObject):
             self.item_model.update_compatibility()
             self.host.emit("reset", context=context)
 
-        def on_run(plugins, context):
+        def on_run(plugins):
+            """Fetch instances in their current state, right after reset"""
             util.async(self.host.context,
                        callback=lambda context: on_finished(plugins, context))
 
@@ -681,7 +707,7 @@ class Controller(QtCore.QObject):
 
             self.run(collectors, context,
                      callback=on_run,
-                     callback_args=[plugins, context])
+                     callback_args=[plugins])
 
         def on_context(context):
             self.item_model.add_context(context)
@@ -691,7 +717,10 @@ class Controller(QtCore.QObject):
                 callback=lambda plugins: on_discover(plugins, context)
             )
 
-        util.async(self.host.context, callback=on_context)
+        def on_reset():
+            util.async(self.host.context, callback=on_context)
+
+        util.async(self.host.reset, callback=on_reset)
 
     @QtCore.pyqtSlot()
     def publish(self):
@@ -820,8 +849,9 @@ class Controller(QtCore.QObject):
             util.async(self.host.context, callback=update_context)
 
         def update_context(ctx):
+            instances = [i.id for i in self.item_model.instances]
             for instance in ctx:
-                if instance.id in [i.id for i in self.item_model.instances]:
+                if instance.id in instances:
                     continue
 
                 context.append(instance)
@@ -855,6 +885,12 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot(int)
     def repairPlugin(self, index):
+        """
+
+        DEPRECATED: REMOVE ME
+
+        """
+
         if "finished" not in self.states:
             self.error.emit("Not ready")
             return
