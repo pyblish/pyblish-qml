@@ -384,17 +384,16 @@ class Controller(QtCore.QObject):
                 "action": action["id"]
             })
 
-            if result["success"]:
-                print "turn green"
-            else:
-                print "turn red"
-
             return result
 
         def on_finished(result):
             util.echo("Finished, finishing up..")
             self.is_running = False
             self.acted.emit()
+
+            # Inform GUI of success or failure
+            plugin = self.item_model.plugins[result["plugin"]["id"]]
+            plugin.actionHasError = not result["success"]
 
             # Allow running action upon action, without resetting
             self.result_model.update_with_result(result)

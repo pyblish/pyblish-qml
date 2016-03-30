@@ -13,6 +13,7 @@ item_defaults = {
     "isToggled": True,
     "optional": True,
     "hasError": False,
+    "actionHasError": False,
     "succeeded": False,
     "processed": False,
     "currentProgress": 0,
