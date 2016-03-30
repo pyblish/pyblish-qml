@@ -243,6 +243,25 @@ def test_cooperative_collection():
 
 
 @with_setup(lib.clean)
+def test_argumentless_plugin():
+    """Implicit plug-ins without arguments should still run"""
+    count = {"#": 0}
+
+    class MyPlugin(pyblish.api.Validator):
+        def process(self):
+            count["#"] += 1
+
+    pyblish.api.register_plugin(MyPlugin)
+
+    c = reset()
+    publish(c)
+
+    check_present("MyPlugin", c.item_model)
+
+    assert count["#"] == 1
+
+
+@with_setup(lib.clean)
 def test_cooperative_collection2():
     """Cooperative collection works with InstancePlugin"""
 

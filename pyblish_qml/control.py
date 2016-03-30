@@ -407,7 +407,6 @@ class Controller(QtCore.QObject):
 
         if item.optional:
             self.__toggle_item(self.item_model, source_index)
-            self.item_model.update_compatibility()
         else:
             self.error.emit("Cannot toggle")
 
@@ -424,8 +423,6 @@ class Controller(QtCore.QObject):
                     if item.isToggled != checkState:
                         self.__toggle_item(self.item_model,
                                            self.item_model.items.index(item))
-
-        self.item_model.update_compatibility()
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def pluginData(self, index):
@@ -523,6 +520,7 @@ class Controller(QtCore.QObject):
                            new_value=new_value,
                            old_value=old_value)
 
+        self.item_model.update_compatibility()
         item.isToggled = new_value
 
     def refresh(self):
@@ -637,24 +635,12 @@ class Controller(QtCore.QObject):
         def on_finished(plugins, context):
             # Compute compatibility
             for plugin in self.item_model.plugins:
-                compatible = pyblish.logic.instances_by_plugin(
-                    context, plugin)
-
-                if plugin.contextEnabled and not plugin.instanceEnabled:
-                    c = type("Context", (object,), {"id": "Context"})
-                    compatible.append(c)
-
-                plugin.compatibleInstances = [i.id for i in compatible]
-
-            for instance in self.item_model.instances:
-                compatible = list()
-                for family in (instance.families or []) + [instance.family]:
-                    compatible.extend(pyblish.logic.plugins_by_families(
-                        plugins, instance.families + [instance.family]))
-
-                instance.compatiblePlugins = [i.id for i in compatible]
-
-            self.item_model.update_compatibility()
+                if plugin.instanceEnabled:
+                    instances = pyblish.logic.instances_by_plugin(context,
+                                                                  plugin)
+                    plugin.compatibleInstances = list(i.id for i in instances)
+                else:
+                    plugin.compatibleInstances = ["Context"]
 
             # Report statistics
             stats["requestCount"] -= self.host.stats()["totalRequestCount"]
@@ -672,8 +658,7 @@ class Controller(QtCore.QObject):
 
             self.initialised.emit()
 
-            self.refresh()
-
+            self.item_model.update_compatibility()
             self.host.emit("reset", context=context)
 
         def on_run(plugins, context):
