@@ -14,6 +14,7 @@ item_defaults = {
     "optional": True,
     "hasError": False,
     "actionHasError": False,
+    "actionPending": True,
     "succeeded": False,
     "processed": False,
     "currentProgress": 0,

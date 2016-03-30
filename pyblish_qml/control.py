@@ -393,6 +393,7 @@ class Controller(QtCore.QObject):
 
             # Inform GUI of success or failure
             plugin = self.item_model.plugins[result["plugin"]["id"]]
+            plugin.actionPending = False
             plugin.actionHasError = not result["success"]
 
             # Allow running action upon action, without resetting

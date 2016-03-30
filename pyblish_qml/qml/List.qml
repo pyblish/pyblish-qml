@@ -63,7 +63,9 @@ ListView {
                 iconSize: 12
                 tooltip: "This plug-in has actions"
                 enabled: object.actionsIcon ? true : false
-                color: object.actionHasError ? "red" : "green"
+                color: object.actionPending ? "white"
+                     : object.actionHasError ? Theme.dark.errorColor
+                     : Theme.dark.successColor
             },
 
             Action {
