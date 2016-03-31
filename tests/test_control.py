@@ -243,6 +243,60 @@ def test_cooperative_collection():
 
 
 @with_setup(lib.clean)
+def test_argumentless_plugin():
+    """Implicit plug-ins without arguments should still run"""
+    count = {"#": 0}
+
+    class MyPlugin(pyblish.api.Validator):
+        def process(self):
+            count["#"] += 1
+
+    pyblish.api.register_plugin(MyPlugin)
+
+    c = reset()
+    publish(c)
+
+    check_present("MyPlugin", c.item_model)
+
+    assert count["#"] == 1
+
+
+@with_setup(lib.clean)
+def test_cooperative_collection2():
+    """Cooperative collection works with InstancePlugin"""
+
+    count = {"#": 0}
+    history = []
+
+    class CollectorA(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder
+
+        def process(self, context):
+            history.append(type(self).__name__)
+            context.create_instance("MyInstance")
+            count["#"] += 1
+
+    class CollectorB(pyblish.api.InstancePlugin):
+        order = pyblish.api.CollectorOrder + 0.1
+
+        def process(self, instance):
+            history.append(type(self).__name__)
+            count["#"] += 10
+
+    pyblish.api.register_plugin(CollectorA)
+    pyblish.api.register_plugin(CollectorB)
+
+    c = reset()
+
+    check_present("CollectorA", c.item_model)
+    check_present("CollectorB", c.item_model)
+    check_present("MyInstance", c.item_model)
+
+    assert count["#"] == 11, count
+    assert history == ["CollectorA", "CollectorB"]
+
+
+@with_setup(lib.clean)
 def test_published_event():
     """published is emitted upon finished publish"""
 
