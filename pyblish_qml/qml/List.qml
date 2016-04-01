@@ -54,7 +54,6 @@ ListView {
                 iconSize: 12
                 tooltip: "This plug-in uses deprecated functionality"
                 enabled: object.pre11 ? true : false
-                color: "yellow"
             },
 
             Action {
