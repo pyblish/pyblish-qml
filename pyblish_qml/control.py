@@ -394,6 +394,11 @@ class Controller(QtCore.QObject):
             self.is_running = False
             self.acted.emit()
 
+            # Inform GUI of success or failure
+            plugin = self.item_model.plugins[result["plugin"]["id"]]
+            plugin.actionPending = False
+            plugin.actionHasError = not result["success"]
+
             # Allow running action upon action, without resetting
             self.result_model.update_with_result(result)
             self.info.emit("Success" if result["success"] else "Failed")
