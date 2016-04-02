@@ -10,8 +10,7 @@ import pyblish_rpc.schema
 import pyblish.logic
 
 # Local libraries
-import util
-import models
+from . import util, models, version
 
 from pyblish_qml import settings
 
@@ -674,6 +673,8 @@ class Controller(QtCore.QObject):
                      callback_args=[plugins])
 
         def on_context(context):
+            context.data["pyblishQmlVersion"] = version
+
             self.item_model.add_context(context)
             self.result_model.add_context(context)
             util.async(
