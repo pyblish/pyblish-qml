@@ -377,3 +377,53 @@ def test_gui_vs_host_order():
     msg = "\n%s >> GUI order" % gui_order
     msg += "\n%s >> Host order" % host_order
     assert host_order == gui_order, msg
+
+    
+@with_setup(lib.clean)
+def test_toggle_compatibility():
+    """toggle instance updates compatibility correctly"""
+
+    class Collector(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder
+        
+        def process(self, context):
+            instance = context.create_instance("A")
+            instance.set_data("family", "FamilyA")
+
+    class Validate(pyblish.api.InstancePlugin):
+        """A dummy validator"""
+        order = pyblish.api.ValidatorOrder
+        families = ["FamilyA"]
+
+        def process(self, instance):
+            pass
+
+    pyblish.api.register_plugin(Collector)
+    pyblish.api.register_plugin(Validate)
+
+    c = reset()
+    
+    def has_enabled_validator(c):
+        """Return whether Validate validator is enabled/compatible"""
+        
+        rows = c.plugin_proxy.rowCount()
+        for row in range(rows):
+            item = c.plugin_proxy.item(row)
+            if item.name == 'Validate':
+                return True
+                
+        return False
+       
+    item = c.item_model.instances["A"]
+    index = c.item_model.items.index(item)
+        
+    # Default state (enabled)
+    assert has_enabled_validator(c), "Not enabled before"
+    
+    # toggle off
+    c.toggleInstance(index)
+    assert not has_enabled_validator(c), "Not disabled"
+    
+    # toggle back on    
+    c.toggleInstance(index)
+    assert has_enabled_validator(c), "Not enabled after"
