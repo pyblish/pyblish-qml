@@ -527,8 +527,8 @@ class Controller(QtCore.QObject):
                            new_value=new_value,
                            old_value=old_value)
 
-        self.item_model.update_compatibility()
         item.isToggled = new_value
+        self.item_model.update_compatibility()
 
     def echo(self, data):
         """Append `data` to result model"""
