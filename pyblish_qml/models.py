@@ -41,7 +41,7 @@ plugin_defaults = {
     "pre11": True,
     "verb": "unknown",
     "actions": list(),
-    "actionsIcon": False,
+    "actionsIconVisible": False,
     "path": "",
     "__instanceEnabled__": False
 }
@@ -334,7 +334,7 @@ class ItemModel(AbstractModel):
 
         for action in item["actions"]:
             if action["on"] == "all":
-                item["actionsIcon"] = True
+                item["actionsIconVisible"] = True
 
         item = self.add_item(item)
         self.plugins.append(item)
@@ -425,6 +425,9 @@ class ItemModel(AbstractModel):
             item.finishedAt = time.time()
 
             if item.itemType == "plugin":
+                if item.actionsIconVisible:
+                    continue
+
                 actions = list(item.actions)
 
                 # Context specific actions
@@ -437,7 +440,7 @@ class ItemModel(AbstractModel):
                         actions.remove(action)
 
                 if actions:
-                    item.actionsIcon = True
+                    item.actionsIconVisible = True
 
     def has_failed_validator(self):
         for validator in self.plugins:

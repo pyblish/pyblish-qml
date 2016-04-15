@@ -378,14 +378,14 @@ def test_gui_vs_host_order():
     msg += "\n%s >> Host order" % host_order
     assert host_order == gui_order, msg
 
-    
+
 @with_setup(lib.clean)
 def test_toggle_compatibility():
     """toggle instance updates compatibility correctly"""
 
     class Collector(pyblish.api.ContextPlugin):
         order = pyblish.api.CollectorOrder
-        
+
         def process(self, context):
             instance = context.create_instance("A")
             instance.set_data("family", "FamilyA")
@@ -402,28 +402,72 @@ def test_toggle_compatibility():
     pyblish.api.register_plugin(Validate)
 
     c = reset()
-    
+
     def has_enabled_validator(c):
         """Return whether Validate validator is enabled/compatible"""
-        
+
         rows = c.plugin_proxy.rowCount()
         for row in range(rows):
             item = c.plugin_proxy.item(row)
             if item.name == 'Validate':
                 return True
-                
+
         return False
-       
+
     item = c.item_model.instances["A"]
     index = c.item_model.items.index(item)
-        
+
     # Default state (enabled)
     assert has_enabled_validator(c), "Not enabled before"
-    
+
     # toggle off
     c.toggleInstance(index)
     assert not has_enabled_validator(c), "Not disabled"
-    
-    # toggle back on    
+
+    # toggle back on
     c.toggleInstance(index)
     assert has_enabled_validator(c), "Not enabled after"
+
+
+@with_setup(lib.clean)
+def test_toggle_compatibility():
+    """failed plugins with failure action, needs to have an action"""
+
+    class SelectMany(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder
+
+        def process(self, context):
+            for name in ("A", "B", "C"):
+                instance = context.create_instance(name)
+                instance.set_data("family", "myFamily")
+
+    class FailureAction(pyblish.api.Action):
+        on = "failed"
+
+    class ValidateFailA(pyblish.api.InstancePlugin):
+        order = pyblish.api.ValidatorOrder
+        families = ["myFamily"]
+        actions = [FailureAction]
+
+        def process(self, instance):
+            assert str(instance) != "A"
+
+    class ValidateFailBC(pyblish.api.InstancePlugin):
+        order = pyblish.api.ValidatorOrder
+        families = ["myFamily"]
+        actions = [FailureAction]
+
+        def process(self, instance):
+            assert str(instance) == "A"
+
+    pyblish.api.deregister_all_plugins()
+    pyblish.api.register_plugin(SelectMany)
+    pyblish.api.register_plugin(ValidateFailA)
+    pyblish.api.register_plugin(ValidateFailBC)
+
+    c = reset()
+
+    validate(c)
+
+    assert c.item_model.plugins[1].actions
+    assert c.item_model.plugins[2].actions
