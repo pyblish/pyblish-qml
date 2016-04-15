@@ -425,7 +425,7 @@ class ItemModel(AbstractModel):
             item.finishedAt = time.time()
 
             if item.itemType == "plugin":
-                actions = item.actions
+                actions = list(item.actions)
 
                 # Context specific actions
                 for action in list(actions):
