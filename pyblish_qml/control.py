@@ -624,9 +624,14 @@ class Controller(QtCore.QObject):
                 items[instance.id] = instance
                 self.item_model.items.remove(instance)
 
-            self.item_model.items.append(items.pop("Context"))
+            # TODO: Clean this up. Instances are cached for
+            # brevity but this is where we are forced to fight it.
+            self.item_model.instances[:] = []
+            self.item_model.items.append(items["Context"])
+            self.item_model.instances.append(items["Context"])
             for instance in context:
                 self.item_model.items.append(items[instance.id])
+                self.item_model.instances.append(items[instance.id])
 
             self.item_model.endResetModel()
 

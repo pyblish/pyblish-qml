@@ -100,7 +100,7 @@ def test_reset():
     class MyCollector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
-            instance.set_data("family", "myFamily")
+            instance.data["family"] = "myFamily"
             count["#"] += 1
 
     pyblish.api.register_plugin(MyCollector)
@@ -123,7 +123,7 @@ def test_publish():
     class Collector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
-            instance.set_data("family", "myFamily")
+            instance.data["family"] = "myFamily"
             count["#"] += 1
 
     class Validator(pyblish.api.Validator):
@@ -167,7 +167,7 @@ def test_publish_only_toggled():
     class MyCollector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
-            instance.set_data("family", "myFamily")
+            instance.data["family"] = "myFamily"
             count["#"] += 1
 
     class MyValidator(pyblish.api.Validator):
@@ -334,49 +334,65 @@ def test_validated_event():
 
 @with_setup(lib.clean)
 def test_gui_vs_host_order():
-    """gui order is the same as the host order"""
+    """Host properly reflects order of instances in GUI"""
 
-    class Collector(pyblish.api.Collector):
+    instances = [
+        "instance4",
+        "instance3",
+        "instance2",
+        "instance1"
+    ]
 
-        def process(self, context):
-            instance = context.create_instance("AC")
-            instance.set_data("family", "FamilyA")
-            instance = context.create_instance("AB")
-            instance.set_data("family", "FamilyA")
-
-            instance = context.create_instance("BC")
-            instance.set_data("family", "FamilyB")
-            instance = context.create_instance("BA")
-            instance.set_data("family", "FamilyB")
-
-    class CollectSorting(pyblish.api.Collector):
-        """ Sorts the context by family and name """
-
-        order = pyblish.api.Collector.order + 0.1
+    class Collector(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder
 
         def process(self, context):
+            for name in instances:
+                context.create_instance(name)
 
-            context[:] = sorted(context,
-                                key=lambda instance: (instance.data("family"),
-                                                      instance.data("name")))
+    class SortByName(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder + 0.1
+
+        def process(self, context):
+            context[:] = sorted(context, key=lambda i: i.name)
 
     pyblish.api.register_plugin(Collector)
-    pyblish.api.register_plugin(CollectSorting)
 
+    # Test baseline
     c = reset()
 
-    host_order = []
-    for instance in c.host.context():
-        host_order.append(str(instance))
+    gui_instances = list(
+        i.name for i in c.item_model.instances
+        if i.name != "Context"
+    )
 
-    gui_order = []
-    for item in c.item_model.items:
-        if item.itemType == 'instance' and str(item) != 'Context':
-            gui_order.append(str(item.id))
+    # GUI should contain the original order
+    assert gui_instances == instances, "QML has got a different order"
 
-    msg = "\n%s >> GUI order" % gui_order
-    msg += "\n%s >> Host order" % host_order
-    assert host_order == gui_order, msg
+    host_instances = list(i.name for i in c.host.context())
+
+    # Host should also contain the original order
+    assert host_instances == instances, "Host has got a different order"
+
+    # Sort context retrospectively
+    pyblish.api.register_plugin(SortByName)
+    c = reset()
+
+    gui_instances = list(
+        i.name for i in c.item_model.instances
+        if i.name != "Context"
+    )
+
+    host_instances = list(i.name for i in c.host.context())
+
+    # GUI should reflect sorted order
+    print("gui_instances: %s" % gui_instances)
+    assert gui_instances != instances, "Sorting did not happen in QML"
+
+    print("host_instances: %s" % host_instances)
+    assert host_instances != instances, "Sorting did not happen in host"
+
+    assert gui_instances == host_instances, "QML != Host"
 
 
 @with_setup(lib.clean)
@@ -388,7 +404,7 @@ def test_toggle_compatibility():
 
         def process(self, context):
             instance = context.create_instance("A")
-            instance.set_data("family", "FamilyA")
+            instance.data["family"] = "FamilyA"
 
     class Validate(pyblish.api.InstancePlugin):
         """A dummy validator"""
@@ -430,44 +446,58 @@ def test_toggle_compatibility():
 
 
 @with_setup(lib.clean)
-def test_action_availability():
-    """failed plugins with failure action, needs to have an action"""
+def test_action_on_failed():
+    """Actions on failed are exclusive to plug-ins that have failed"""
 
     class SelectMany(pyblish.api.ContextPlugin):
         order = pyblish.api.CollectorOrder
 
         def process(self, context):
             for name in ("A", "B", "C"):
-                instance = context.create_instance(name)
-                instance.set_data("family", "myFamily")
+                context.create_instance(name)
 
-    class FailureAction(pyblish.api.Action):
+    class ActionOnFailed(pyblish.api.Action):
         on = "failed"
 
-    class ValidateFailA(pyblish.api.InstancePlugin):
+    class ValidateFail(pyblish.api.InstancePlugin):
         order = pyblish.api.ValidatorOrder
-        families = ["myFamily"]
-        actions = [FailureAction]
+        actions = [ActionOnFailed]
 
         def process(self, instance):
-            assert str(instance) != "A"
+            assert False
 
-    class ValidateFailBC(pyblish.api.InstancePlugin):
+    class ValidateSuccess(pyblish.api.InstancePlugin):
         order = pyblish.api.ValidatorOrder
-        families = ["myFamily"]
-        actions = [FailureAction]
+        actions = [ActionOnFailed]
 
         def process(self, instance):
-            assert str(instance) == "A"
+            assert True
 
-    pyblish.api.deregister_all_plugins()
     pyblish.api.register_plugin(SelectMany)
-    pyblish.api.register_plugin(ValidateFailA)
-    pyblish.api.register_plugin(ValidateFailBC)
+    pyblish.api.register_plugin(ValidateFail)
+    pyblish.api.register_plugin(ValidateSuccess)
 
     c = reset()
 
+    validate_fail_index = c.item_model.items.index(
+        c.item_model.plugins["ValidateFail"])
+    validate_success_index = c.item_model.items.index(
+        c.item_model.plugins["ValidateSuccess"])
+
+    validate_fail_actions = c.getPluginActions(validate_fail_index)
+
+    assert not validate_fail_actions, (
+        "ValidateFail should not have produced any actions")
+
     validate(c)
 
-    assert c.item_model.plugins["ValidateFailA"].actions
-    assert c.item_model.plugins["ValidateFailBC"].actions
+    validate_fail_actions = c.getPluginActions(validate_fail_index)
+
+    assert len(validate_fail_actions) == 1, (
+        "ValidateFail should have had an action")
+    assert validate_fail_actions[0]["id"] == "ActionOnFailed", (
+        "ValidateFail had an unknown action")
+
+    validate_success_actions = c.getPluginActions(validate_success_index)
+    assert len(validate_success_actions) == 0, (
+        "ValidateSuccess should not have had an action")
