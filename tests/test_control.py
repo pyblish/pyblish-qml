@@ -454,36 +454,50 @@ def test_action_on_failed():
 
         def process(self, context):
             for name in ("A", "B", "C"):
-                instance = context.create_instance(name)
-                instance.data["family"] = "myFamily"
+                context.create_instance(name)
 
-    class FailureAction(pyblish.api.Action):
+    class ActionOnFailed(pyblish.api.Action):
         on = "failed"
 
-    class ValidateFailA(pyblish.api.InstancePlugin):
+    class ValidateFail(pyblish.api.InstancePlugin):
         order = pyblish.api.ValidatorOrder
-        families = ["myFamily"]
-        actions = [FailureAction]
+        actions = [ActionOnFailed]
 
         def process(self, instance):
-            assert str(instance) != "A"
+            assert False
 
-    class ValidateFailBC(pyblish.api.InstancePlugin):
+    class ValidateSuccess(pyblish.api.InstancePlugin):
         order = pyblish.api.ValidatorOrder
-        families = ["myFamily"]
-        actions = [FailureAction]
+        actions = [ActionOnFailed]
 
         def process(self, instance):
-            assert str(instance) == "A"
+            assert True
 
-    pyblish.api.deregister_all_plugins()
     pyblish.api.register_plugin(SelectMany)
-    pyblish.api.register_plugin(ValidateFailA)
-    pyblish.api.register_plugin(ValidateFailBC)
+    pyblish.api.register_plugin(ValidateFail)
+    pyblish.api.register_plugin(ValidateSuccess)
 
     c = reset()
 
+    validate_fail_index = c.item_model.items.index(
+        c.item_model.plugins["ValidateFail"])
+    validate_success_index = c.item_model.items.index(
+        c.item_model.plugins["ValidateSuccess"])
+
+    validate_fail_actions = c.getPluginActions(validate_fail_index)
+
+    assert not validate_fail_actions, (
+        "ValidateFail should not have produced any actions")
+
     validate(c)
 
-    assert c.item_model.plugins["ValidateFailA"].actions
-    assert c.item_model.plugins["ValidateFailBC"].actions
+    validate_fail_actions = c.getPluginActions(validate_fail_index)
+
+    assert len(validate_fail_actions) == 1, (
+        "ValidateFail should have had an action")
+    assert validate_fail_actions[0]["id"] == "ActionOnFailed", (
+        "ValidateFail had an unknown action")
+
+    validate_success_actions = c.getPluginActions(validate_success_index)
+    assert len(validate_success_actions) == 0, (
+        "ValidateSuccess should not have had an action")
