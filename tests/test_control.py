@@ -430,7 +430,7 @@ def test_toggle_compatibility():
 
 
 @with_setup(lib.clean)
-def test_toggle_compatibility():
+def test_action_availability():
     """failed plugins with failure action, needs to have an action"""
 
     class SelectMany(pyblish.api.ContextPlugin):
@@ -469,5 +469,5 @@ def test_toggle_compatibility():
 
     validate(c)
 
-    assert c.item_model.plugins[1].actions
-    assert c.item_model.plugins[2].actions
+    assert c.item_model.plugins["ValidateFailA"].actions
+    assert c.item_model.plugins["ValidateFailBC"].actions
