@@ -100,7 +100,7 @@ def test_reset():
     class MyCollector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
-            instance.set_data("family", "myFamily")
+            instance.data["family"] = "myFamily"
             count["#"] += 1
 
     pyblish.api.register_plugin(MyCollector)
@@ -123,7 +123,7 @@ def test_publish():
     class Collector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
-            instance.set_data("family", "myFamily")
+            instance.data["family"] = "myFamily"
             count["#"] += 1
 
     class Validator(pyblish.api.Validator):
@@ -167,7 +167,7 @@ def test_publish_only_toggled():
     class MyCollector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
-            instance.set_data("family", "myFamily")
+            instance.data["family"] = "myFamily"
             count["#"] += 1
 
     class MyValidator(pyblish.api.Validator):
@@ -339,15 +339,11 @@ def test_gui_vs_host_order():
     class Collector(pyblish.api.Collector):
 
         def process(self, context):
-            instance = context.create_instance("AC")
-            instance.set_data("family", "FamilyA")
-            instance = context.create_instance("AB")
-            instance.set_data("family", "FamilyA")
-
-            instance = context.create_instance("BC")
-            instance.set_data("family", "FamilyB")
-            instance = context.create_instance("BA")
-            instance.set_data("family", "FamilyB")
+            for name, family in {"AC": "FamilyA",
+                                 "AB": "FamilyA",
+                                 "BC": "FamilyB",
+                                 "BA": "FamilyB"}:
+                context.create_instance(name, family=family)
 
     class CollectSorting(pyblish.api.Collector):
         """ Sorts the context by family and name """
@@ -355,10 +351,13 @@ def test_gui_vs_host_order():
         order = pyblish.api.Collector.order + 0.1
 
         def process(self, context):
-
-            context[:] = sorted(context,
-                                key=lambda instance: (instance.data("family"),
-                                                      instance.data("name")))
+            context[:] = sorted(
+                context,
+                key=lambda instance: (
+                    instance.data("family"),
+                    instance.data("name")
+                )
+            )
 
     pyblish.api.register_plugin(Collector)
     pyblish.api.register_plugin(CollectSorting)
@@ -388,7 +387,7 @@ def test_toggle_compatibility():
 
         def process(self, context):
             instance = context.create_instance("A")
-            instance.set_data("family", "FamilyA")
+            instance.data["family"] = "FamilyA"
 
     class Validate(pyblish.api.InstancePlugin):
         """A dummy validator"""
@@ -430,8 +429,8 @@ def test_toggle_compatibility():
 
 
 @with_setup(lib.clean)
-def test_action_availability():
-    """failed plugins with failure action, needs to have an action"""
+def test_action_on_failed():
+    """Actions on failed are exclusive to plug-ins that have failed"""
 
     class SelectMany(pyblish.api.ContextPlugin):
         order = pyblish.api.CollectorOrder
@@ -439,7 +438,7 @@ def test_action_availability():
         def process(self, context):
             for name in ("A", "B", "C"):
                 instance = context.create_instance(name)
-                instance.set_data("family", "myFamily")
+                instance.data["family"] = "myFamily"
 
     class FailureAction(pyblish.api.Action):
         on = "failed"
