@@ -334,48 +334,65 @@ def test_validated_event():
 
 @with_setup(lib.clean)
 def test_gui_vs_host_order():
-    """gui order is the same as the host order"""
+    """Host properly reflects order of instances in GUI"""
 
-    class Collector(pyblish.api.Collector):
+    instances = [
+        "instance4",
+        "instance3",
+        "instance2",
+        "instance1"
+    ]
 
-        def process(self, context):
-            for name, family in {"AC": "FamilyA",
-                                 "AB": "FamilyA",
-                                 "BC": "FamilyB",
-                                 "BA": "FamilyB"}:
-                context.create_instance(name, family=family)
-
-    class CollectSorting(pyblish.api.Collector):
-        """ Sorts the context by family and name """
-
-        order = pyblish.api.Collector.order + 0.1
+    class Collector(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder
 
         def process(self, context):
-            context[:] = sorted(
-                context,
-                key=lambda instance: (
-                    instance.data("family"),
-                    instance.data("name")
-                )
-            )
+            for name in instances:
+                context.create_instance(name)
+
+    class SortByName(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder + 0.1
+
+        def process(self, context):
+            context[:] = sorted(context, key=lambda i: i.name)
 
     pyblish.api.register_plugin(Collector)
-    pyblish.api.register_plugin(CollectSorting)
 
+    # Test baseline
     c = reset()
 
-    host_order = []
-    for instance in c.host.context():
-        host_order.append(str(instance))
+    gui_instances = list(
+        i.name for i in c.item_model.instances
+        if i.name != "Context"
+    )
 
-    gui_order = []
-    for item in c.item_model.items:
-        if item.itemType == 'instance' and str(item) != 'Context':
-            gui_order.append(str(item.id))
+    # GUI should contain the original order
+    assert gui_instances == instances, "QML has got a different order"
 
-    msg = "\n%s >> GUI order" % gui_order
-    msg += "\n%s >> Host order" % host_order
-    assert host_order == gui_order, msg
+    host_instances = list(i.name for i in c.host.context())
+
+    # Host should also contain the original order
+    assert host_instances == instances, "Host has got a different order"
+
+    # Sort context retrospectively
+    pyblish.api.register_plugin(SortByName)
+    c = reset()
+
+    gui_instances = list(
+        i.name for i in c.item_model.instances
+        if i.name != "Context"
+    )
+
+    host_instances = list(i.name for i in c.host.context())
+
+    # GUI should reflect sorted order
+    print("gui_instances: %s" % gui_instances)
+    assert gui_instances != instances, "Sorting did not happen in QML"
+
+    print("host_instances: %s" % host_instances)
+    assert host_instances != instances, "Sorting did not happen in host"
+
+    assert gui_instances == host_instances, "QML != Host"
 
 
 @with_setup(lib.clean)
