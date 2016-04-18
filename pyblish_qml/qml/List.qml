@@ -61,7 +61,7 @@ ListView {
                 iconName: "adn"
                 iconSize: 12
                 tooltip: "This plug-in has actions"
-                enabled: object.actionsIconVisibleVisible ? true : false
+                enabled: object.actionsIconVisible ? true : false
                 color: object.actionPending ? "white"
                      : object.actionHasError ? Theme.dark.errorColor
                      : Theme.dark.successColor
