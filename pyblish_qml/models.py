@@ -6,101 +6,87 @@ import util
 from pyblish_qml import settings
 
 
-item_defaults = {
-    "id": "default",
-    "name": "default",
-    "isProcessing": False,
-    "families": list(),
-    "familiesConcatenated": "",
-    "isToggled": True,
-    "optional": True,
-    "hasError": False,
-    "actionHasError": False,
-    "actionPending": True,
-    "succeeded": False,
-    "processed": False,
-    "currentProgress": 0,
-    "duration": 0,  # Time (ms) to process pair
-    "finishedAt": 0,  # Time (s) when finished
-    "amountPassed": 0,  # Number of plug-ins/instances passed
-    "amountFailed": 0,  # Number of plug-ins/instances failed
-    "optional": False,
-}
+defaults = {
+    "common": {
+        "id": "default",
+        "name": "default",
+        "isProcessing": False,
+        "families": list(),
+        "familiesConcatenated": "",
+        "isToggled": True,
+        "hasError": False,
+        "actionHasError": False,
+        "actionPending": True,
+        "succeeded": False,
+        "processed": False,
+        "currentProgress": 0,
+        "duration": 0,          # Time (ms) to process pair
+        "finishedAt": 0,        # Time (s) when finished
+        "amountPassed": 0,      # Number of plug-ins/instances passed
+        "amountFailed": 0,      # Number of plug-ins/instances failed
+    },
+    "plugin": {
+        "doc": "",
+        "order": None,
+        "hasRepair": False,
+        "optional": True,
+        "hasCompatible": True,
+        "hosts": list(),
+        "type": "unknown",
+        "module": "unknown",
+        "compatibleInstances": list(),
+        "contextEnabled": False,
+        "instanceEnabled": False,
+        "pre11": True,
+        "verb": "unknown",
+        "actions": list(),
+        "actionsIconVisible": False,
+        "path": "",
+        "__instanceEnabled__": False
+    },
+    "instance": {
+        "optional": True,
+        "family": None,
+        "niceName": "default",
+        "compatiblePlugins": list(),
+    },
+    "result": {
+        "type": "default",
+        "filter": "default",
+        "message": "default",
 
-plugin_defaults = {
-    "doc": "",
-    "order": None,
-    "hasRepair": False,
-    "hasCompatible": False,
-    "hosts": list(),
-    "type": "unknown",
-    "module": "unknown",
-    "compatibleInstances": list(),
-    "contextEnabled": False,
-    "instanceEnabled": False,
-    "pre11": True,
-    "verb": "unknown",
-    "actions": list(),
-    "actionsIconVisible": False,
-    "path": "",
-    "__instanceEnabled__": False
-}
+        # Temporary metadata: "default", until treemodel
+        "instance": "default",
+        "plugin": "default",
 
-instance_defaults = {
-    "optional": True,
-    "family": None,
-    "niceName": "default",
-    "compatiblePlugins": list(),
-}
+        # LogRecord
+        "threadName": "default",
+        "name": "default",
+        "filename": "default",
+        "pathname": "default",
+        "lineno": 0,
+        "msg": "default",
+        "msecs": 0.0,
 
-result_defaults = {
-    "type": "default",
-    "filter": "default",
-    "message": "default",
+        # Exception
+        "fname": "default",
+        "line_number": 0,
+        "func": "default",
+        "exc": "default",
 
-    # Temporary metadata: "default", until treemodel
-    "instance": "default",
-    "plugin": "default",
+        # Context
+        "port": 0,
+        "host": "default",
+        "user": "default",
+        "connectTime": "default",
+        "pythonVersion": "default",
+        "pyblishVersion": "default",
+        "endpointVersion": "default",
 
-    # LogRecord
-    "threadName": "default",
-    "name": "default",
-    "thread": "default",
-    "created": "default",
-    "process": "default",
-    "processName": "default",
-    "args": "default",
-    "module": "default",
-    "filename": "default",
-    "levelno": 0,
-    "levelname": "default",
-    "exc_text": "default",
-    "pathname": "default",
-    "lineno": 0,
-    "msg": "default",
-    "exc_info": "default",
-    "funcName": "default",
-    "relativeCreated": "default",
-    "msecs": 0.0,
-
-    # Exception
-    "fname": "default",
-    "line_number": 0,
-    "func": "default",
-    "exc": "default",
-
-    # Context
-    "port": 0,
-    "host": "default",
-    "user": "default",
-    "connectTime": "default",
-    "pythonVersion": "default",
-    "pyblishVersion": "default",
-    "endpointVersion": "default",
-
-    # Plugin
-    "doc": "default",
-    "path": "default",
+        # Plugin
+        "doc": "default",
+        "path": "default",
+    }
 }
 
 
@@ -286,8 +272,8 @@ class ItemModel(AbstractModel):
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_plugin(self, plugin):
         item = {}
-        item.update(item_defaults)
-        item.update(plugin_defaults)
+        item.update(defaults["common"])
+        item.update(defaults["plugin"])
 
         plugin = plugin.to_json()
         for member in ["pre11",
@@ -343,8 +329,8 @@ class ItemModel(AbstractModel):
     def add_instance(self, instance):
         instance_json = instance.to_json()
         item = {}
-        item.update(item_defaults)
-        item.update(instance_defaults)
+        item.update(defaults["common"])
+        item.update(defaults["instance"])
         item.update(instance_json["data"])
         item.update(instance_json)
 
@@ -364,8 +350,8 @@ class ItemModel(AbstractModel):
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_context(self, context, label=None):
         item = {}
-        item.update(item_defaults)
-        item.update(instance_defaults)
+        item.update(defaults["common"])
+        item.update(defaults["instance"])
 
         name = context.data.get("label") or settings.ContextLabel
 
@@ -487,7 +473,7 @@ class ResultModel(AbstractModel):
     added = QtCore.pyqtSignal()
 
     def add_item(self, item):
-        item_ = result_defaults.copy()
+        item_ = defaults["result"].copy()
         item_.update(item)
 
         try:
@@ -496,7 +482,7 @@ class ResultModel(AbstractModel):
             self.added.emit()
 
     def add_context(self, context):
-        item = result_defaults.copy()
+        item = defaults["result"].copy()
         item.update(context.to_json()["data"])
         item.update({
             "type": "context",
@@ -759,40 +745,3 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
     @QtCore.pyqtSlot(result=int)
     def rowCount(self, parent=QtCore.QModelIndex()):
         return super(ProxyModel, self).rowCount(parent)
-
-
-class InstanceProxy(ProxyModel):
-    def __init__(self, *args, **kwargs):
-        super(InstanceProxy, self).__init__(*args, **kwargs)
-        self.add_inclusion("itemType", "instance")
-
-
-class PluginProxy(ProxyModel):
-    def __init__(self, *args, **kwargs):
-        super(PluginProxy, self).__init__(*args, **kwargs)
-        self.add_inclusion("itemType", "plugin")
-        self.add_exclusion("hasCompatible", False)
-
-
-class ResultProxy(ProxyModel):
-    def __init__(self, *args, **kwargs):
-        super(ResultProxy, self).__init__(*args, **kwargs)
-        self.add_exclusion("levelname", "DEBUG")
-        self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
-
-
-class RecordProxy(ProxyModel):
-    def __init__(self, *args, **kwargs):
-        super(RecordProxy, self).__init__(*args, **kwargs)
-        self.add_inclusion("type", "record")
-
-
-class ErrorProxy(ProxyModel):
-    def __init__(self, *args, **kwargs):
-        super(ErrorProxy, self).__init__(*args, **kwargs)
-        self.add_inclusion("type", "error")
-
-
-class GadgetProxy(ProxyModel):
-    def __init__(self, *args, **kwargs):
-        super(GadgetProxy, self).__init__(*args, **kwargs)
