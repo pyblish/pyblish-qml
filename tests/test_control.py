@@ -95,13 +95,14 @@ def validate(controller=None):
 def test_reset():
     """Reset works"""
 
-    count = {"#": 0}
+    data = {"#": 0, "instances": list()}
 
     class MyCollector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
             instance.data["family"] = "myFamily"
-            count["#"] += 1
+            data["#"] += 1
+            data["instances"].append(instance)
 
     pyblish.api.register_plugin(MyCollector)
 
@@ -109,9 +110,9 @@ def test_reset():
 
     # At this point, the item-model is populated with
     # a number of instances.
-    check_present("MyCollector", c.item_model)
-    check_present("MyInstance", c.item_model)
-    assert_equals(count["#"], 1)
+    check_present(MyCollector.id, c.item_model)
+    check_present(data["instances"][0].id, c.item_model)
+    assert_equals(data["#"], 1)
 
 
 @with_setup(lib.clean)
