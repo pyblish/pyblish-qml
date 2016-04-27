@@ -95,13 +95,14 @@ def validate(controller=None):
 def test_reset():
     """Reset works"""
 
-    count = {"#": 0}
+    data = {"#": 0, "instances": list()}
 
     class MyCollector(pyblish.api.Collector):
         def process(self, context):
             instance = context.create_instance("MyInstance")
             instance.data["family"] = "myFamily"
-            count["#"] += 1
+            data["#"] += 1
+            data["instances"].append(instance)
 
     pyblish.api.register_plugin(MyCollector)
 
@@ -110,8 +111,8 @@ def test_reset():
     # At this point, the item-model is populated with
     # a number of instances.
     check_present("MyCollector", c.item_model)
-    check_present("MyInstance", c.item_model)
-    assert_equals(count["#"], 1)
+    check_present(data["instances"][0].name, c.item_model)
+    assert_equals(data["#"], 1)
 
 
 @with_setup(lib.clean)
@@ -188,7 +189,7 @@ def test_publish_only_toggled():
     check_present("MyCollector", c.item_model)
     check_present("MyInstance", c.item_model)
 
-    c.item_model.plugins["MyValidator"].isToggled = False
+    c.item_model.plugins[MyValidator.id].isToggled = False
 
     publish(c)
 
@@ -399,12 +400,15 @@ def test_gui_vs_host_order():
 def test_toggle_compatibility():
     """toggle instance updates compatibility correctly"""
 
+    data = {"instance": None}
+
     class Collector(pyblish.api.ContextPlugin):
         order = pyblish.api.CollectorOrder
 
         def process(self, context):
             instance = context.create_instance("A")
             instance.data["family"] = "FamilyA"
+            data['instance'] = instance
 
     class Validate(pyblish.api.InstancePlugin):
         """A dummy validator"""
@@ -430,7 +434,7 @@ def test_toggle_compatibility():
 
         return False
 
-    item = c.item_model.instances["A"]
+    item = c.item_model.instances[data['instance'].id]
     index = c.item_model.items.index(item)
 
     # Default state (enabled)
@@ -480,9 +484,9 @@ def test_action_on_failed():
     c = reset()
 
     validate_fail_index = c.item_model.items.index(
-        c.item_model.plugins["ValidateFail"])
+        c.item_model.plugins[ValidateFail.id])
     validate_success_index = c.item_model.items.index(
-        c.item_model.plugins["ValidateSuccess"])
+        c.item_model.plugins[ValidateSuccess.id])
 
     validate_fail_actions = c.getPluginActions(validate_fail_index)
 
@@ -495,7 +499,7 @@ def test_action_on_failed():
 
     assert len(validate_fail_actions) == 1, (
         "ValidateFail should have had an action")
-    assert validate_fail_actions[0]["id"] == "ActionOnFailed", (
+    assert validate_fail_actions[0]["id"] == ActionOnFailed.id, (
         "ValidateFail had an unknown action")
 
     validate_success_actions = c.getPluginActions(validate_success_index)

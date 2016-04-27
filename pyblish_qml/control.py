@@ -51,7 +51,7 @@ class Controller(QtCore.QObject):
 
     state_changed = QtCore.pyqtSignal(str, arguments=["state"])
 
-    # PyQt Properties
+    # Qt Properties
     itemModel = pyqtConstantProperty(lambda self: self.item_model)
     itemProxy = pyqtConstantProperty(lambda self: self.item_proxy)
     recordProxy = pyqtConstantProperty(lambda self: self.record_proxy)
@@ -64,19 +64,27 @@ class Controller(QtCore.QObject):
     def __init__(self, parent=None):
         super(Controller, self).__init__(parent)
 
-        self._temp = [1, 2, 3, 4]
-
         self.item_model = models.ItemModel()
         self.result_model = models.ResultModel()
 
-        self.instance_proxy = models.InstanceProxy(self.item_model)
-        self.plugin_proxy = models.PluginProxy(self.item_model)
-        self.result_proxy = models.ResultProxy(self.result_model)
+        self.instance_proxy = models.ProxyModel(self.item_model)
+        self.instance_proxy.add_inclusion("itemType", "instance")
+
+        self.plugin_proxy = models.ProxyModel(self.item_model)
+        self.plugin_proxy.add_inclusion("itemType", "plugin")
+        self.plugin_proxy.add_exclusion("hasCompatible", False)
+
+        self.result_proxy = models.ProxyModel(self.result_model)
+        self.result_proxy.add_exclusion("levelname", "DEBUG")
+        self.result_proxy.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
 
         # Used in Perspective
         self.item_proxy = models.ProxyModel(self.item_model)
-        self.record_proxy = models.RecordProxy(self.result_model)
-        self.error_proxy = models.ErrorProxy(self.result_model)
+        self.record_proxy = models.ProxyModel(self.result_model)
+        self.record_proxy.add_inclusion("type", "record")
+
+        self.error_proxy = models.ProxyModel(self.result_model)
+        self.error_proxy.add_inclusion("type", "error")
 
         self.changes = dict()
         self.is_running = False
@@ -591,6 +599,16 @@ class Controller(QtCore.QObject):
         A reset completely flushes the state of the GUI and reverts
         back to how it was when it first got launched.
 
+        Pipeline:
+              ______________     ____________     ______________
+             |              |   |            |   |              |
+             | host.reset() |-->| on_reset() |-->| on_context() |--
+             |______________|   |____________|   |______________| |
+             _______________     __________     _______________   |
+            |               |   |          |   |               |  |
+            | on_finished() |<--| on_run() |<--| on_discover() |<--
+            |_______________|   |__________|   |_______________|
+
         """
 
         if not any(state in self.states for state in ("ready", "finished")):
@@ -614,26 +632,9 @@ class Controller(QtCore.QObject):
                                                                   plugin)
                     plugin.compatibleInstances = list(i.id for i in instances)
                 else:
-                    plugin.compatibleInstances = ["Context"]
+                    plugin.compatibleInstances = [context.id]
 
-            # Reorder instances in support of "cooperative collection"
-            self.item_model.beginResetModel()
-
-            items = dict()
-            for instance in self.item_model.instances:
-                items[instance.id] = instance
-                self.item_model.items.remove(instance)
-
-            # TODO: Clean this up. Instances are cached for
-            # brevity but this is where we are forced to fight it.
-            self.item_model.instances[:] = []
-            self.item_model.items.append(items["Context"])
-            self.item_model.instances.append(items["Context"])
-            for instance in context:
-                self.item_model.items.append(items[instance.id])
-                self.item_model.instances.append(items[instance.id])
-
-            self.item_model.endResetModel()
+            self.item_model.reorder(context)
 
             # Report statistics
             stats["requestCount"] -= self.host.stats()["totalRequestCount"]
@@ -663,7 +664,7 @@ class Controller(QtCore.QObject):
             collectors = list()
 
             for plugin in plugins:
-                self.item_model.add_plugin(plugin)
+                self.item_model.add_plugin(plugin.to_json())
 
                 # Sort out which of these are Collectors
                 if not pyblish.lib.inrange(
@@ -680,8 +681,9 @@ class Controller(QtCore.QObject):
         def on_context(context):
             context.data["pyblishQmlVersion"] = version
 
-            self.item_model.add_context(context)
-            self.result_model.add_context(context)
+            self.item_model.add_context(context.to_json())
+            self.result_model.add_context(context.to_json())
+
             util.async(
                 self.host.discover,
                 callback=lambda plugins: on_discover(plugins, context)
@@ -825,7 +827,7 @@ class Controller(QtCore.QObject):
                     continue
 
                 context.append(instance)
-                self.item_model.add_instance(instance)
+                self.item_model.add_instance(instance.to_json())
 
             util.async(iterator.next, callback=on_next)
 

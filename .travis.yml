@@ -1,5 +1,21 @@
 language: python
+
 python:
 - 2.7
+
+sudo: required # install.sh requires sudo apt-get
+
+install:
+- echo "Install.."
+- source .travis/install_linux.sh
+- source .travis/install.sh
+- pip install coverage nose
+- git clone https://github.com/pyblish/pyblish-rpc
+- git clone https://github.com/pyblish/pyblish-base
+- export PYTHONPATH=$(pwd)/pyblish-rpc:$(pwd)/pyblish-base
+
 script:
-- git clone https://github.com/pyblish/pyblish-qml.git
+- nosetests -c .noserc
+
+after_success:
+- coveralls
