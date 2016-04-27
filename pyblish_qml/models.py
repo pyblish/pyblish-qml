@@ -251,7 +251,7 @@ class AbstractModel(QtCore.QAbstractListModel):
 
 def ItemIterator(items):
     for i in items:
-        if i.id == "Context":
+        if i.name == "Context":
             continue
 
         if not i.isToggled:
@@ -269,13 +269,43 @@ class ItemModel(AbstractModel):
         self.plugins = util.ItemList(key="id")
         self.instances = util.ItemList(key="id")
 
+    def reorder(self, context):
+        # Reorder instances in support of "cooperative collection"
+        self.beginResetModel()
+
+        items = dict()
+        for instance in self.instances:
+            items[instance.id] = instance
+            self.items.remove(instance)
+
+        # TODO: Clean this up. Instances are cached for
+        # brevity but this is where we are forced to fight it.
+        self.instances[:] = []
+        self.items.append(items[context.id])
+        self.instances.append(items[context.id])
+
+        for instance in context:
+            self.items.append(items[instance.id])
+            self.instances.append(items[instance.id])
+
+        self.endResetModel()
+
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_plugin(self, plugin):
+        """Append `plugin` to model
+
+        Arguments:
+            plugin (dict): Serialised plug-in from pyblish-rpc
+
+        Schema:
+            plugin.json
+
+        """
+
         item = {}
         item.update(defaults["common"])
         item.update(defaults["plugin"])
 
-        plugin = plugin.to_json()
         for member in ["pre11",
                        "name",
                        "label",
@@ -327,37 +357,56 @@ class ItemModel(AbstractModel):
 
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_instance(self, instance):
-        instance_json = instance.to_json()
-        item = {}
-        item.update(defaults["common"])
-        item.update(defaults["instance"])
-        item.update(instance_json["data"])
-        item.update(instance_json)
+        """Append `instance` to model
 
-        item["name"] = instance.data.get("name")
+        Arguments:
+            instance (dict): Serialised instance
+
+        Schema:
+            instance.json
+
+        """
+
+        assert isinstance(instance, dict)
+
+        item = defaults["common"].copy()
+        item.update(defaults["instance"])
+
+        item.update(instance["data"])
+        item.update(instance)
+
         item["itemType"] = "instance"
-        item["isToggled"] = instance.data.get("publish", True)
+        item["isToggled"] = instance["data"].get("publish", True)
         item["hasCompatible"] = True
 
         # Visualised in Perspective
-        item["familiesConcatenated"] = instance.data.get("family", "")
+        item["familiesConcatenated"] = instance["data"].get("family", "")
         item["familiesConcatenated"] += ", ".join(
-            instance.data.get("families", []))
+            instance["data"].get("families", []))
 
         item = self.add_item(item)
         self.instances.append(item)
 
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_context(self, context, label=None):
-        item = {}
-        item.update(defaults["common"])
+        """Append `context` to model
+
+        Arguments:
+            context (dict): Serialised to add
+
+        Schema:
+            context.json
+
+        """
+
+        assert isinstance(context, dict)
+
+        item = defaults["common"].copy()
         item.update(defaults["instance"])
+        item.update(context)
 
-        name = context.data.get("label") or settings.ContextLabel
-
-        item["id"] = "Context"
         item["family"] = None
-        item["name"] = name
+        item["label"] = context["data"].get("label") or settings.ContextLabel
         item["itemType"] = "instance"
         item["isToggled"] = True
         item["optional"] = False
@@ -483,7 +532,7 @@ class ResultModel(AbstractModel):
 
     def add_context(self, context):
         item = defaults["result"].copy()
-        item.update(context.to_json()["data"])
+        item.update(context["data"])
         item.update({
             "type": "context",
             "name": "Pyblish",
@@ -512,30 +561,30 @@ class ResultModel(AbstractModel):
             self.add_item(error)
 
     def parse_result(self, result):
-        plugin_id = result["plugin"]["id"]
+        plugin_name = result["plugin"]["name"]
 
         try:
-            instance_id = result["instance"]["id"]
+            instance_name = result["instance"]["name"]
         except:
-            instance_id = None
+            instance_name = None
 
         plugin_msg = {
             "type": "plugin",
-            "message": plugin_id,
-            "filter": plugin_id,
+            "message": plugin_name,
+            "filter": plugin_name,
 
-            "plugin": plugin_id,
-            "instance": instance_id
+            "plugin": plugin_name,
+            "instance": instance_name
         }
 
         instance_msg = {
             "type": "instance",
-            "message": instance_id or "Context",
-            "filter": instance_id,
+            "message": instance_name or "Context",
+            "filter": instance_name,
             "duration": result["duration"],
 
-            "plugin": plugin_id,
-            "instance": instance_id
+            "plugin": plugin_name,
+            "instance": instance_name
         }
 
         record_msgs = list()
@@ -545,8 +594,8 @@ class ResultModel(AbstractModel):
             record["filter"] = record["message"]
             record["message"] = util.format_text(str(record["message"]))
 
-            record["plugin"] = plugin_id
-            record["instance"] = instance_id
+            record["plugin"] = plugin_name
+            record["instance"] = instance_name
 
             record_msgs.append(record)
 
@@ -555,8 +604,8 @@ class ResultModel(AbstractModel):
             "message": "No error",
             "filter": "",
 
-            "plugin": plugin_id,
-            "instance": instance_id
+            "plugin": plugin_name,
+            "instance": instance_name
         }
 
         error_msg = None
@@ -567,8 +616,8 @@ class ResultModel(AbstractModel):
             error["message"] = util.format_text(error["message"])
             error["filter"] = error["message"]
 
-            error["plugin"] = plugin_id
-            error["instance"] = instance_id
+            error["plugin"] = plugin_name
+            error["instance"] = instance_name
 
             error_msg = error
 
