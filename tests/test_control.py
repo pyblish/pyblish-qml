@@ -189,7 +189,7 @@ def test_publish_only_toggled():
     check_present("MyCollector", c.item_model)
     check_present("MyInstance", c.item_model)
 
-    c.item_model.plugins["MyValidator"].isToggled = False
+    c.item_model.plugins[MyValidator.id].isToggled = False
 
     publish(c)
 
@@ -484,9 +484,9 @@ def test_action_on_failed():
     c = reset()
 
     validate_fail_index = c.item_model.items.index(
-        c.item_model.plugins["ValidateFail"])
+        c.item_model.plugins[ValidateFail.id])
     validate_success_index = c.item_model.items.index(
-        c.item_model.plugins["ValidateSuccess"])
+        c.item_model.plugins[ValidateSuccess.id])
 
     validate_fail_actions = c.getPluginActions(validate_fail_index)
 
@@ -499,7 +499,7 @@ def test_action_on_failed():
 
     assert len(validate_fail_actions) == 1, (
         "ValidateFail should have had an action")
-    assert validate_fail_actions[0]["id"] == "ActionOnFailed", (
+    assert validate_fail_actions[0]["id"] == ActionOnFailed.id, (
         "ValidateFail had an unknown action")
 
     validate_success_actions = c.getPluginActions(validate_success_index)
