@@ -505,3 +505,45 @@ def test_action_on_failed():
     validate_success_actions = c.getPluginActions(validate_success_index)
     assert len(validate_success_actions) == 0, (
         "ValidateSuccess should not have had an action")
+
+
+@with_setup(lib.clean)
+def test_action_not_processed():
+    """Actions on not processed """
+
+    class SelectMany(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder
+
+        def process(self, context):
+            for name in ("A", "B", "C"):
+                context.create_instance(name)
+
+    class ActionOnNotProcessed(pyblish.api.Action):
+        on = "notProcessed"
+
+    class ValidateAction(pyblish.api.InstancePlugin):
+        order = pyblish.api.ValidatorOrder
+        actions = [ActionOnNotProcessed]
+
+        def process(self, instance):
+            assert True
+
+    pyblish.api.register_plugin(SelectMany)
+    pyblish.api.register_plugin(ValidateAction)
+
+    c = reset()
+
+    validate_index = c.item_model.items.index(
+        c.item_model.plugins[ValidateAction.id])
+
+    validate_actions = c.getPluginActions(validate_index)
+
+    assert len(validate_actions) == 1, (
+        "ValidateAction should have 1 action")
+
+    validate(c)
+
+    validate_actions = c.getPluginActions(validate_index)
+
+    assert len(validate_actions) == 0, (
+        "ValidateAction should not have had an action")
