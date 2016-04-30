@@ -333,6 +333,8 @@ class Controller(QtCore.QObject):
                 actions.remove(action)
             if action["on"] == "processed" and not item.processed:
                 actions.remove(action)
+            if action["on"] == "notProcessed" and item.processed:
+                actions.remove(action)
 
         # Discard empty groups
         index = 0
