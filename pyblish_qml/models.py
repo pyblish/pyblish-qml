@@ -138,6 +138,7 @@ class AbstractItem(QtCore.QObject):
     https://github.com/pyblish/pyblish-qml/issues/81
 
     """
+
     __datachanged__ = QtCore.pyqtSignal(QtCore.QObject)
 
     def __str__(self):
