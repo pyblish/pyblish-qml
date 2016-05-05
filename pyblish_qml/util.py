@@ -5,6 +5,8 @@ import re
 
 from PyQt5 import QtCore
 
+from .vendor import six
+
 _timers = {}
 _async_threads = []
 
@@ -33,9 +35,12 @@ class QState(QtCore.QState):
         self.name = name
         self.setObjectName(name)
 
-        # machine.configuration() in Python 3
-        # throws an error unless this exists..
-        self.QState = None
+        # machine.configuration() throws an exception
+        # under Python 3 unless this useless variable
+        # is set? In Python 2 however, setting this
+        # variable causes a segfault.
+        if six.PY3:
+            self.QState = None
 
 
 class ItemList(list):
