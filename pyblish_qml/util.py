@@ -33,6 +33,10 @@ class QState(QtCore.QState):
         self.name = name
         self.setObjectName(name)
 
+        # machine.configuration() in Python 3
+        # throws an error unless this exists..
+        self.QState = None
+
 
 class ItemList(list):
     """List with keys

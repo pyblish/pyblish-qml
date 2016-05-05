@@ -831,7 +831,7 @@ class Controller(QtCore.QObject):
                 context.append(instance)
                 self.item_model.add_instance(instance.to_json())
 
-            util.async(iterator.next, callback=on_next)
+            util.async(lambda: next(iterator), callback=on_next)
 
         def on_finished(message=None):
             """Locally running function"""
@@ -855,7 +855,7 @@ class Controller(QtCore.QObject):
         # Once the thread finishes execution, it signals
         # the `callback`.
         iterator = self.iterator(plugins, context)
-        util.async(iterator.next, callback=on_next)
+        util.async(lambda: next(iterator), callback=on_next)
 
     @QtCore.pyqtSlot(int)
     def repairPlugin(self, index):
@@ -922,7 +922,7 @@ class Controller(QtCore.QObject):
             self.result_model.update_with_result(result)
 
             # Run next again
-            util.async(iterator.next, callback=on_next)
+            util.async(lambda: next(iterator), callback=on_next)
 
         def on_finished():
             self.is_running = False
@@ -935,4 +935,4 @@ class Controller(QtCore.QObject):
                       % abs(stats["requestCount"]))
 
         # Reset state
-        util.async(iterator.next, callback=on_next)
+        util.async(lambda: next(iterator), callback=on_next)

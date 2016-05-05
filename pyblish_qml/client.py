@@ -1,11 +1,20 @@
-import httplib
-import xmlrpclib
+try:
+    import httplib
+except ImportError:
+    # Python 3
+    import http.client as httplib
+
+try:
+    from xmlrpclib import Transport, ServerProxy
+except ImportError:
+    # Python 3
+    from xmlrpc.client import Transport, ServerProxy
 
 
-class TimeoutTransport(xmlrpclib.Transport):
+class TimeoutTransport(Transport):
     """Requests should happen instantly"""
     def __init__(self, timeout=5, *args, **kwargs):
-        xmlrpclib.Transport.__init__(self, *args, **kwargs)
+        Transport.__init__(self, *args, **kwargs)
         self.timeout = timeout
 
     def make_connection(self, host):
@@ -28,7 +37,6 @@ class HttpWithTimeout(httplib.HTTP):
 
 def proxy(timeout=5):
     """Return proxy at default location of Pyblish QML"""
-    return xmlrpclib.ServerProxy(
+    return ServerProxy(
         "http://127.0.0.1:9090",
-        transport=TimeoutTransport(timeout),
         allow_none=True)
