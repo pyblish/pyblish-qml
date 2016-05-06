@@ -82,7 +82,6 @@ MouseArea {
 
         Label {
             id: label
-            opacity: active ? 1.0 : 0.5
             anchors.verticalCenter: parent.verticalCenter
             elide: Text.ElideRight
 
