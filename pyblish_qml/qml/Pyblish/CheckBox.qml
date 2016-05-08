@@ -25,14 +25,14 @@ MouseArea {
 
     AwesomeIcon {
         id: check
+
         name: "check"
         size: 8
 
         anchors.centerIn: parent
-        opacity: checkView.checked ? checkView.active ? 1 : 0.5 : 0
 
         color: statuses[status]
-        opacity: checkView.checked ? 1 : 0
+        opacity: checkView.checked ? checkView.active ? 1 : 0.5 : 0
 
         Behavior on opacity {
             NumberAnimation {
