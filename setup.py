@@ -8,7 +8,7 @@ version_mod = imp.load_source("version", version_file)
 version = version_mod.version
 
 setup(
-    name='pyblish-qml',
+    name='pyblish_qml',
     version=version,
     packages=['pyblish_qml',],
     license="LGPL",
