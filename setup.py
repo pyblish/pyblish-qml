@@ -1,5 +1,4 @@
-from setuptools import setup, find_packages
-
+from distutils.core import setup
 
 import os
 import imp
@@ -8,14 +7,10 @@ version_file = os.path.abspath("pyblish_qml/version.py")
 version_mod = imp.load_source("version", version_file)
 version = version_mod.version
 
-
 setup(
-    name="pyblish-qml",
+    name='pyblish-bumpybx',
     version=version,
-    long_description=readme,
-    url="https://github.com/pyblish/pyblish",
+    packages=['pyblish_qml',],
     license="LGPL",
-    packages=find_packages(),
-    zip_safe=False,
-    classifiers=classifiers
+    long_description=open('README.md').read(),
 )
