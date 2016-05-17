@@ -24,13 +24,16 @@ version = version_mod.version
 qml_dir = os.path.abspath('pyblish_qml/qml')
 qml_package_data = list()
 for root, dirs, files in os.walk(qml_dir):
-    for suffix in ("ttf", "qml", "js", "txt", "png", "py", "otf"):
+    for suffix in ("ttf", "qml", "js", "txt", "png", "py", "otf", "ico"):
         relpath = os.path.relpath(root, qml_dir)
         relpath = relpath.replace("\\", "/")
         qml_package_data.append("qml/" + relpath.strip(".") + "/*." + suffix)
 
 # qmldir file has no suffix
 qml_package_data.append(os.path.join("qml", "Pyblish", "qmldir"))
+qml_package_data.append(os.path.join("qml", "Pyblish", "Graphs", "qmldir"))
+qml_package_data.append(os.path.join("qml", "Pyblish", "ListItems", "qmldir"))
+qml_package_data.append(os.path.join("qml", "Perspective", "qmldir"))
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
