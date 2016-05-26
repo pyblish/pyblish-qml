@@ -277,8 +277,6 @@ class Controller(QtCore.QObject):
         }
 
         for plug, instance in pyblish.logic.Iterator(plugins, context):
-            if not plug.active:
-                continue
 
             state["nextOrder"] = plug.order
 
