@@ -672,6 +672,9 @@ class Controller(QtCore.QObject):
                         base=pyblish.api.Collector.order):
                     continue
 
+                if not plugin.active:
+                    continue
+
                 collectors.append(plugin)
 
             self.run(collectors, context,

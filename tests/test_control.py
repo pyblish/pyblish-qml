@@ -547,3 +547,32 @@ def test_action_not_processed():
 
     assert len(validate_actions) == 0, (
         "ValidateAction should not have had an action")
+
+
+def test_inactive_collector():
+    """An inactive collector should not run"""
+
+    count = {"#": 0}
+
+    class MyInactiveCollector(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder
+        active = False
+
+        def process(self, context):
+            print("Ran %s" % type(self))
+            count["#"] += 1
+
+    class MyActiveCollector(pyblish.api.ContextPlugin):
+        order = pyblish.api.CollectorOrder
+        active = True
+
+        def process(self, context):
+            print("Ran %s" % type(self))
+            count["#"] += 10
+
+    pyblish.api.register_plugin(MyInactiveCollector)
+    pyblish.api.register_plugin(MyActiveCollector)
+
+    reset()
+
+    assert count["#"] == 10
