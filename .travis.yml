@@ -1,14 +1,13 @@
 language: python
 
 python:
-- 2.7
+- 3.5
 
 sudo: required # install.sh requires sudo apt-get
 
 install:
-- echo "Install.."
-- source .travis/install_linux.sh
-- source .travis/install.sh
+- sudo apt-get update
+- sudo apt-get install -y python3-pyqt5
 - pip install coverage nose
 - git clone https://github.com/pyblish/pyblish-rpc
 - git clone https://github.com/pyblish/pyblish-base
