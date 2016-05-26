@@ -2,9 +2,8 @@ import time
 import re
 from PyQt5 import QtCore
 
-import util
-from pyblish_qml import settings
-
+from . import util, settings
+from .vendor import six
 
 defaults = {
     "common": {
@@ -131,6 +130,7 @@ class PropertyType(QtCore.pyqtWrapperType):
         return super(PropertyType, cls).__new__(cls, name, bases, attrs)
 
 
+@six.add_metaclass(PropertyType)
 class AbstractItem(QtCore.QObject):
     """Model Item
 
@@ -139,14 +139,13 @@ class AbstractItem(QtCore.QObject):
 
     """
 
-    __metaclass__ = PropertyType
     __datachanged__ = QtCore.pyqtSignal(QtCore.QObject)
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
-        return u"%s.%s(%r)" % (__name__, type(self).__name__, self.__str__())
+        return "%s.%s(%r)" % (__name__, type(self).__name__, self.__str__())
 
 
 def Item(**kwargs):
@@ -239,8 +238,8 @@ class AbstractModel(QtCore.QAbstractListModel):
 
     def roleNames(self):
         return {
-            QtCore.Qt.UserRole + 0: "item",
-            QtCore.Qt.UserRole + 1: "object"
+            QtCore.Qt.UserRole + 0: b"item",
+            QtCore.Qt.UserRole + 1: b"object"
         }
 
     def reset(self):
