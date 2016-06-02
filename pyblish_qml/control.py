@@ -277,8 +277,6 @@ class Controller(QtCore.QObject):
         }
 
         for plug, instance in pyblish.logic.Iterator(plugins, context):
-            if not plug.active:
-                continue
 
             state["nextOrder"] = plug.order
 
@@ -672,6 +670,9 @@ class Controller(QtCore.QObject):
                 if not pyblish.lib.inrange(
                         number=plugin.order,
                         base=pyblish.api.Collector.order):
+                    continue
+
+                if not plugin.active:
                     continue
 
                 collectors.append(plugin)
