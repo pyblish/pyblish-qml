@@ -19,4 +19,4 @@ before_script:
 
 script:
 - docker build -t pyblish/pyblish-qml .
-- docker run --rm -v $(pwd):/pyblish-qml pyblish-pyblish-qml
+- docker run --rm -v $(pwd):/pyblish-qml pyblish/pyblish-qml
