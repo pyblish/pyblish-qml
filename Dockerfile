@@ -3,9 +3,10 @@
 # cd pyblish-qml
 # docker run --rm -v $(pwd):/pyblish-qml pyblish/pyblish-qml
 
-MAINTAINER marcus@abstractfactory.io
 
 FROM ubuntu:14.04
+
+MAINTAINER marcus@abstractfactory.io
 
 RUN apt-get update && apt-get install -y \
     python3-pyqt5 \
