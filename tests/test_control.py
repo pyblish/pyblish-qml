@@ -11,11 +11,7 @@ from nose.tools import (
 from pyblish_qml import control
 import pyblish.api
 
-from . import lib
-
-# Module-level setup and teardown
-setup = lib._setup
-teardown = lib._teardown
+from . import port, lib
 
 
 def check_present(name, model):
@@ -25,7 +21,7 @@ def check_present(name, model):
 def reset(controller=None):
     if controller is None:
         controller = control.Controller()
-        controller.on_client_changed(lib.port)
+        controller.on_client_changed(port)
 
     ready = QtTest.QSignalSpy(controller.ready)
 
@@ -52,7 +48,7 @@ def publish(controller=None):
 
     if controller is None:
         controller = control.Controller()
-        controller.on_client_changed(lib.port)
+        controller.on_client_changed(port)
 
     finished = QtTest.QSignalSpy(controller.finished)
 
@@ -77,7 +73,7 @@ def validate(controller=None):
 
     if controller is None:
         controller = control.Controller()
-        controller.on_client_changed(lib.port)
+        controller.on_client_changed(port)
 
     finished = QtTest.QSignalSpy(controller.finished)
 
@@ -159,7 +155,7 @@ def test_publish():
     assert_equals(count["#"], 111)
 
 
-@with_setup(lib._setup, lib._teardown)
+@with_setup(lib.clean)
 def test_publish_only_toggled():
     """Only toggled items are published"""
 
