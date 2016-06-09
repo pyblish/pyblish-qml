@@ -19,9 +19,11 @@ RUN apt-get update && apt-get install -y \
         nose \
         coverage
 
-RUN git clone https://github.com/pyblish/pyblish-rpc && \
+RUN mkdir /deps && cd /deps && \
+    git clone https://github.com/pyblish/pyblish-rpc && \
     git clone https://github.com/pyblish/pyblish-base && \
-    export PYTHONPATH=$(pwd)/pyblish-rpc:$(pwd)/pyblish-base
+
+ENV PYTHONPATH=/deps/pyblish-rpc:/deps/pyblish-base
 
 WORKDIR /pyblish-qml
 ENTRYPOINT python3 run_testsuite.py

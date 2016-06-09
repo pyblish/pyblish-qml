@@ -2,7 +2,7 @@ import time
 
 from pyblish_qml import util
 
-import lib
+from . import lib
 
 # Vendor libraries
 from nose.tools import (
