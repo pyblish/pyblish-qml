@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN mkdir /deps && cd /deps && \
     git clone https://github.com/pyblish/pyblish-rpc && \
-    git clone https://github.com/pyblish/pyblish-base && \
+    git clone https://github.com/pyblish/pyblish-base
 
 ENV PYTHONPATH=/deps/pyblish-rpc:/deps/pyblish-base
 
