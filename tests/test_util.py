@@ -1,8 +1,10 @@
+import sys
 import time
 
+from PyQt5 import QtCore
 from pyblish_qml import util
 
-import lib
+from . import app, lib
 
 # Vendor libraries
 from nose.tools import (
@@ -12,9 +14,10 @@ from nose.tools import (
 )
 
 
-@with_setup(lib._setup)
 def test_async():
     """util.async works as expected"""
+
+    app = QtCore.QCoreApplication(sys.argv)
 
     mutable = dict()
 
@@ -24,12 +27,12 @@ def test_async():
 
     def on_expensive_function(result):
         mutable["result"] = result
-        lib.app.quit()
+        app.quit()
 
     qthread = util.async(expensive_function,
                          callback=on_expensive_function)
 
-    lib.app.exec_()
+    app.exec_()
 
     assert_true(qthread.wait(200))
     assert_equals(mutable["result"], 5)
@@ -37,6 +40,7 @@ def test_async():
 
 def test_chain_with_functions():
     """util.chain works with functions"""
+
     def ten(data):
         return 10
 
