@@ -1,7 +1,17 @@
-from .version import version, version_info
+from .version import (
+    version,
+    version_info,
+    __version__
+)
+
+from .util import (
+    register_dispatch_wrapper,
+    deregister_dispatch_wrapper,
+    dispatch_wrapper
+)
 
 
-class _Settings(object):
+class _settings(object):
 
     def __init__(self):
         self.ContextLabel = "Context"
@@ -50,4 +60,15 @@ class _Settings(object):
         self._port_changed_callbacks.append(func)
 
 
-settings = _Settings()
+settings = _settings()
+
+
+__all__ = [
+    "__version__",
+    "version",
+    "version_info",
+    "register_dispatch_wrapper",
+    "deregister_dispatch_wrapper",
+    "dispatch_wrapper",
+    "settings",
+]

@@ -5,20 +5,10 @@ import collections
 
 # Dependencies
 from PyQt5 import QtCore
-import pyblish_rpc.client
-import pyblish_rpc.schema
 import pyblish.logic
 
 # Local libraries
-from . import util, models, version
-
-from pyblish_qml import settings
-
-
-def pyqtConstantProperty(fget):
-    return QtCore.pyqtProperty(QtCore.QVariant,
-                               fget=fget,
-                               constant=True)
+from . import util, models, version, settings, rpc
 
 
 class Controller(QtCore.QObject):
@@ -52,14 +42,14 @@ class Controller(QtCore.QObject):
     state_changed = QtCore.pyqtSignal(str, arguments=["state"])
 
     # Qt Properties
-    itemModel = pyqtConstantProperty(lambda self: self.item_model)
-    itemProxy = pyqtConstantProperty(lambda self: self.item_proxy)
-    recordProxy = pyqtConstantProperty(lambda self: self.record_proxy)
-    errorProxy = pyqtConstantProperty(lambda self: self.error_proxy)
-    instanceProxy = pyqtConstantProperty(lambda self: self.instance_proxy)
-    pluginProxy = pyqtConstantProperty(lambda self: self.plugin_proxy)
-    resultModel = pyqtConstantProperty(lambda self: self.result_model)
-    resultProxy = pyqtConstantProperty(lambda self: self.result_proxy)
+    itemModel = util.pyqtConstantProperty(lambda self: self.item_model)
+    itemProxy = util.pyqtConstantProperty(lambda self: self.item_proxy)
+    recordProxy = util.pyqtConstantProperty(lambda self: self.record_proxy)
+    errorProxy = util.pyqtConstantProperty(lambda self: self.error_proxy)
+    instanceProxy = util.pyqtConstantProperty(lambda self: self.instance_proxy)
+    pluginProxy = util.pyqtConstantProperty(lambda self: self.plugin_proxy)
+    resultModel = util.pyqtConstantProperty(lambda self: self.result_model)
+    resultProxy = util.pyqtConstantProperty(lambda self: self.result_proxy)
 
     def __init__(self, parent=None):
         super(Controller, self).__init__(parent)
@@ -115,7 +105,7 @@ class Controller(QtCore.QObject):
 
         """
 
-        self.host = pyblish_rpc.client.Proxy(port=port)
+        self.host = rpc.client.Proxy(port=port)
 
     def setup_statemachine(self):
         """Setup and start state machine"""

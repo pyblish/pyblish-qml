@@ -10,7 +10,7 @@ import threading
 from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 
 # Local libraries
-from . import util, compat, server, control
+from . import util, compat, server, control, rpc
 
 from pyblish_qml import settings
 
@@ -216,7 +216,7 @@ class Application(QtGui.QGuiApplication):
         t.start()
 
 
-def main(source=None, debug=False, validate=True):
+def main(source=None, debug=False, validate=True, port=6000):
     """Start the Qt-runtime and show the window
 
     Arguments:
@@ -228,16 +228,6 @@ def main(source=None, debug=False, validate=True):
             prior to launching. Defaults to True
 
     """
-
-    if validate and compat.validate() is False:
-        util.echo("""
-Could not start application due to a misconfigured environment.
-
-Pass validate=False to pyblish_qml.app:main
-in order to bypass validation.
-""")
-
-        return 255
 
     # Initialise OS compatiblity
     compat.main()
@@ -253,27 +243,24 @@ in order to bypass validation.
 
         util.echo("Starting in debug-mode")
         util.echo("Looking for server..")
-        import pyblish_rpc.client
-        proxy = pyblish_rpc.client.Proxy(6000)
+        proxy = rpc.client.Proxy(port)
 
         if not proxy.ping():
-            import pyblish_rpc.server
-
-            os.environ["PYBLISH_CLIENT_PORT"] = str(6000)
+            os.environ["PYBLISH_CLIENT_PORT"] = str(port)
 
             util.echo("No existing server found, creating..")
             thread = threading.Thread(
-                target=pyblish_rpc.server.start_debug_server,
-                kwargs={"port": 6000})
+                target=rpc.server.start_debug_server,
+                kwargs={"port": port})
             thread.daemon = True
             thread.start()
 
             util.echo("Debug server created successfully.")
-            util.echo("Running mocked RPC server @ 127.0.0.1:%s" % 6000)
+            util.echo("Running mocked RPC server @ 127.0.0.1:%s" % port)
 
-        app.show_signal.emit(6000, {
+        app.show_signal.emit(port, {
             "ContextLabel": "World",
-            "WindowTitle": "Pyblish",
+            "WindowTitle": "Pyblish (DEBUG)",
             "WindowSize": (430, 600)
         })
 
@@ -281,8 +268,7 @@ in order to bypass validation.
         app = Application(source or APP_PATH)
         app.listen()
 
-    util.timer_end("application",
-                   "Spent %.2f ms creating the application")
+    util.timer_end("application", "Spent %.2f ms creating the application")
 
     return app.exec_()
 
