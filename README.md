@@ -42,5 +42,5 @@ $ python -m pyblish_qml
 ```python
 # From your favourite DCC
 import pyblish_qml
-pyblish_qml.listen()
+pyblish_qml.show()
 ```
