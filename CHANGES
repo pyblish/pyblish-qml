@@ -6,6 +6,7 @@ Version 0.7.0
 
 - Python 3 support (#191)
 - Consolidation of Pyblish RPC (#202)
+- Consolidation of Pyblish Integration (#203)
 
 Version 0.6.0
 -------------
