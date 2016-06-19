@@ -1,2 +1,0 @@
-#!/bin/sh
-python run_testsuite.py
