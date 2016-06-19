@@ -10,9 +10,7 @@ import threading
 from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 
 # Local libraries
-from . import util, compat, server, control, rpc
-
-from pyblish_qml import settings
+from . import util, compat, server, control, rpc, settings
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
@@ -120,8 +118,8 @@ class Application(QtGui.QGuiApplication):
         to display it.
 
         Arguments:
-            port (int, optional): Client asking to show GUI.
-                If no port is passed, the GUI cannot do anything.
+            port (int): Client asking to show GUI.
+            client_settings (dict, optional): Visual settings, see settings.py
 
         """
 
@@ -134,12 +132,9 @@ class Application(QtGui.QGuiApplication):
             window.setHeight(client_settings["WindowSize"][1])
             window.setTitle(client_settings["WindowTitle"])
 
-        util.echo("Settings:")
-        for setting in ("WindowTitle",
-                        "WindowSize",
-                        "WindowPosition",
-                        "HeartbeatInterval"):
-            util.echo("  %s = %s" % (setting, getattr(settings, setting)))
+        print("Settings:")
+        for key, value in client_settings.items():
+            print("  %s = %s" % (key, value))
 
         previously_hidden = not window.isVisible()
 
@@ -147,9 +142,9 @@ class Application(QtGui.QGuiApplication):
         window.showNormal()
 
         new_client = False
-        if settings.current_port() != port:
+        if settings.current_host_port() != port:
             new_client = True
-            settings.set_current_port(port)
+            settings.set_current_host_port(port)
 
         if os.name == "nt":
             # Work-around for window appearing behind
@@ -169,7 +164,7 @@ class Application(QtGui.QGuiApplication):
                 count = len(ready)
                 ready.wait(1000)
                 if len(ready) != count + 1:
-                    util.echo("Warning: Could not enter ready state")
+                    print("Warning: Could not enter ready state")
 
                 util.timer_end("ready", "Awaited statemachine for %.2f ms")
 
@@ -216,13 +211,11 @@ class Application(QtGui.QGuiApplication):
         t.start()
 
 
-def main(source=None, debug=False, validate=True, port=6000):
+def main(source=None, debug=False, validate=True):
     """Start the Qt-runtime and show the window
 
     Arguments:
         source (str): QML entry-point
-        pid (int, optional): Process id of parent process. Deprecated
-        preload (bool, optional): Load in backgrund. Defaults to False
         debug (bool, optional): Run in debug-mode. Defaults to False
         validate (bool, optional): Whether the environment should be validated
             prior to launching. Defaults to True
@@ -232,31 +225,33 @@ def main(source=None, debug=False, validate=True, port=6000):
     # Initialise OS compatiblity
     compat.main()
 
-    util.echo("Starting Pyblish..")
+    print("Starting Pyblish..")
     util.timer("application")
 
     # debug mode
     if debug:
+        port = 6000
+
         app = Application(source or APP_PATH)
         app.listen()
         app.__debugging__ = True
 
-        util.echo("Starting in debug-mode")
-        util.echo("Looking for server..")
+        print("Starting in debug-mode")
+        print("Looking for server..")
         proxy = rpc.client.Proxy(port)
 
         if not proxy.ping():
             os.environ["PYBLISH_CLIENT_PORT"] = str(port)
 
-            util.echo("No existing server found, creating..")
+            print("No existing server found, creating..")
             thread = threading.Thread(
                 target=rpc.server.start_debug_server,
                 kwargs={"port": port})
             thread.daemon = True
             thread.start()
 
-            util.echo("Debug server created successfully.")
-            util.echo("Running mocked RPC server @ 127.0.0.1:%s" % port)
+            print("Debug server created successfully.")
+            print("Running mocked RPC server @ 127.0.0.1:%s" % port)
 
         app.show_signal.emit(port, {
             "ContextLabel": "World",

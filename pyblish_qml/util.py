@@ -1,8 +1,5 @@
-import os
 import re
-import sys
 import time
-import inspect
 
 from PyQt5 import QtCore
 
@@ -13,50 +10,6 @@ _async_threads = []
 _data = {
     "dispatch_wrapper": None
 }
-
-
-def register_vendor_libraries():
-    package_dir = os.path.dirname(__file__)
-    vendor_dir = os.path.join(package_dir, "vendor")
-    sys.path.insert(0, vendor_dir)
-
-
-def deregister_vendor_libraries():
-    package_dir = os.path.dirname(__file__)
-    vendor_dir = os.path.join(package_dir, "vendor")
-    sys.path.remove(vendor_dir)
-
-
-def register_dispatch_wrapper(wrapper):
-    """Register a dispatch wrapper for servers
-
-    The wrapper must have this exact signature:
-        (func, *args, **kwargs)
-
-    Usage:
-        >>> def wrapper(func, *args, **kwargs):
-        ...   return func(*args, **kwargs)
-        ...
-        >>> register_dispatch_wrapper(wrapper)
-        >>> deregister_dispatch_wrapper()
-
-    """
-
-    signature = inspect.getargspec(wrapper)
-    if any(len(signature.args) != 1,
-           signature.varargs is None,
-           signature.keywords is None):
-        raise TypeError("Wrapper signature mismatch")
-
-    _data["dispatch_wrapper"] = wrapper
-
-
-def deregister_dispatch_wrapper():
-    _data["dispatch_wrapper"] = None
-
-
-def dispatch_wrapper():
-    return _data["dispatch_wrapper"]
 
 
 class QState(QtCore.QState):
