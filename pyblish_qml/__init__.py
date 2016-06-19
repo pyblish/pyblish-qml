@@ -8,11 +8,10 @@ from .host import (
     register_dispatch_wrapper,
     deregister_dispatch_wrapper,
     dispatch_wrapper,
-    setup,
-    teardown,
+    uninstall,
+    install,
     show,
 )
-
 
 __all__ = [
     "__version__",

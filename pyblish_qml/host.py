@@ -25,13 +25,6 @@ def register_dispatch_wrapper(wrapper):
     The wrapper must have this exact signature:
         (func, *args, **kwargs)
 
-    Usage:
-        >>> def wrapper(func, *args, **kwargs):
-        ...   return func(*args, **kwargs)
-        ...
-        >>> register_dispatch_wrapper(wrapper)
-        >>> deregister_dispatch_wrapper()
-
     """
 
     signature = inspect.getargspec(wrapper)
@@ -51,27 +44,27 @@ def dispatch_wrapper():
     return rpc.server.dispatch_wrapper
 
 
-def setup(port=9001):
-    """Perform first time setup
+def install(initial_port=9001):
+    """Perform first time install
 
     Attributes:
-        port (int, optional): Port from which to start
-            looking for available ports, defaults to
-            pyblish_qml.server.first_port
+        initial_port (int, optional): Port from which to start
+            looking for available ports, defaults to 9001
 
     """
 
     if self.ACTIVE_HOST_PORT is not None:
-        teardown()
+        uninstall()
 
-    setup_host()
-    setup_callbacks()
+    install_host()
+    install_callbacks()
 
     try:
         # In case QML is live and well, ask it
-        # for the next available port number.
+        # for the next available initial_port number.
         self.ACTIVE_PROXY = proxy()
-        self.ACTIVE_HOST_PORT = self.ACTIVE_PROXY.find_available_port(*[port])
+        self.ACTIVE_HOST_PORT = self.ACTIVE_PROXY.find_available_port(
+            6001)
 
     except (socket.timeout, socket.error):
         raise ValueError("Is Pyblish QML running?")
@@ -89,7 +82,7 @@ def setup(port=9001):
         sys.stderr.write("Setup failed..\n")
 
 
-def teardown():
+def uninstall():
     """Kill server and clean up traces of Pyblish QML in this process"""
     if self.ACTIVE_PROXY is None:
         return
@@ -99,8 +92,8 @@ def teardown():
     self.ACTIVE_HOST_PORT = None
     self.ACTIVE_PROXY = None
 
-    teardown_callbacks()
-    teardown_server()
+    uninstall_callbacks()
+    uninstall_server()
 
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
@@ -108,34 +101,37 @@ def teardown():
 def show():
     """Attempt to show GUI
 
-    Requires setup() to have been run first, and
+    Requires install() to have been run first, and
     a live instance of Pyblish QML in the background.
 
     """
 
     if not self.ACTIVE_HOST_PORT:
-        sys.stdout.write("Running setup() for the first time.\n")
-        setup()
+        sys.stdout.write("Running install() for the first time.\n")
+        install()
 
     if self.ACTIVE_PROXY is None:
         self.ACTIVE_PROXY = proxy()
 
     try:
-        self.ACTIVE_PROXY.show(self.ACTIVE_HOST_PORT, settings.to_dict())
+        self.ACTIVE_PROXY.show(
+            self.ACTIVE_HOST_PORT,
+            settings.to_dict()
+        )
 
     except (socket.error, socket.timeout):
         raise socket.error("Hello? Anybody there?")
 
 
-def setup_callbacks():
+def install_callbacks():
     pyblish.api.register_callback("instanceToggled", _toggle_instance)
 
 
-def teardown_callbacks():
+def uninstall_callbacks():
     pyblish.api.deregister_callback("instanceToggled", _toggle_instance)
 
 
-def teardown_server():
+def uninstall_server():
     rpc.server.kill()
 
 
@@ -186,7 +182,7 @@ def proxy(timeout=5):
         allow_none=True)
 
 
-def setup_host():
+def install_host():
     """Install required components into supported hosts
 
     An unsupported host will still run, but may encounter issues,
@@ -194,18 +190,18 @@ def setup_host():
 
     """
 
-    for setup in (_setup_maya,
-                  _setup_houdini,
-                  _setup_nuke):
+    for install in (_install_maya,
+                  _install_houdini,
+                  _install_nuke):
         try:
-            setup()
+            install()
         except ImportError:
             pass
         else:
             break
 
 
-def _setup_maya():
+def _install_maya():
     """Helper function to Autodesk Maya support"""
     from maya import utils
 
@@ -221,7 +217,7 @@ def _setup_maya():
     settings.WindowTitle = "Pyblish (Maya)"
 
 
-def _setup_houdini():
+def _install_houdini():
     """Helper function to SideFx Houdini support"""
     import hdefereval
 
@@ -236,7 +232,7 @@ def _setup_houdini():
     settings.WindowTitle = "Pyblish (Houdini)"
 
 
-def _setup_nuke():
+def _install_nuke():
     """Helper function to The Foundry Nuke support"""
     import nuke
 
