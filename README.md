@@ -56,7 +56,7 @@ pyblish_qml.show()
 
 Pyblish QML runs as an independent process on your computer, and communicates with your host via interprocess communication through remote-procedure calls (RPC).
 
-It uses the standard [`xmlrpc`]() library and default to responding to calls via port number 9090.
+It uses the standard [`xmlrpc`](https://docs.python.org/2/library/xmlrpclib.html) library and default to responding to calls via port number `9090`.
 
 ```python
 >>> from xmlrpclib import ServerProxy
