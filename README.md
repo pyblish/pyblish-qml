@@ -13,7 +13,7 @@ The Pyblish QML project provides a graphical frontend to [Pyblish](http://pyblis
 
 ### Installation
 
-Requires [pyblish-base](https://github.com/pyblish/pyblish-base), Python 3 and PyQt5.
+Requires [pyblish-base](https://github.com/pyblish/pyblish-base), Python 2 or 3 and PyQt5.
 
 ```bash
 $ pip install pyblish-qml
