@@ -54,9 +54,6 @@ class QmlApi(object):
             "message": "Hello, whomever you are"
         }
 
-    def port(self):
-        return 9090
-
     def find_available_port(self, start=first_port):
         """Return the next available port at which a client may listen
 
