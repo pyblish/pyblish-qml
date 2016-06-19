@@ -11,12 +11,11 @@ from ..vendor.six.moves import (
     socketserver
 )
 
-dispatch_wrapper = None
-
 
 self = sys.modules[__name__]
 self.current_server_thread = None
 self.current_server = None
+self.dispatch_wrapper = None
 
 
 def default_wrapper(func, *args, **kwargs):
@@ -65,7 +64,7 @@ class RpcServer(socketserver.ThreadingMixIn, xmlrpclib.SimpleXMLRPCServer):
         return True
 
     def _dispatch(self, *args):
-        wrapper = dispatch_wrapper or default_wrapper
+        wrapper = sys.modules[__name__].dispatch_wrapper or default_wrapper
         return wrapper(xmlrpclib.SimpleXMLRPCServer._dispatch,
                        self, *args)
 

@@ -4,11 +4,8 @@ import time
 from PyQt5 import QtCore
 from pyblish_qml import util
 
-from . import app, lib
-
 # Vendor libraries
 from nose.tools import (
-    with_setup,
     assert_true,
     assert_equals
 )
