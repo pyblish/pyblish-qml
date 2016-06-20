@@ -18,7 +18,7 @@ script:
   - docker run --rm -v $(pwd):/pyblish-qml pyblish/pyblish-qml
 
   # Test setup.py
-  - pip install -U file://$(pwd)
+  - pip install --upgrade --force-reinstall file://$(pwd)
 
 deploy:
   provider: pypi
