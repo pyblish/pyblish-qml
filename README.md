@@ -114,7 +114,7 @@ Pyblish QML fills the same gap as Pyblish Lite, with a few notable differences.
 **Cons**
 
 - Requires PyQt5 (and either Python 2 or 3)
-- Supports only one publish at a time, for one logged on user at a time
+- Supports only one publish at a time, for one logged on user at a time ([#199](https://github.com/pyblish/pyblish-qml/issues/199))
 
 Development wise, Pyblish QML is written in.. you guessed it, QML. Whereas Pyblish Lite is written using classig widgets. QML is a new graphical user interface language for OpenGL developed by the same group, Qt.
 
