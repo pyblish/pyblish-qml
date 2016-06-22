@@ -99,6 +99,29 @@ pyblish_qml.uninstall()
 <br>
 <br>
 
+### Differences to [Pyblish Lite](https://github.com/mottosso/pyblish-lite)
+
+Pyblish QML fills the same gap as Pyblish Lite, with a few notable differences.
+
+**Pros**
+
+- Asynchronous operation - use the GUI during intense processing
+- Faster startup time - it's running before you are
+- Smoother visuals - animations galore
+- Inspect individual items - tens of instances, hundreds of plug-ins? no problem
+- Filter terminal via keyword search - thousands of log entries? no problem
+
+**Cons**
+
+- Requires PyQt5 (and either Python 2 or 3)
+- Supports only one publish at a time, for one logged on user at a time
+
+Development wise, Pyblish QML is written in.. you guessed it, QML. Whereas Pyblish Lite is written using classig widgets. QML is a new graphical user interface language for OpenGL developed by the same group, Qt.
+
+<br>
+<br>
+<br>
+
 ### Testing
 
 Tests are automatically run at each commit to GitHub via Travis-CI. You can run these tests locally via Docker too.
