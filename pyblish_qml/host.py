@@ -17,6 +17,7 @@ from . import rpc, settings
 self = sys.modules[__name__]
 self.ACTIVE_HOST_PORT = None
 self.ACTIVE_PROXY = None
+self.ACTIVE_HOST_NAME = None
 
 
 def register_dispatch_wrapper(wrapper):
@@ -64,10 +65,22 @@ def install(initial_port=9001):
         # for the next available initial_port number.
         self.ACTIVE_PROXY = proxy()
         self.ACTIVE_HOST_PORT = self.ACTIVE_PROXY.find_available_port(
-            6001)
+            initial_port)
 
     except (socket.timeout, socket.error):
-        raise ValueError("Is Pyblish QML running?")
+        raise socket.error(
+            "Is Pyblish QML running?\n\n"
+
+            "This GUI requires a separate, standalone process to be running\n"
+            "in the background in order to make use of it from within {host}\n"
+            "Make sure to run python -m pyblish_qml prior to showing it from\n"
+            "from {host}.\n\n"
+
+            "See the documentation for further information.\n"
+            "- https://github.com/pyblish/pyblish-qml\n\n#"
+            .format(
+                host=self.ACTIVE_HOST_NAME or "a host")
+        )
 
     os.environ["PYBLISH_CLIENT_PORT"] = str(self.ACTIVE_HOST_PORT)
 
@@ -191,8 +204,8 @@ def install_host():
     """
 
     for install in (_install_maya,
-                  _install_houdini,
-                  _install_nuke):
+                    _install_houdini,
+                    _install_nuke):
         try:
             install()
         except ImportError:
@@ -216,6 +229,8 @@ def _install_maya():
     settings.ContextLabel = "Maya"
     settings.WindowTitle = "Pyblish (Maya)"
 
+    self.ACTIVE_HOST_NAME = "Maya"
+
 
 def _install_houdini():
     """Helper function to SideFx Houdini support"""
@@ -231,6 +246,8 @@ def _install_houdini():
     settings.ContextLabel = "Houdini"
     settings.WindowTitle = "Pyblish (Houdini)"
 
+    self.ACTIVE_HOST_NAME = "Houdini"
+
 
 def _install_nuke():
     """Helper function to The Foundry Nuke support"""
@@ -245,3 +262,5 @@ def _install_nuke():
 
     settings.ContextLabel = "Nuke"
     settings.WindowTitle = "Pyblish (Nuke)"
+
+    self.ACTIVE_HOST_NAME = "Nuke"
