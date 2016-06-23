@@ -127,7 +127,7 @@ Development wise, Pyblish QML is written in.. you guessed it, QML. Whereas Pybli
 Tests are automatically run at each commit to GitHub via Travis-CI. You can run these tests locally via Docker too.
 
 ```bash
-$ git clone https://github.com/mottosso/pyblish-qml.git
+$ git clone https://github.com/pyblish/pyblish-qml.git
 $ cd pyblish-qml
 $ docker build -t pyblish/pyblish-qml .
 $ docker run --rm -v $(pwd):/pyblish-qml pyblish/pyblish-qml
