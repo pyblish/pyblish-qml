@@ -1,9 +1,11 @@
 import time
 import re
+
 from PyQt5 import QtCore
 
 from . import util, settings
 from .vendor import six
+
 
 defaults = {
     "common": {

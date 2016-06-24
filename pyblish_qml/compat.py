@@ -2,11 +2,7 @@ import os
 import sys
 import warnings
 
-try:
-    import ConfigParser
-except ImportError:
-    import configparser as ConfigParser
-
+from .vendor import six
 import xml.etree.ElementTree as ElementTree
 
 cwd = os.path.dirname(sys.executable)
@@ -94,7 +90,7 @@ def test_qtconf_availability():
 
 def test_qtconf_correctness():
     """Is the qt.conf correctly configured?"""
-    config = ConfigParser.ConfigParser()
+    config = six.configparser.configparser()
     config.read(qtconf_path)
 
     prefix_dir = config.get("Paths", "prefix")
@@ -165,12 +161,12 @@ def generate_safemode_windows():
     try:
         import pyblish
         import pyblish_qml
-        import pyblish_endpoint
         import PyQt5
 
     except ImportError:
-        print("Run this in a terminal with access to the Pyblish libraries and PyQt5")
-        return
+        return sys.stderr.write(
+            "Run this in a terminal with access to "
+            "the Pyblish libraries and PyQt5.\n")
 
     template = r"""@echo off
 
@@ -189,7 +185,6 @@ def generate_safemode_windows():
     set PATH=%PATH%;{python}
     set PYTHONPATH={pyblish}
     set PYTHONPATH=%PYTHONPATH%;{pyblish_qml}
-    set PYTHONPATH=%PYTHONPATH%;{pyblish_endpoint}
     set PYTHONPATH=%PYTHONPATH%;{PyQt5}
 
     set SystemRoot=C:\Windows
@@ -204,7 +199,7 @@ def generate_safemode_windows():
     """
 
     values = {}
-    for lib in (pyblish, pyblish_qml, pyblish_endpoint, PyQt5):
+    for lib in (pyblish, pyblish_qml, PyQt5):
         values[lib.__name__] = os.path.dirname(os.path.dirname(lib.__file__))
 
     values["python"] = os.path.dirname(sys.executable)
@@ -294,7 +289,9 @@ def windows_taskbar_compat():
     """Enable icon and taskbar grouping for Windows 7+"""
 
     import ctypes
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(u"pyblish.qml")
+    ctypes.windll.shell32.\
+        SetCurrentProcessExplicitAppUserModelID(
+            u"pyblish.qml")
 
 
 def main():

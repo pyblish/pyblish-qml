@@ -5,5 +5,5 @@ Pyblish QML
 
 - `Link`_
 
-.. _`Pyblish`: https://github.com/abstractfactory/pyblish
+.. _`Pyblish`: https://github.com/pyblish/pyblish
 .. _`Link`: https://github.com/pyblish/pyblish-qml

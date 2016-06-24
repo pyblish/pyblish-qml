@@ -1,0 +1,1 @@
+pyblish-base>=1.4

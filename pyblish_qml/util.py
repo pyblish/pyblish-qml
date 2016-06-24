@@ -1,7 +1,5 @@
-import os
-import sys
-import time
 import re
+import time
 
 from PyQt5 import QtCore
 
@@ -9,18 +7,9 @@ from .vendor import six
 
 _timers = {}
 _async_threads = []
-
-
-def register_vendor_libraries():
-    package_dir = os.path.dirname(__file__)
-    vendor_dir = os.path.join(package_dir, "vendor")
-    sys.path.insert(0, vendor_dir)
-
-
-def deregister_vendor_libraries():
-    package_dir = os.path.dirname(__file__)
-    vendor_dir = os.path.join(package_dir, "vendor")
-    sys.path.remove(vendor_dir)
+_data = {
+    "dispatch_wrapper": None
+}
 
 
 class QState(QtCore.QState):
@@ -214,3 +203,9 @@ def format_text(text):
         result = re.sub(pattern, html, result)
 
     return result
+
+
+def pyqtConstantProperty(fget):
+    return QtCore.pyqtProperty(QtCore.QVariant,
+                               fget=fget,
+                               constant=True)

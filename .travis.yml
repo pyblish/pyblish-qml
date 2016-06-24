@@ -7,16 +7,25 @@ python:
 - 3.4
 
 services:
-- docker
-
-virtualenv:
-  # The PyQt5 install ends up amongst system packages
-  system_site_packages: true
+  - docker
 
 before_script:
-- export DISPLAY=:99.0
-- sh -e /etc/init.d/xvfb start
+  - export DISPLAY=:99.0
+  - sh -e /etc/init.d/xvfb start
 
 script:
-- docker build -t pyblish/pyblish-qml .
-- docker run --rm -v $(pwd):/pyblish-qml pyblish/pyblish-qml
+  - docker build -t pyblish/pyblish-qml .
+  - docker run --rm -v $(pwd):/pyblish-qml pyblish/pyblish-qml
+
+  # Test setup.py
+  - pip install --upgrade --force-reinstall file://$(pwd)
+
+deploy:
+  provider: pypi
+  user: mottosso
+  password:
+    secure: NKekJIgRr/kaDXsK6Vz4rj3Uuxk6gK1NsrlAkAqXX8bPSS2oLpp8KVN2SjoCizwdO+sZzry6q0WdbeqnqRwiTTdnotlyVqjbmFNfTCeRdqZKAqYDvfSe44eNWCQgf06zl0lErX9NrJuPnJWyXqutvojdm50b99NzkiO60I+Fr6M=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: pyblish/pyblish-qml

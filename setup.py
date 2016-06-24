@@ -46,7 +46,11 @@ classifiers = [
     "Programming Language :: Python :: 2",
     "Programming Language :: Python :: 2.6",
     "Programming Language :: Python :: 2.7",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.1",
+    "Programming Language :: Python :: 3.2",
     "Programming Language :: Python :: 3.3",
+    "Programming Language :: Python :: 3.4",
     "Programming Language :: Python :: 3.5",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities"
@@ -67,5 +71,8 @@ setup(
     package_data={
         "pyblish_qml": qml_package_data
     },
+    install_requires=[
+        "pyblish-base>=1.4"
+    ],
     entry_points={},
 )

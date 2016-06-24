@@ -8,11 +8,7 @@ Attributes:
 
 import os
 
-try:
-    from SimpleXMLRPCServer import SimpleXMLRPCServer
-except ImportError:
-    # Python 3
-    from xmlrpc.server import SimpleXMLRPCServer
+from .vendor.six.moves import xmlrpc_server as xmlrpclib
 
 first_port = 9001
 
@@ -51,13 +47,13 @@ class QmlApi(object):
     def heartbeat(self, port):
         """Tell QML that someone is listening at `port`"""
         self.app.register_heartbeat(port)
-        
+
     def ping(self):
         """Used to check connectivity"""
         return {
             "message": "Hello, whomever you are"
         }
-        
+
     def find_available_port(self, start=first_port):
         """Return the next available port at which a client may listen
 
@@ -95,7 +91,7 @@ class CtrlApi(object):
 
 
 def _server(port, service):
-    server = SimpleXMLRPCServer(
+    server = xmlrpclib.SimpleXMLRPCServer(
         ("127.0.0.1", port),
         allow_none=True,
         logRequests=False)
