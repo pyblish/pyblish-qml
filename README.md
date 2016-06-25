@@ -13,29 +13,35 @@ The Pyblish QML project provides a graphical frontend to [Pyblish](http://pyblis
 
 ### Requirements
 
-The Pyblish QML **client** has no dependencies except Python 2 or 3 and [pyblish-base](https://github.com/pyblish/pyblish-base), whereas the **server** requires PyQt5.
+The Pyblish QML **client** depends on [pyblish-base](https://github.com/pyblish/pyblish-base) and Python 2 or 3, whereas the **server** requires PyQt5.
 
-**Any platform**
+- **Any platform** 
+ 
+ PyQt5 is available on PyPI, but only for Python 3.5. For any other distribution, see below.
 
-The easiest way to get your hands on PyQt5, on any platform, is via pip and Python 3.5.
-
-```bash
+ ```bash
 $ pip install PyQt5
 ```
 
-**Windows**
+- **Windows**
 
-On Windows, you may download and install the binary distribution from the [Riverbank Software website](https://www.riverbankcomputing.com/software/pyqt/download5).
+ On Windows, you may download and install the binary distribution from the [Riverbank Software website](https://www.riverbankcomputing.com/software/pyqt/download5).
 
-**Debian**
+- **Debian**
 
-```bash
+ Like most Linux distribution, Debian will have PyQt5 available via its native package manager.
+
+ ```bash
 $ apt-get install python3-pyqt5 python3-pyqt5.qtquick
 ```
 
-**MacOS**
+ See `yum` for Red Hat based distributions.
 
-```bash
+- **MacOS**
+
+ Finally, brew provides a pre-compiled distribution for Python 3 as well.
+
+ ```bash
 $ brew install pyqt5
 ```
 
