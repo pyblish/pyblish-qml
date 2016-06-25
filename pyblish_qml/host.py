@@ -133,7 +133,17 @@ def show():
         )
 
     except (socket.error, socket.timeout):
-        raise socket.error("Hello? Anybody there?")
+        raise socket.error(
+            "Communication problem.\n"
+            "\n"
+            "Hello? Is it me you're looking for?\n"
+            "\n"
+            "This problem typically occurs when Pyblish QML \n"
+            "was running, but isn't anymore.\n"
+            "\n"
+            "To start it again, go to any terminal any type:\n"
+            "$ python -m pyblish_qml"
+        )
 
 
 def install_callbacks():

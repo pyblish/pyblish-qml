@@ -20,7 +20,7 @@ __all__ = [
     "register_dispatch_wrapper",
     "deregister_dispatch_wrapper",
     "dispatch_wrapper",
-    "setup",
-    "teardown",
+    "install",
+    "uninstall",
     "show",
 ]
