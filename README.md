@@ -11,9 +11,39 @@ The Pyblish QML project provides a graphical frontend to [Pyblish](http://pyblis
 <br>
 <br>
 
-### Installation
+### Requirements
 
-Requires [pyblish-base](https://github.com/pyblish/pyblish-base), Python 2 or 3 and PyQt5.
+The Pyblish QML **client** has no dependencies except Python 2 or 3 and [pyblish-base](https://github.com/pyblish/pyblish-base), whereas the **server** requires PyQt5.
+
+**Any platform**
+
+The easiest way to get your hands on PyQt5, on any platform, is via pip and Python 3.5.
+
+```bash
+$ pip install PyQt5
+```
+
+**Windows**
+
+On Windows, you may download and install the binary distribution from the [Riverbank Software website](https://www.riverbankcomputing.com/software/pyqt/download5).
+
+**Debian**
+
+```bash
+$ apt-get install python3-pyqt5 python3-pyqt5.qtquick
+```
+
+**MacOS**
+
+```bash
+$ brew install pyqt5
+```
+
+<br>
+<br>
+<br>
+
+### Installation
 
 ```bash
 $ pip install pyblish-qml
@@ -33,14 +63,14 @@ $ python -m pyblish_qml --demo
 
 Run Pyblish QML from any terminal, then show it from your favourite digital content creation software.
 
-**Start**
+**Server**
 
 ```bash
 # From any terminal
 $ python -m pyblish_qml
 ```
 
-**Show**
+**Client**
 
 ```python
 # From your favourite DCC
