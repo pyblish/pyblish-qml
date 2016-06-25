@@ -69,7 +69,12 @@ setup(
     zip_safe=False,
     classifiers=classifiers,
     package_data={
-        "pyblish_qml": qml_package_data
+        "pyblish_qml": qml_package_data + [
+            "vendor/jsonschema/schemas/*.json"
+        ],
+        "pyblish_qml.rpc": [
+            "schema/*.json",
+        ]
     },
     install_requires=[
         "pyblish-base>=1.4"
