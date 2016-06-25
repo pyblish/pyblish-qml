@@ -1,19 +1,16 @@
 import sys
 
+# User-editable settings
+
+ContextLabel = "Context"
+WindowTitle = "Pyblish"
+WindowSize = (430, 600)
+WindowPosition = (100, 100)
+HeartbeatInterval = 60
+
+# Implementation details below.
+
 self = sys.modules[__name__]
-
-self._settings = {
-    "ContextLabel": "Context",
-    "WindowTitle": "Pyblish",
-    "WindowSize": (430, 600),
-    "WindowPosition": (100, 100),
-    "HeartbeatInterval": 60,
-}
-
-# Enable access via dot-syntax
-# E.g. settings.ContextLabel
-locals().update(self._settings)
-
 self._callbacks = dict()
 self._current_gui_port = 0
 self._current_host_port = 0
@@ -28,11 +25,20 @@ def from_dict(settings):
 
     """
 
-    self._settings.update(settings)
+    assert isinstance(settings, dict), "`settings` must be of type dict"
+    for key, value in settings.items():
+        setattr(self, key, value)
 
 
 def to_dict():
-    return self._settings.copy()
+    """Return dictionary of settings"""
+    return dict((k, getattr(self, k)) for k in {
+        "ContextLabel",
+        "WindowTitle",
+        "WindowSize",
+        "WindowPosition",
+        "HeartbeatInterval",
+    })
 
 
 def current_host_port():
