@@ -651,12 +651,14 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 
     """
 
-    def __init__(self, source, parent=None):
+    def __init__(self, source, excludes=None, includes=None, parent=None):
         super(ProxyModel, self).__init__(parent)
         self.setSourceModel(source)
 
-        self.excludes = dict()
-        self.includes = dict()
+        self.excludes = excludes or dict()
+        self.includes = includes or dict()
+
+        self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
 
     @QtCore.pyqtSlot(int, result=QtCore.QObject)
     def item(self, index):
