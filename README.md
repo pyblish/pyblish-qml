@@ -15,14 +15,6 @@ The Pyblish QML project provides a graphical frontend to [Pyblish](http://pyblis
 
 The Pyblish QML **client** depends on [pyblish-base](https://github.com/pyblish/pyblish-base) and Python 2 or 3, whereas the **server** requires PyQt5.
 
-- **Any platform** 
- 
- PyQt5 is available on PyPI, but only for Python 3.5. For any other distribution, see below.
-
- ```bash
-$ pip install PyQt5
-```
-
 - **Windows**
 
  On Windows, you may download and install the binary distribution from the [Riverbank Software website](https://www.riverbankcomputing.com/software/pyqt/download5).
