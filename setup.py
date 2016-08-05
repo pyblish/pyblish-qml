@@ -78,7 +78,7 @@ setup(
     },
     install_requires=[
         "pyblish-base>=1.4",
-        "python-qt5>=0.1.8"
+        "PyQt5>=5.7"
     ],
     entry_points={},
 )
