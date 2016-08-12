@@ -263,6 +263,9 @@ def _install_nuke():
     """Helper function to The Foundry Nuke support"""
     import nuke
 
+    if "--hiero" in nuke.rawArgs or "--studio" in nuke.rawArgs:
+        raise ImportError
+
     def threaded_wrapper(func, *args, **kwargs):
         return nuke.executeInMainThreadWithResult(
             func, args, kwargs)
@@ -274,3 +277,24 @@ def _install_nuke():
     settings.WindowTitle = "Pyblish (Nuke)"
 
     self.ACTIVE_HOST_NAME = "Nuke"
+
+
+def _install_hiero():
+    """Helper function to The Foundry Hiero support"""
+    import hiero
+    import nuke
+
+    if "--hiero" not in nuke.rawArgs:
+        raise ImportError
+
+    def threaded_wrapper(func, *args, **kwargs):
+        return hiero.core.executeInMainThreadWithResult(
+            func, args, kwargs)
+
+    sys.stdout.write("Setting up Pyblish QML in Hiero\n")
+    register_dispatch_wrapper(threaded_wrapper)
+
+    settings.ContextLabel = "Hiero"
+    settings.WindowTitle = "Pyblish (Hiero)"
+
+    self.ACTIVE_HOST_NAME = "Hiero"
