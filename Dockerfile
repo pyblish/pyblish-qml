@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
         coverage
 
 RUN mkdir /deps && cd /deps && \
-    git clone https://github.com/pyblish/pyblish-base &&
+    git clone https://github.com/pyblish/pyblish-base && \
     cd pyblish-base && git checkout 1.4.2
 
 ENV PYTHONPATH=/deps/pyblish-base
