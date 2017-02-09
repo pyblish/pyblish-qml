@@ -158,6 +158,18 @@ Development wise, Pyblish QML is written in.. you guessed it, QML. Whereas Pybli
 <br>
 <br>
 
+### Common Problems
+
+Due to the inherent complexity of the client/server-style implementation of this project, some of the below problems are likely to puzzle you at first.
+
+![image](https://cloud.githubusercontent.com/assets/2152766/16816779/882b6880-4937-11e6-842a-0becb69e5855.png)
+
+Search the [Issues](https://github.com/pyblish/pyblish-qml/issues/new) section, if nothing is found feel free to open your own issue or [report a problem on the forums](http://forums.pyblish.com).
+
+<br>
+<br>
+<br>
+
 ### Testing
 
 Tests are automatically run at each commit to GitHub via Travis-CI. You can run these tests locally via Docker too.
