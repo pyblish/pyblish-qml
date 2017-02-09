@@ -511,7 +511,7 @@ class LongRunningValidator(pyblish.api.Validator):
     """I will take at least 2 seconds..."""
     def process(self, context):
         self.log.info("Sleeping for 2 seconds..")
-        time.sleep(600)
+        time.sleep(2)
         self.log.info("Good morning")
 
 
