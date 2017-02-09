@@ -204,7 +204,8 @@ def install_host():
 
     for install in (_install_maya,
                     _install_houdini,
-                    _install_nuke):
+                    _install_nuke,
+                    _install_hiero):
         try:
             install()
         except ImportError:
@@ -265,6 +266,26 @@ def _install_nuke():
     self.ACTIVE_HOST_NAME = "Nuke"
 
 
+def _install_hiero():
+    """Helper function to The Foundry Hiero support"""
+    import hiero
+    import nuke
+
+    if "--hiero" not in nuke.rawArgs:
+        raise ImportError
+
+    def threaded_wrapper(func, *args, **kwargs):
+        return hiero.core.executeInMainThreadWithResult(
+            func, args, kwargs)
+
+    sys.stdout.write("Setting up Pyblish QML in Hiero\n")
+    register_dispatch_wrapper(threaded_wrapper)
+
+    settings.ContextLabel = "Hiero"
+    settings.WindowTitle = "Pyblish (Hiero)"
+
+    self.ACTIVE_HOST_NAME = "Hiero"
+
 
 def _show_no_gui():
     """Popup with information about how to register a new GUI
@@ -314,8 +335,8 @@ def _show_no_gui():
         informative = """\
 Pyblish QML does not appear to be running.
 
-Press \"Show details...\" below for information on how to 
-run it it.
+Press \"Show details...\" below for information on how to
+ run it it.
 """
 
         detailed = """\
