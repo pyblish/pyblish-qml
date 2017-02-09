@@ -253,6 +253,9 @@ def _install_nuke():
     """Helper function to The Foundry Nuke support"""
     import nuke
 
+    if "--hiero" in nuke.rawArgs or "--studio" in nuke.rawArgs:
+        raise ImportError
+
     def threaded_wrapper(func, *args, **kwargs):
         return nuke.executeInMainThreadWithResult(
             func, args, kwargs)
