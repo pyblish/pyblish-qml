@@ -91,7 +91,7 @@ defaults = {
 }
 
 
-class PropertyType(QtCore.pyqtWrapperType):
+class PropertyType(type(QtCore.QObject)):
     """Metaclass for converting class attributes into pyqtProperties
 
     Usage:
@@ -318,6 +318,7 @@ class ItemModel(AbstractModel):
                        "doc",
                        "type",
                        "module",
+                       "match",
                        "hasRepair",
                        "families",
                        "contextEnabled",
@@ -427,6 +428,8 @@ class ItemModel(AbstractModel):
             result (dict): Dictionary following the Result schema
 
         """
+
+        assert isinstance(result, dict), "%s is not a dictionary" % result
 
         for type in ("instance", "plugin"):
             id = (result[type] or {}).get("id")
@@ -651,12 +654,14 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 
     """
 
-    def __init__(self, source, parent=None):
+    def __init__(self, source, excludes=None, includes=None, parent=None):
         super(ProxyModel, self).__init__(parent)
         self.setSourceModel(source)
 
-        self.excludes = dict()
-        self.includes = dict()
+        self.excludes = excludes or dict()
+        self.includes = includes or dict()
+
+        self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
 
     @QtCore.pyqtSlot(int, result=QtCore.QObject)
     def item(self, index):

@@ -10,6 +10,8 @@ import pyblish.logic
 # Local libraries
 from . import util, models, version, settings, rpc
 
+qtproperty = util.pyqtConstantProperty
+
 
 class Controller(QtCore.QObject):
     """Communicate with QML"""
@@ -41,46 +43,71 @@ class Controller(QtCore.QObject):
 
     state_changed = QtCore.pyqtSignal(str, arguments=["state"])
 
-    # Qt Properties
-    itemModel = util.pyqtConstantProperty(lambda self: self.item_model)
-    itemProxy = util.pyqtConstantProperty(lambda self: self.item_proxy)
-    recordProxy = util.pyqtConstantProperty(lambda self: self.record_proxy)
-    errorProxy = util.pyqtConstantProperty(lambda self: self.error_proxy)
-    instanceProxy = util.pyqtConstantProperty(lambda self: self.instance_proxy)
-    pluginProxy = util.pyqtConstantProperty(lambda self: self.plugin_proxy)
-    resultModel = util.pyqtConstantProperty(lambda self: self.result_model)
-    resultProxy = util.pyqtConstantProperty(lambda self: self.result_proxy)
+    # Statically expose these members to the QML run-time.
+    itemModel = qtproperty(lambda self: self.data["models"]["item"])
+    itemProxy = qtproperty(lambda self: self.data["proxies"]["item"])
+    recordProxy = qtproperty(lambda self: self.data["proxies"]["record"])
+    errorProxy = qtproperty(lambda self: self.data["proxies"]["error"])
+    instanceProxy = qtproperty(lambda self: self.data["proxies"]["instance"])
+    pluginProxy = qtproperty(lambda self: self.data["proxies"]["plugin"])
+    resultModel = qtproperty(lambda self: self.data["models"]["result"])
+    resultProxy = qtproperty(lambda self: self.data["proxies"]["result"])
 
     def __init__(self, parent=None):
         super(Controller, self).__init__(parent)
 
-        self.item_model = models.ItemModel()
-        self.result_model = models.ResultModel()
+        # Connection to host
+        # ------------------
+        # This is updated whenever a new host makes a connection.
+        self.host = None
 
-        self.instance_proxy = models.ProxyModel(self.item_model)
-        self.instance_proxy.add_inclusion("itemType", "instance")
+        self.data = {
+            "models": {
+                "item": models.ItemModel(),
+                "result": models.ResultModel(),
+            }
+        }
+        self.data.update({
+            "proxies": {
+                "item": models.ProxyModel(self.data["models"]["item"]),
 
-        self.plugin_proxy = models.ProxyModel(self.item_model)
-        self.plugin_proxy.add_inclusion("itemType", "plugin")
-        self.plugin_proxy.add_exclusion("hasCompatible", False)
+                "instance": models.ProxyModel(
+                    self.data["models"]["item"],
+                    includes={"itemType": ["instance"]}),
 
-        self.result_proxy = models.ProxyModel(self.result_model)
-        self.result_proxy.add_exclusion("levelname", "DEBUG")
-        self.result_proxy.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
+                "plugin": models.ProxyModel(
+                    self.data["models"]["item"],
+                    includes={"itemType": "plugin"},
+                    excludes={"hasCompatible": [False]}),
 
-        # Used in Perspective
-        self.item_proxy = models.ProxyModel(self.item_model)
-        self.record_proxy = models.ProxyModel(self.result_model)
-        self.record_proxy.add_inclusion("type", "record")
+                # Terminal
+                "result": models.ProxyModel(
+                    self.data["models"]["result"],
+                    excludes={"levelname": ["DEBUG"]}),
 
-        self.error_proxy = models.ProxyModel(self.result_model)
-        self.error_proxy.add_inclusion("type", "error")
+                # Perspective
+                "record": models.ProxyModel(
+                    self.data["models"]["result"],
+                    includes={"type": ["record"]}),
 
-        self.changes = dict()
-        self.is_running = False
+                "error": models.ProxyModel(
+                    self.data["models"]["result"],
+                    includes={"type": ["error"]})
+            },
+            "state": {
+                "is_running": False,
+                "current": None,
+                "all": list()
+            }
+        })
+
+        # Install state machine
+        # ---------------------
+        # This is what enables complex combinations of state
+        # to appear as one, such that one may register interest in
+        # e.g. a "finished" state, when "finished" may actually be
+        # a combination of multiple child states.
         self.machine = self.setup_statemachine()
-        self._state = None
-        self._states = list()
 
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
@@ -94,8 +121,8 @@ class Controller(QtCore.QObject):
 
         settings.register_port_changed_callback(self.on_client_changed)
 
-        # Connection to host
-        self.host = None
+    def dispatch(self, func, *args, **kwargs):
+        return getattr(self.host, func)(*args, **kwargs)
 
     def on_client_changed(self, port):
         """Establish a connection with client
@@ -239,11 +266,11 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtProperty(str, notify=state_changed)
     def state(self):
-        return self._state
+        return self.data["state"]["current"]
 
     @property
     def states(self):
-        return self._states
+        return self.data["state"]["all"]
 
     @QtCore.pyqtSlot(result=float)
     def time(self):
@@ -270,7 +297,7 @@ class Controller(QtCore.QObject):
 
             state["nextOrder"] = plug.order
 
-            if not self.is_running:
+            if not self.data["state"]["is_running"]:
                 raise StopIteration("Stopped")
 
             if test(**state):
@@ -303,9 +330,10 @@ class Controller(QtCore.QObject):
 
         """
 
-        index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
-        index = self.plugin_proxy.mapToSource(index).row()
-        item = self.item_model.items[index]
+        index = self.data["proxies"]["plugin"].mapToSource(
+            self.data["proxies"]["plugin"].index(
+                index, 0, QtCore.QModelIndex())).row()
+        item = self.data["models"]["item"].items[index]
 
         # Inject reference to the original index
         actions = [
@@ -369,9 +397,9 @@ class Controller(QtCore.QObject):
         def run():
             util.echo("Running with states.. %s" % self.states)
             self.acting.emit()
-            self.is_running = True
+            self.data["state"]["is_running"] = True
 
-            item = self.item_model.items[action["index"]]
+            item = self.data["models"]["item"].items[action["index"]]
 
             context = self.host.context()
             plugins = self.host.discover()
@@ -388,16 +416,19 @@ class Controller(QtCore.QObject):
 
         def on_finished(result):
             util.echo("Finished, finishing up..")
-            self.is_running = False
+
+            models = self.data["models"]
+
+            self.data["state"]["is_running"] = False
             self.acted.emit()
 
             # Inform GUI of success or failure
-            plugin = self.item_model.plugins[result["plugin"]["id"]]
+            plugin = models["item"].plugins[result["plugin"]["id"]]
             plugin.actionPending = False
             plugin.actionHasError = not result["success"]
 
             # Allow running action upon action, without resetting
-            self.result_model.update_with_result(result)
+            models["result"].update_with_result(result)
             self.info.emit("Success" if result["success"] else "Failed")
             util.echo("Finished with states.. %s" % self.states)
 
@@ -405,53 +436,68 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
-        qindex = self.instance_proxy.index(index, 0, QtCore.QModelIndex())
-        source_qindex = self.instance_proxy.mapToSource(qindex)
+        models = self.data["models"]
+        proxies = self.data["proxies"]
+
+        qindex = proxies["instance"].index(index, 0, QtCore.QModelIndex())
+        source_qindex = self.data["proxies"]["instance"].mapToSource(qindex)
         source_index = source_qindex.row()
-        item = self.item_model.items[source_index]
+        item = models["item"].items[source_index]
 
         if item.optional:
-            self.__toggle_item(self.item_model, source_index)
+            self.__toggle_item(models["item"], source_index)
         else:
             self.error.emit("Cannot toggle")
 
     @QtCore.pyqtSlot(bool, str)
     def toggleSection(self, checkState, sectionLabel):
-        for item in self.item_model.items:
+        model = self.data["models"]["item"]
+
+        for item in model.items:
             if item.itemType == 'instance' and sectionLabel == item.family:
                 if item.isToggled != checkState:
-                    self.__toggle_item(self.item_model,
-                                       self.item_model.items.index(item))
+                    self.__toggle_item(model,
+                                       model.items.index(item))
 
             if item.itemType == 'plugin' and item.optional:
                 if item.verb == sectionLabel:
                     if item.isToggled != checkState:
-                        self.__toggle_item(self.item_model,
-                                           self.item_model.items.index(item))
+                        self.__toggle_item(
+                            model,
+                            model.items.index(item))
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def pluginData(self, index):
-        qindex = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
-        source_qindex = self.plugin_proxy.mapToSource(qindex)
+        models = self.data["models"]
+        proxies = self.data["proxies"]
+
+        qindex = proxies["plugin"].index(index, 0, QtCore.QModelIndex())
+        source_qindex = proxies["plugin"].mapToSource(qindex)
         source_index = source_qindex.row()
-        return self.__item_data(self.item_model, source_index)
+        return self.__item_data(models["item"], source_index)
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def instanceData(self, index):
-        qindex = self.instance_proxy.index(index, 0, QtCore.QModelIndex())
-        source_qindex = self.instance_proxy.mapToSource(qindex)
+        models = self.data["models"]
+        proxies = self.data["proxies"]
+
+        qindex = proxies["instance"].index(index, 0, QtCore.QModelIndex())
+        source_qindex = proxies["instance"].mapToSource(qindex)
         source_index = source_qindex.row()
-        return self.__item_data(self.item_model, source_index)
+        return self.__item_data(models["item"], source_index)
 
     @QtCore.pyqtSlot(int)
     def togglePlugin(self, index):
-        qindex = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
-        source_qindex = self.plugin_proxy.mapToSource(qindex)
+        models = self.data["models"]
+        proxies = self.data["proxies"]
+
+        qindex = proxies["plugin"].index(index, 0, QtCore.QModelIndex())
+        source_qindex = proxies["plugin"].mapToSource(qindex)
         source_index = source_qindex.row()
-        item = self.item_model.items[source_index]
+        item = models["item"].items[source_index]
 
         if item.optional:
-            self.__toggle_item(self.item_model, source_index)
+            self.__toggle_item(self.data["models"]["item"], source_index)
         else:
             self.error.emit("Cannot toggle")
 
@@ -467,9 +513,9 @@ class Controller(QtCore.QObject):
 
         """
 
-        target = {"result": self.result_proxy,
-                  "instance": self.instance_proxy,
-                  "plugin": self.plugin_proxy}[target]
+        target = {"result": self.data["proxies"]["result"],
+                  "instance": self.data["proxies"]["instance"],
+                  "plugin": self.data["proxies"]["plugin"]}[target]
 
         if operation == "add":
             target.add_exclusion(role, value)
@@ -482,14 +528,8 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def save(self):
-        if not self.changes:
-            return
-
-        self.saving.emit()
-
-        # util.async(self.host.save,
-        #            args=[self.changes],
-        #            callback=self.saved.emit)
+        # Deprecated
+        return
 
     def __item_data(self, model, index):
         """Return item data as dict"""
@@ -526,11 +566,11 @@ class Controller(QtCore.QObject):
                            old_value=old_value)
 
         item.isToggled = new_value
-        self.item_model.update_compatibility()
+        self.data["models"]["item"].update_compatibility()
 
     def echo(self, data):
         """Append `data` to result model"""
-        self.result_model.add_item(data)
+        self.data["models"]["result"].add_item(data)
 
     # Event handlers
 
@@ -538,11 +578,11 @@ class Controller(QtCore.QObject):
         """Reflect currently running pair in GUI"""
 
         if instance is None:
-            instance_item = self.item_model.instances[0]
+            instance_item = self.data["models"]["item"].instances[0]
         else:
-            instance_item = self.item_model.instances[instance.id]
+            instance_item = self.data["models"]["item"].instances[instance.id]
 
-        plugin_item = self.item_model.plugins[plugin.id]
+        plugin_item = self.data["models"]["item"].plugins[plugin.id]
 
         instance_item.isProcessing = True
         plugin_item.isProcessing = True
@@ -553,11 +593,13 @@ class Controller(QtCore.QObject):
         if state == "ready":
             self.ready.emit()
 
-        self._state = state
-        self._states = list(s.name for s in self.machine.configuration())
+        self.data["state"]["current"] = state
+        self.data["state"]["all"] = list(
+            s.name for s in self.machine.configuration()
+        )
 
     def on_finished(self):
-        self.item_model.reset_status()
+        self.data["models"]["item"].reset_status()
 
         self.echo({
             "type": "message",
@@ -579,7 +621,7 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def stop(self):
-        self.is_running = False
+        self.data["state"]["is_running"] = False
         self.stopping.emit()
 
     @QtCore.pyqtSlot()
@@ -610,13 +652,12 @@ class Controller(QtCore.QObject):
         stats = {"requestCount": self.host.stats()["totalRequestCount"]}
 
         # Clear models
-        self.item_model.reset()
-        self.result_model.reset()
-        self.changes.clear()
+        self.data["models"]["item"].reset()
+        self.data["models"]["result"].reset()
 
         def on_finished(plugins, context):
             # Compute compatibility
-            for plugin in self.item_model.plugins:
+            for plugin in self.data["models"]["item"].plugins:
                 if plugin.instanceEnabled:
                     instances = pyblish.logic.instances_by_plugin(context,
                                                                   plugin)
@@ -624,7 +665,7 @@ class Controller(QtCore.QObject):
                 else:
                     plugin.compatibleInstances = [context.id]
 
-            self.item_model.reorder(context)
+            self.data["models"]["item"].reorder(context)
 
             # Report statistics
             stats["requestCount"] -= self.host.stats()["totalRequestCount"]
@@ -633,7 +674,7 @@ class Controller(QtCore.QObject):
                       % abs(stats["requestCount"]))
 
             # Reset Context
-            context = self.item_model.instances[0]
+            context = self.data["models"]["item"].instances[0]
             context.hasError = False
             context.succeeded = False
             context.processed = False
@@ -642,7 +683,7 @@ class Controller(QtCore.QObject):
 
             self.initialised.emit()
 
-            self.item_model.update_compatibility()
+            self.data["models"]["item"].update_compatibility()
             self.host.emit("reset", context=context)
 
         def on_run(plugins):
@@ -654,7 +695,7 @@ class Controller(QtCore.QObject):
             collectors = list()
 
             for plugin in plugins:
-                self.item_model.add_plugin(plugin.to_json())
+                self.data["models"]["item"].add_plugin(plugin.to_json())
 
                 # Sort out which of these are Collectors
                 if not pyblish.lib.inrange(
@@ -674,8 +715,8 @@ class Controller(QtCore.QObject):
         def on_context(context):
             context.data["pyblishQmlVersion"] = version
 
-            self.item_model.add_context(context.to_json())
-            self.result_model.add_context(context.to_json())
+            self.data["models"]["item"].add_context(context.to_json())
+            self.data["models"]["result"].add_context(context.to_json())
 
             util.async(
                 self.host.discover,
@@ -697,6 +738,8 @@ class Controller(QtCore.QObject):
         """
 
         def get_data():
+            model = self.data["models"]["item"]
+
             # Communicate with host to retrieve current plugins and instances
             # This can potentially take a very long time; it is run
             # asynchonously and initiates processing once complete.
@@ -706,7 +749,7 @@ class Controller(QtCore.QObject):
             plugins = list()
             instances = list()
 
-            for plugin in models.ItemIterator(self.item_model.plugins):
+            for plugin in models.ItemIterator(model.plugins):
 
                 # Exclude Collectors
                 if pyblish.lib.inrange(
@@ -716,7 +759,7 @@ class Controller(QtCore.QObject):
 
                 plugins.append(host_plugins[plugin.id])
 
-            for instance in models.ItemIterator(self.item_model.instances):
+            for instance in models.ItemIterator(model.instances):
                 instances.append(host_context[instance.id])
 
             return plugins, instances
@@ -739,6 +782,8 @@ class Controller(QtCore.QObject):
         """
 
         def get_data():
+            model = self.data["models"]["item"]
+
             # Communicate with host to retrieve current plugins and instances
             # This can potentially take a very long time; it is run
             # asynchonously and initiates processing once complete.
@@ -748,7 +793,7 @@ class Controller(QtCore.QObject):
             plugins = list()
             instances = list()
 
-            for plugin in models.ItemIterator(self.item_model.plugins):
+            for plugin in models.ItemIterator(model.plugins):
                 # Consider Validators only.
                 if not pyblish.lib.inrange(plugin.order,
                                            base=pyblish.api.Validator.order):
@@ -756,7 +801,7 @@ class Controller(QtCore.QObject):
 
                 plugins.append(host_plugins[plugin.id])
 
-            for instance in models.ItemIterator(self.item_model.instances):
+            for instance in models.ItemIterator(model.instances):
                 instances.append(host_context[instance.id])
 
             return plugins, instances
@@ -791,9 +836,8 @@ class Controller(QtCore.QObject):
         #     return self.error.emit("Not ready")
 
         # Initial set-up
-        self.is_running = True
+        self.data["state"]["is_running"] = True
         self.publishing.emit()
-        self.save()
 
         # Setup statistics for better debugging.
         # (To be finalised in `on_finished`)
@@ -806,27 +850,27 @@ class Controller(QtCore.QObject):
             if isinstance(result, StopIteration):
                 return on_finished(str(result))
 
-            self.item_model.update_with_result(result)
-            self.result_model.update_with_result(result)
+            self.data["models"]["item"].update_with_result(result)
+            self.data["models"]["result"].update_with_result(result)
 
             # Once the main thread has finished updating
             # the GUI, we can proceed handling of next task.
             util.async(self.host.context, callback=update_context)
 
         def update_context(ctx):
-            instances = [i.id for i in self.item_model.instances]
+            instances = [i.id for i in self.data["models"]["item"].instances]
             for instance in ctx:
                 if instance.id in instances:
                     continue
 
                 context.append(instance)
-                self.item_model.add_instance(instance.to_json())
+                self.data["models"]["item"].add_instance(instance.to_json())
 
             util.async(lambda: next(iterator), callback=on_next)
 
         def on_finished(message=None):
             """Locally running function"""
-            self.is_running = False
+            self.data["state"]["is_running"] = False
             self.finished.emit()
 
             if message:
@@ -861,14 +905,13 @@ class Controller(QtCore.QObject):
             return
 
         self.publishing.emit()
-        self.is_running = True
-        self.save()
+        self.data["state"]["is_running"] = True
 
         # Setup statistics
         util.timer("publishing")
         stats = {"requestCount": self.host.stats()["totalRequestCount"]}
 
-        instance_iterator = models.ItemIterator(self.item_model.instances)
+        instance_iterator = models.ItemIterator(self.data["models"]["item"].instances)
         failed_instances = [p.id for p in instance_iterator
                             if p.hasError]
 
@@ -880,9 +923,9 @@ class Controller(QtCore.QObject):
             if p.id in failed_instances)
 
         # Filter items in GUI with items from host
-        index = self.plugin_proxy.index(index, 0, QtCore.QModelIndex())
-        index = self.plugin_proxy.mapToSource(index)
-        plugin = self.item_model.items[index.row()]
+        index = self.data["proxies"]["plugin"].index(index, 0, QtCore.QModelIndex())
+        index = self.data["proxies"]["plugin"].mapToSource(index)
+        plugin = self.data["models"]["item"].items[index.row()]
         plugin.hasError = False
 
         plugin = plugins[plugin.id]
@@ -894,7 +937,7 @@ class Controller(QtCore.QObject):
             test=self.host.test)
 
         def on_next(result):
-            if not self.is_running:
+            if not self.data["state"]["is_running"]:
                 return on_finished()
 
             if isinstance(result, StopIteration):
@@ -909,14 +952,14 @@ class Controller(QtCore.QObject):
                 self.echo({"type": "message", "message": str(result)})
                 return on_finished()
 
-            self.item_model.update_with_result(result)
-            self.result_model.update_with_result(result)
+            self.data["models"]["item"].update_with_result(result)
+            self.data["models"]["result"].update_with_result(result)
 
             # Run next again
             util.async(lambda: next(iterator), callback=on_next)
 
         def on_finished():
-            self.is_running = False
+            self.data["state"]["is_running"] = False
             self.finished.emit()
 
             # Report statistics

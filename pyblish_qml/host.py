@@ -5,6 +5,7 @@ import socket
 import inspect
 import traceback
 import threading
+import contextlib
 
 # Python 2 and 3 compatibility
 from .vendor.six.moves import xmlrpc_client as xmlrpclib
@@ -57,9 +58,6 @@ def install(initial_port=9001):
     if self.ACTIVE_HOST_PORT is not None:
         uninstall()
 
-    install_host()
-    install_callbacks()
-
     try:
         # In case QML is live and well, ask it
         # for the next available initial_port number.
@@ -68,19 +66,10 @@ def install(initial_port=9001):
             initial_port)
 
     except (socket.timeout, socket.error):
-        raise socket.error(
-            "Is Pyblish QML running?\n\n"
+        return _show_no_gui()
 
-            "This GUI requires a separate, standalone process to be running\n"
-            "in the background in order to make use of it from within {host}\n"
-            "Make sure to run python -m pyblish_qml prior to showing it from\n"
-            "from {host}.\n\n"
-
-            "See the documentation for further information.\n"
-            "- https://github.com/pyblish/pyblish-qml\n\n#"
-            .format(
-                host=self.ACTIVE_HOST_NAME or "a host")
-        )
+    install_host()
+    install_callbacks()
 
     os.environ["PYBLISH_CLIENT_PORT"] = str(self.ACTIVE_HOST_PORT)
 
@@ -111,7 +100,7 @@ def uninstall():
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
-def show():
+def show(parent=None):
     """Attempt to show GUI
 
     Requires install() to have been run first, and
@@ -215,7 +204,8 @@ def install_host():
 
     for install in (_install_maya,
                     _install_houdini,
-                    _install_nuke):
+                    _install_nuke,
+                    _install_hiero):
         try:
             install()
         except ImportError:
@@ -298,3 +288,73 @@ def _install_hiero():
     settings.WindowTitle = "Pyblish (Hiero)"
 
     self.ACTIVE_HOST_NAME = "Hiero"
+
+
+def _show_no_gui():
+    """Popup with information about how to register a new GUI
+
+    In the event of no GUI being registered or available,
+    this information dialog will appear to guide the user
+    through how to get set up with one.
+
+    """
+
+    try:
+        from PyQt5 import QtWidgets, QtGui
+    except ImportError:
+        raise ImportError("pyblish-qml requires PyQt5 bindings.")
+
+    @contextlib.contextmanager
+    def application():
+        app = QtWidgets.QApplication.instance()
+
+        if not app:
+            app = QtWidgets.QApplication(sys.argv)
+            yield app
+            app.exec_()
+        else:
+            yield app
+
+    with application():
+        messagebox = QtWidgets.QMessageBox()
+        messagebox.setIcon(messagebox.Warning)
+        messagebox.setWindowIcon(QtGui.QIcon(os.path.join(
+            os.path.dirname(pyblish.__file__),
+            "icons",
+            "logo-32x32.svg"))
+        )
+
+        spacer = QtWidgets.QWidget()
+        spacer.setMinimumSize(400, 0)
+        spacer.setSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                             QtWidgets.QSizePolicy.Expanding)
+
+        layout = messagebox.layout()
+        layout.addWidget(spacer, layout.rowCount(), 0, 1, layout.columnCount())
+
+        messagebox.setWindowTitle("Uh oh")
+        messagebox.setText("Is Pyblish QML running?")
+
+        informative = """\
+Pyblish QML does not appear to be running.
+
+Press \"Show details...\" below for information on how to
+ run it it.
+"""
+
+        detailed = """\
+This GUI requires a separate, standalone process to be running
+in the background in order to make use of it from within {host}
+Make sure to run python -m pyblish_qml prior to showing it from
+from {host}.
+
+See the documentation for further information.
+- https://github.com/pyblish/pyblish-qml#
+
+""".format(host=self.ACTIVE_HOST_NAME or "a host")
+
+        messagebox.setInformativeText(informative)
+        messagebox.setDetailedText(detailed)
+
+        messagebox.setStandardButtons(messagebox.Ok)
+        messagebox.show()

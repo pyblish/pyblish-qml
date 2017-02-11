@@ -268,6 +268,7 @@ def format_plugin(plugin):
         "families": plugin.families,
         "doc": inspect.getdoc(plugin),
         "active": plugin.active,
+        "match": plugin.match,
 
         # Metadata
         "__pre11__": plugin.__pre11__,
