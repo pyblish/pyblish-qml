@@ -293,7 +293,7 @@ class Controller(QtCore.QObject):
             "ordersWithError": set()
         }
 
-        for plug, instance in pyblish.logic.Iterator(plugins, context):
+        for plug, instance in iterator(plugins, context):
 
             state["nextOrder"] = plug.order
 
@@ -970,3 +970,27 @@ class Controller(QtCore.QObject):
 
         # Reset state
         util.async(lambda: next(iterator), callback=on_next)
+
+
+def iterator(plugins, context):
+    """An iterator for plug-in and instance pairs"""
+    test = pyblish.logic.registered_test()
+    state = {
+        "nextOrder": None,
+        "ordersWithError": set()
+    }
+
+    for plugin in plugins:
+        state["nextOrder"] = plugin.order
+
+        message = test(**state)
+        if message:
+            raise StopIteration("Stopped due to %s" % message)
+
+        instances = pyblish.api.instances_by_plugin(context, plugin)
+        if plugin.__instanceEnabled__:
+            for instance in instances:
+                yield plugin, instance
+
+        else:
+            yield plugin, None
