@@ -293,7 +293,7 @@ class Controller(QtCore.QObject):
             "ordersWithError": set()
         }
 
-        for plug, instance in pyblish.logic.Iterator(plugins, context):
+        for plug, instance in iterator(plugins, context):
 
             state["nextOrder"] = plug.order
 
@@ -911,7 +911,8 @@ class Controller(QtCore.QObject):
         util.timer("publishing")
         stats = {"requestCount": self.host.stats()["totalRequestCount"]}
 
-        instance_iterator = models.ItemIterator(self.data["models"]["item"].instances)
+        instance_iterator = models.ItemIterator(
+            self.data["models"]["item"].instances)
         failed_instances = [p.id for p in instance_iterator
                             if p.hasError]
 
@@ -923,7 +924,8 @@ class Controller(QtCore.QObject):
             if p.id in failed_instances)
 
         # Filter items in GUI with items from host
-        index = self.data["proxies"]["plugin"].index(index, 0, QtCore.QModelIndex())
+        index = self.data["proxies"]["plugin"].index(
+            index, 0, QtCore.QModelIndex())
         index = self.data["proxies"]["plugin"].mapToSource(index)
         plugin = self.data["models"]["item"].items[index.row()]
         plugin.hasError = False
@@ -970,3 +972,27 @@ class Controller(QtCore.QObject):
 
         # Reset state
         util.async(lambda: next(iterator), callback=on_next)
+
+
+def iterator(plugins, context):
+    """An iterator for plug-in and instance pairs"""
+    test = pyblish.logic.registered_test()
+    state = {
+        "nextOrder": None,
+        "ordersWithError": set()
+    }
+
+    for plugin in plugins:
+        state["nextOrder"] = plugin.order
+
+        message = test(**state)
+        if message:
+            raise StopIteration("Stopped due to %s" % message)
+
+        instances = pyblish.api.instances_by_plugin(context, plugin)
+        if plugin.__instanceEnabled__:
+            for instance in instances:
+                yield plugin, instance
+
+        else:
+            yield plugin, None
