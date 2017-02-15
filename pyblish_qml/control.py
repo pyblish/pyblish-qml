@@ -911,7 +911,8 @@ class Controller(QtCore.QObject):
         util.timer("publishing")
         stats = {"requestCount": self.host.stats()["totalRequestCount"]}
 
-        instance_iterator = models.ItemIterator(self.data["models"]["item"].instances)
+        instance_iterator = models.ItemIterator(
+            self.data["models"]["item"].instances)
         failed_instances = [p.id for p in instance_iterator
                             if p.hasError]
 
@@ -923,7 +924,8 @@ class Controller(QtCore.QObject):
             if p.id in failed_instances)
 
         # Filter items in GUI with items from host
-        index = self.data["proxies"]["plugin"].index(index, 0, QtCore.QModelIndex())
+        index = self.data["proxies"]["plugin"].index(
+            index, 0, QtCore.QModelIndex())
         index = self.data["proxies"]["plugin"].mapToSource(index)
         plugin = self.data["models"]["item"].items[index.row()]
         plugin.hasError = False
