@@ -125,10 +125,11 @@ class PopenServer(object):
                     payload = response["payload"]
                     args = payload["args"]
 
-                    # wrapper = sys.modules[__name__].dispatch_wrapper \
-                    #     or default_wrapper
+                    wrapper = sys.modules[__name__].\
+                        dispatch_wrapper or default_wrapper
+
                     func = getattr(self.service, payload["name"])
-                    result = func(*args)
+                    result = wrapper(func, *args)
 
                     data = json.dumps({
                         "header": "pyblish-qml:popen.response",
