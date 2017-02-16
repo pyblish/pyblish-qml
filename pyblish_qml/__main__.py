@@ -17,6 +17,8 @@ def cli():
                         help="Check system prior to launching")
     parser.add_argument("--kill", action="store_true",
                         help="Kill running QML client")
+    parser.add_argument("--popen", action="store_true",
+                        help="Communicate via popen")
     kwargs = parser.parse_args()
 
     # If a QML is already running, re-use this.
@@ -27,7 +29,7 @@ def cli():
 
     except (socket.timeout, socket.error):
         return app.main(debug=kwargs.debug or kwargs.demo,
-                        validate=kwargs.validate)
+                        validate=kwargs.validate, popen=kwargs.popen)
 
     else:
         if kwargs.kill:

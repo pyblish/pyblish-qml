@@ -20,7 +20,7 @@ BaseDelegate {
             spacing: 2
 
             Label {
-                text: "pyblish-base " + object.pyblishServerVersion
+                text: "pyblish-base " + object.pyblishVersion
                 style: "title"
                 elide: Text.ElideRight
             }
@@ -32,16 +32,12 @@ BaseDelegate {
                     "value": object.pythonVersion.split(" ")[0]
                 },
                 {
-                    "key": "pyblish-rpc",
-                    "value": object.pyblishRPCVersion
-                },
-                {
                     "key": "pyblish-qml",
                     "value": object.pyblishQmlVersion
                 },
                 {
                     "key": "Port",
-                    "value": object.port
+                    "value": object.port == -1 ? "subprocess" : object.port
                 },
                 {
                     "key": "User",

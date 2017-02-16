@@ -4,13 +4,14 @@
 import os
 import sys
 import time
+import json
 import threading
 
 # Dependencies
 from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 
 # Local libraries
-from . import util, compat, server, control, rpc, settings
+from . import util, compat, server, control, ipc, settings
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
@@ -154,22 +155,25 @@ class Application(QtGui.QGuiApplication):
             window.setFlags(previous_flags)
 
         if previously_hidden or new_client:
-            # Give statemachine enough time to boot up
-            if not any(state in self.controller.states
-                       for state in ["ready", "finished"]):
-                util.timer("ready")
+            self.reset()
 
-                ready = QtTest.QSignalSpy(self.controller.ready)
+    def reset(self):
+        # Give statemachine enough time to boot up
+        if not any(state in self.controller.states
+                   for state in ["ready", "finished"]):
+            util.timer("ready")
 
-                count = len(ready)
-                ready.wait(1000)
-                if len(ready) != count + 1:
-                    print("Warning: Could not enter ready state")
+            ready = QtTest.QSignalSpy(self.controller.ready)
 
-                util.timer_end("ready", "Awaited statemachine for %.2f ms")
+            count = len(ready)
+            ready.wait(1000)
+            if len(ready) != count + 1:
+                print("Warning: Could not enter ready state")
 
-            self.controller.show.emit()
-            self.controller.reset()
+            util.timer_end("ready", "Awaited statemachine for %.2f ms")
+
+        self.controller.show.emit()
+        self.controller.reset()
 
     def hide(self):
         """Hide GUI
@@ -201,17 +205,39 @@ class Application(QtGui.QGuiApplication):
 
         """
 
+        service = server.QmlApi(self)
+
         kwargs = {
             "port": 9090,
-            "service": server.QmlApi(self),
+            "service": service,
         }
 
         t = threading.Thread(target=server._serve, kwargs=kwargs)
         t.daemon = True
         t.start()
 
+        def listen_popen():
+            while True:
+                try:
+                    message = raw_input()
+                except EOFError:
+                    break
 
-def main(source=None, debug=False, validate=True):
+                try:
+                    data = json.loads(message)
+                except:
+                    continue
+
+                if data["header"] == "pyblish-qml:popen.request":
+                    payload = data["payload"]
+                    getattr(service, payload["name"])()
+
+        # t = threading.Thread(target=listen_popen)
+        # t.daemon = True
+        # t.start()
+
+
+def main(source=None, debug=False, validate=True, popen=False):
     """Start the Qt-runtime and show the window
 
     Arguments:
@@ -229,7 +255,23 @@ def main(source=None, debug=False, validate=True):
     util.timer("application")
 
     # debug mode
-    if debug:
+    if not debug:
+        app = Application(source or APP_PATH)
+        app.listen()
+
+        if popen:
+            print("Launching via popen")
+            app.__debugging__ = True
+            app.window.show()
+            app.reset()
+
+            # app.show_signal.emit(0, {
+            #     "ContextLabel": "World",
+            #     "WindowTitle": "Pyblish (DEBUG)",
+            #     "WindowSize": (430, 600)
+            # })
+
+    else:
         port = 6000
 
         app = Application(source or APP_PATH)
@@ -238,14 +280,14 @@ def main(source=None, debug=False, validate=True):
 
         print("Starting in debug-mode")
         print("Looking for server..")
-        proxy = rpc.client.Proxy(port)
+        proxy = ipc.client.RpcProxy(port)
 
         if not proxy.ping():
             os.environ["PYBLISH_CLIENT_PORT"] = str(port)
 
             print("No existing server found, creating..")
             thread = threading.Thread(
-                target=rpc.server.start_debug_server,
+                target=ipc.server.start_debug_server,
                 kwargs={"port": port})
             thread.daemon = True
             thread.start()
@@ -258,10 +300,6 @@ def main(source=None, debug=False, validate=True):
             "WindowTitle": "Pyblish (DEBUG)",
             "WindowSize": (430, 600)
         })
-
-    else:
-        app = Application(source or APP_PATH)
-        app.listen()
 
     util.timer_end("application", "Spent %.2f ms creating the application")
 

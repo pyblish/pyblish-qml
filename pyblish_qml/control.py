@@ -8,7 +8,7 @@ from PyQt5 import QtCore
 import pyblish.logic
 
 # Local libraries
-from . import util, models, version, settings, rpc
+from . import util, models, version, settings, ipc
 
 qtproperty = util.pyqtConstantProperty
 
@@ -53,13 +53,13 @@ class Controller(QtCore.QObject):
     resultModel = qtproperty(lambda self: self.data["models"]["result"])
     resultProxy = qtproperty(lambda self: self.data["proxies"]["result"])
 
-    def __init__(self, parent=None):
+    def __init__(self, host=None, parent=None):
         super(Controller, self).__init__(parent)
 
         # Connection to host
-        # ------------------
-        # This is updated whenever a new host makes a connection.
-        self.host = None
+        # Defaults to using ipc, and updated whenever a new
+        # host makes a connection via RPC.
+        self.host = ipc.client.PopenProxy()
 
         self.data = {
             "models": {
@@ -132,7 +132,7 @@ class Controller(QtCore.QObject):
 
         """
 
-        self.host = rpc.client.Proxy(port=port)
+        self.host = ipc.client.RpcProxy(port=port)
 
     def setup_statemachine(self):
         """Setup and start state machine"""
@@ -684,7 +684,7 @@ class Controller(QtCore.QObject):
             self.initialised.emit()
 
             self.data["models"]["item"].update_compatibility()
-            self.host.emit("reset", context=context)
+            self.host.emit("reset", context=None)
 
         def on_run(plugins):
             """Fetch instances in their current state, right after reset"""

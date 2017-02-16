@@ -1,5 +1,8 @@
+import os
 import sys
+import json
 import threading
+import subprocess
 
 import pyblish.api
 import pyblish.lib
@@ -23,7 +26,9 @@ def default_wrapper(func, *args, **kwargs):
 
 
 class RpcServer(socketserver.ThreadingMixIn, xmlrpclib.SimpleXMLRPCServer):
-    """The Pyblish RPC Server
+    """An RPC server
+
+    This server relies on a port and socket for interprocess communication.
 
     Support multiple requests simultaneously. This is important,
     as we will still want to emit heartbeats during a potentially
@@ -69,6 +74,71 @@ class RpcServer(socketserver.ThreadingMixIn, xmlrpclib.SimpleXMLRPCServer):
                        self, *args)
 
 
+class PopenServer(object):
+    """A subprocess server
+
+    This server relies on stdout and stdin for interprocess communication.
+
+    """
+
+    def __init__(self, service, python, pyqt5):
+        super(PopenServer, self).__init__()
+        self.service = service
+
+        CREATE_NO_WINDOW = 0x08000000
+
+        self.popen = subprocess.Popen(
+            [python, "-u", "-m", "pyblish_qml", "--popen"],
+            env=dict(os.environ, **{
+                "PYTHONHOME": os.path.split(python)[0],
+                "PYTHONPATH": os.pathsep.join([
+                    os.getenv("PYTHONPATH", ""),
+                    pyqt5,
+                ])
+            }),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+
+            # This is only relevant on Windows, but does
+            # no harm on other OSs.
+            creationflags=CREATE_NO_WINDOW
+        )
+
+        thread = threading.Thread(target=self._listen)
+        thread.daemon = True
+        thread.start()
+
+    def stop(self):
+        return self.popen.kill()
+
+    def wait(self):
+        return self.popen.wait()
+
+    def _listen(self):
+        for line in iter(self.popen.stdout.readline, b""):
+            try:
+                response = json.loads(line)
+            except Exception:
+                sys.stdout.write(line)
+            else:
+                if response["header"] == "pyblish-qml:popen.request":
+                    payload = response["payload"]
+                    args = payload["args"]
+
+                    # wrapper = sys.modules[__name__].dispatch_wrapper \
+                    #     or default_wrapper
+                    func = getattr(self.service, payload["name"])
+                    result = func(*args)
+
+                    data = json.dumps({
+                        "header": "pyblish-qml:popen.response",
+                        "payload": result
+                    })
+
+                    self.popen.stdin.write(data + "\n")
+                    self.popen.stdin.flush()
+
+
 def kill():
     """Shutdown a running server"""
     print("Shutting down..")
@@ -93,7 +163,7 @@ def _server(port, service):
 
 def _serve(port, service=None):
     if service is None:
-        service = service_.RpcService()
+        service = service_.Service()
 
     server = _server(port, service)
     print("Listening on %s:%s" % server.server_address)
@@ -105,7 +175,7 @@ def start_production_server(port, service=None):
 
     Arguments:
         port (int): Port at which to listen for incoming requests
-        service (RpcService): Service responding to requests
+        service (Service): Service responding to requests
 
     """
 
@@ -147,5 +217,13 @@ def start_debug_server(port=6000, delay=0.5):
     """
 
     pyblish.lib.setup_log("pyblish")
-    service = service_.MockRpcService()
+    service = service_.MockService()
     return _serve(port, service)
+
+
+if __name__ == '__main__':
+    PopenServer(
+        service=service_.MockService(),
+        python="C:/python27/python.exe",
+        pyqt5="C:/modules/python-qt5"
+    ).wait()

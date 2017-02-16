@@ -12,7 +12,7 @@ from .vendor.six.moves import xmlrpc_client as xmlrpclib
 
 import pyblish.api
 
-from . import rpc, settings
+from . import ipc, settings
 
 
 self = sys.modules[__name__]
@@ -35,15 +35,15 @@ def register_dispatch_wrapper(wrapper):
             signature.keywords is None]):
         raise TypeError("Wrapper signature mismatch")
 
-    rpc.server.dispatch_wrapper = wrapper
+    ipc.server.dispatch_wrapper = wrapper
 
 
 def deregister_dispatch_wrapper():
-    rpc.server.dispatch_wrapper = None
+    ipc.server.dispatch_wrapper = None
 
 
 def dispatch_wrapper():
-    return rpc.server.dispatch_wrapper
+    return ipc.server.dispatch_wrapper
 
 
 def install(initial_port=9001):
@@ -144,7 +144,7 @@ def uninstall_callbacks():
 
 
 def uninstall_server():
-    rpc.server.kill()
+    ipc.server.kill()
 
 
 def _serve():
@@ -159,7 +159,7 @@ def _serve():
 
     def server():
         """Provide QML with a friend to speak with"""
-        self.server = rpc.server.start_production_server(self.ACTIVE_HOST_PORT)
+        self.server = ipc.server.start_production_server(self.ACTIVE_HOST_PORT)
 
     def heartbeat_emitter():
         """Let QML know we're still here"""

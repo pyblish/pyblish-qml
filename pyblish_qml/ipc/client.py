@@ -7,6 +7,8 @@ communication is serialised back into its original JSON.
 
 """
 
+import sys
+import json
 import socket
 
 from ..vendor.six.moves import xmlrpc_client as xmlrpclib
@@ -16,7 +18,7 @@ import pyblish.api
 import pyblish.plugin
 
 
-class Proxy(object):
+class RpcProxy(object):
     """Wrap ServerProxy with logic and object proxies
 
     The proxy mirrors the remote interface to provide an
@@ -90,6 +92,111 @@ class Proxy(object):
 
     def emit(self, signal, **kwargs):
         self._proxy.emit(signal, kwargs)
+
+
+class PopenProxy(object):
+    """Messages sent from QML to server"""
+
+    def __init__(self):
+        self.cached_context = list()
+        self.cached_discover = list()
+
+    def stats(self):
+        return self._dispatch("stats")
+
+    def reset(self):
+        return self._dispatch("reset")
+
+    def test(self, **vars):
+        """Vars can only be passed as a non-keyword argument"""
+        return self._dispatch("test", kwargs=vars)
+
+    def ping(self):
+        self._dispatch("ping", args=[])
+        return True
+
+    def process(self, plugin, context, instance=None, action=None):
+        """Transmit a `process` request to host
+
+        Arguments:
+            plugin (PluginProxy): Plug-in to process
+            context (ContextProxy): Filtered context
+            instance (InstanceProxy, optional): Instance to process
+            action (str, optional): Action to process
+
+        """
+
+        plugin = plugin.to_json()
+        instance = instance.to_json() if instance is not None else None
+        return self._dispatch("process", args=[plugin, instance, action])
+
+    def repair(self, plugin, context, instance=None):
+        plugin = plugin.to_json()
+        instance = instance.to_json() if instance is not None else None
+        return self._dispatch("repair", args=[plugin, instance])
+
+    def context(self):
+        self.cached_context = ContextProxy.from_json(self._dispatch("context"))
+        return self.cached_context
+
+    def discover(self):
+        self.cached_discover[:] = list()
+        for plugin in self._dispatch("discover"):
+            self.cached_discover.append(PluginProxy.from_json(plugin))
+
+        return self.cached_discover
+
+    def emit(self, signal, **kwargs):
+        self._dispatch("emit", args=[signal, kwargs])
+
+    def _dispatch(self, func, args=None, kwargs=None):
+        data = json.dumps(
+            {
+                "header": "pyblish-qml:popen.request",
+                "payload": {
+                    "name": func,
+                    "args": args or list(),
+                    "kwargs": kwargs or dict(),
+                }
+            }
+        )
+
+        sys.stdout.write(data + "\n")
+        sys.stdout.flush()
+
+        try:
+            response = loads(raw_input())
+        except TypeError as e:
+            print(e)
+        else:
+            if response["header"] == "pyblish-qml:popen.response":
+                return response["payload"]
+
+
+def loads(json_text):
+    """Load json as bytes instead of unicode"""
+    return _byteify(
+        json.loads(json_text, object_hook=_byteify)
+    )
+
+
+def _byteify(data):
+    # Convert unicode
+    if isinstance(data, unicode):
+        return data.encode('utf-8')
+
+    # Convert members of lists
+    if isinstance(data, list):
+        return [_byteify(item) for item in data]
+
+    # Convert members of dicts
+    if isinstance(data, dict):
+        return {
+            _byteify(key): _byteify(value) for key, value in data.iteritems()
+        }
+
+    # if it's anything else, return it in its original form
+    return data
 
 
 # Object Proxies
