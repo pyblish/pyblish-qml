@@ -7,8 +7,3 @@ from nose.tools import (
     assert_equals,
     with_setup
 )
-
-from pyblish_qml import control
-import pyblish.api
-
-from . import port, lib
