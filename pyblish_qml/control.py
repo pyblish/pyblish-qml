@@ -8,7 +8,7 @@ from PyQt5 import QtCore
 import pyblish.logic
 
 # Local libraries
-from . import util, models, version, settings, ipc
+from . import util, models, version, ipc
 
 qtproperty = util.pyqtConstantProperty
 
@@ -53,13 +53,13 @@ class Controller(QtCore.QObject):
     resultModel = qtproperty(lambda self: self.data["models"]["result"])
     resultProxy = qtproperty(lambda self: self.data["proxies"]["result"])
 
-    def __init__(self, host=None, parent=None):
+    def __init__(self, parent=None):
         super(Controller, self).__init__(parent)
 
         # Connection to host
         # Defaults to using ipc, and updated whenever a new
         # host makes a connection via RPC.
-        self.host = ipc.client.PopenProxy()
+        self.host = ipc.client.Proxy()
 
         self.data = {
             "models": {
@@ -112,6 +112,7 @@ class Controller(QtCore.QObject):
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
         self.finished.connect(self.on_finished)
+        self.show.connect(self.on_show)
 
         # NOTE: Listeners to this signal are run in the main thread
         self.about_to_process.connect(self.on_about_to_process,
@@ -119,20 +120,11 @@ class Controller(QtCore.QObject):
 
         self.state_changed.connect(self.on_state_changed)
 
-        settings.register_port_changed_callback(self.on_client_changed)
+    def on_show(self):
+        self.host.emit("pyblishQmlShown")
 
     def dispatch(self, func, *args, **kwargs):
         return getattr(self.host, func)(*args, **kwargs)
-
-    def on_client_changed(self, port):
-        """Establish a connection with client
-
-        A client registers interest to QML. Once registered,
-        the target host is altered dynamically.
-
-        """
-
-        self.host = ipc.client.RpcProxy(port=port)
 
     def setup_statemachine(self):
         """Setup and start state machine"""

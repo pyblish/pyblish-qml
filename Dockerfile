@@ -20,8 +20,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN mkdir /deps && cd /deps && \
     git clone https://github.com/pyblish/pyblish-base && \
-    cd pyblish-base && git checkout 1.4.2
+    cd pyblish-base && git checkout 1.4.4
 
+ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONPATH=/deps/pyblish-base
 
 WORKDIR /pyblish-qml

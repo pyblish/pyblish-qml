@@ -1,24 +1,14 @@
 import os
 import sys
-import time
-import socket
 import inspect
-import traceback
-import threading
-import contextlib
-
-# Python 2 and 3 compatibility
-from .vendor.six.moves import xmlrpc_client as xmlrpclib
 
 import pyblish.api
 
-from . import ipc, settings
+from . import ipc, settings, _state
+from .vendor.Qt import QtWidgets, QtCore, QtGui
 
-
-self = sys.modules[__name__]
-self.ACTIVE_HOST_PORT = None
-self.ACTIVE_PROXY = None
-self.ACTIVE_HOST_NAME = None
+MODULE_DIR = os.path.dirname(__file__)
+SPLASH_PATH = os.path.join(MODULE_DIR, "splash.png")
 
 
 def register_dispatch_wrapper(wrapper):
@@ -35,18 +25,22 @@ def register_dispatch_wrapper(wrapper):
             signature.keywords is None]):
         raise TypeError("Wrapper signature mismatch")
 
-    ipc.server.dispatch_wrapper = wrapper
+    _state["dispatchWrapper"] = wrapper
 
 
 def deregister_dispatch_wrapper():
-    ipc.server.dispatch_wrapper = None
+    _state.pop("dispatchWrapper")
 
 
 def dispatch_wrapper():
-    return ipc.server.dispatch_wrapper
+    return _state.get("dispatchWrapper")
 
 
-def install(initial_port=9001):
+def current_server():
+    return _state.get("currentServer")
+
+
+def install():
     """Perform first time install
 
     Attributes:
@@ -55,48 +49,13 @@ def install(initial_port=9001):
 
     """
 
-    if self.ACTIVE_HOST_PORT is not None:
-        uninstall()
-
-    try:
-        # In case QML is live and well, ask it
-        # for the next available initial_port number.
-        self.ACTIVE_PROXY = proxy()
-        self.ACTIVE_HOST_PORT = self.ACTIVE_PROXY.find_available_port(
-            initial_port)
-
-    except (socket.timeout, socket.error):
-        return _show_no_gui()
-
-    install_host()
     install_callbacks()
-
-    os.environ["PYBLISH_CLIENT_PORT"] = str(self.ACTIVE_HOST_PORT)
-
-    try:
-        _serve()
-
-    except:
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        message = "".join(traceback.format_exception(
-            exc_type, exc_value, exc_traceback))
-        sys.stderr.write(message)
-        sys.stderr.write("Setup failed..\n")
+    install_host()
 
 
 def uninstall():
-    """Kill server and clean up traces of Pyblish QML in this process"""
-    if self.ACTIVE_PROXY is None:
-        return
-
-    del self.ACTIVE_PROXY
-
-    self.ACTIVE_HOST_PORT = None
-    self.ACTIVE_PROXY = None
-
+    """Clean up traces of Pyblish QML"""
     uninstall_callbacks()
-    uninstall_server()
-
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
@@ -108,31 +67,70 @@ def show(parent=None):
 
     """
 
-    if not self.ACTIVE_HOST_PORT:
-        sys.stdout.write("Running install() for the first time.\n")
-        install()
+    if _state.get("currentServer"):
+        _state.get("currentServer").stop()
 
-    if self.ACTIVE_PROXY is None:
-        self.ACTIVE_PROXY = proxy()
+    class Splash(QtWidgets.QWidget):
+        def __init__(self, parent=None):
+            super(Splash, self).__init__(parent)
+            self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+            self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+            self.setWindowFlags(
+                QtCore.Qt.WindowStaysOnTopHint |
+                QtCore.Qt.FramelessWindowHint
+            )
 
-    try:
-        self.ACTIVE_PROXY.show(
-            self.ACTIVE_HOST_PORT,
-            settings.to_dict()
-        )
+            pixmap = QtGui.QPixmap(SPLASH_PATH)
+            image = QtWidgets.QLabel()
+            image.setPixmap(pixmap)
 
-    except (socket.error, socket.timeout):
-        raise socket.error(
-            "Communication problem.\n"
-            "\n"
-            "Hello? Is it me you're looking for?\n"
-            "\n"
-            "This problem typically occurs when Pyblish QML \n"
-            "was running, but isn't anymore.\n"
-            "\n"
-            "To start it again, go to any terminal any type:\n"
-            "$ python -m pyblish_qml"
-        )
+            layout = QtWidgets.QVBoxLayout(self)
+            layout.addWidget(image)
+
+            label = QtWidgets.QLabel(self)
+            label.move(20, 170)
+            label.show()
+
+            self.count = 0
+            self.label = label
+
+            self.setStyleSheet("""
+                QLabel {
+                    color: white
+                }
+            """)
+
+            loop = QtCore.QTimer()
+            loop.timeout.connect(self.animate)
+            loop.start(330)
+
+            self.loop = loop
+
+            self.animate()
+            self.resize(200, 200)
+
+        def animate(self):
+            self.label.setText("loading" + "." * self.count)
+            self.count = (self.count + 1) % 4
+
+    splash = Splash()
+    splash.show()
+
+    def on_shown():
+        splash.close()
+        pyblish.api.deregister_callback("pyblishQmlShown", on_shown)
+
+    pyblish.api.register_callback("pyblishQmlShown", on_shown)
+
+    server = ipc.server.Server(
+        service=ipc.service.Service(),
+    )
+
+    _state["currentServer"] = server
+
+    print("Available as pyblish_qml.api.current_server()")
+
+    return server
 
 
 def install_callbacks():
@@ -143,55 +141,25 @@ def uninstall_callbacks():
     pyblish.api.deregister_callback("instanceToggled", _toggle_instance)
 
 
-def uninstall_server():
-    ipc.server.kill()
-
-
-def _serve():
-    """Start XML-RPC server
-
-    This is the entrypoint towards which the remote Pyblish QML instance
-    communicates.
-
-    """
-
-    assert self.ACTIVE_HOST_PORT
-
-    def server():
-        """Provide QML with a friend to speak with"""
-        self.server = ipc.server.start_production_server(self.ACTIVE_HOST_PORT)
-
-    def heartbeat_emitter():
-        """Let QML know we're still here"""
-        p = proxy()
-
-        while True:
-            try:
-                p.heartbeat(self.ACTIVE_HOST_PORT)
-                time.sleep(1)
-            except (socket.error, socket.timeout):
-                pass
-
-    for worker in (server, heartbeat_emitter):
-        t = threading.Thread(target=worker, name=worker.__name__)
-        t.daemon = True
-        t.start()
-
-    sys.stdout.write("Server running @ %i\n" % self.ACTIVE_HOST_PORT)
-
-    return self.ACTIVE_HOST_PORT
-
-
 def _toggle_instance(instance, new_value, old_value):
     """Alter instance upon visually toggling instance"""
     instance.data["publish"] = new_value
 
 
-def proxy(timeout=5):
-    """Return proxy at default location of Pyblish QML"""
-    return xmlrpclib.ServerProxy(
-        "http://127.0.0.1:9090",
-        allow_none=True)
+def register_python_executable(path):
+    _state["pythonExecutable"] = path
+
+
+def registered_python_executable():
+    return _state.get("pythonExecutable")
+
+
+def register_pyqt5(path):
+    _state["pyqt5"] = path
+
+
+def registered_pyqt5():
+    return _state.get("pyqt5")
 
 
 def install_host():
@@ -229,8 +197,6 @@ def _install_maya():
     settings.ContextLabel = "Maya"
     settings.WindowTitle = "Pyblish (Maya)"
 
-    self.ACTIVE_HOST_NAME = "Maya"
-
 
 def _install_houdini():
     """Helper function to SideFx Houdini support"""
@@ -245,8 +211,6 @@ def _install_houdini():
 
     settings.ContextLabel = "Houdini"
     settings.WindowTitle = "Pyblish (Houdini)"
-
-    self.ACTIVE_HOST_NAME = "Houdini"
 
 
 def _install_nuke():
@@ -266,8 +230,6 @@ def _install_nuke():
     settings.ContextLabel = "Nuke"
     settings.WindowTitle = "Pyblish (Nuke)"
 
-    self.ACTIVE_HOST_NAME = "Nuke"
-
 
 def _install_hiero():
     """Helper function to The Foundry Hiero support"""
@@ -286,75 +248,3 @@ def _install_hiero():
 
     settings.ContextLabel = "Hiero"
     settings.WindowTitle = "Pyblish (Hiero)"
-
-    self.ACTIVE_HOST_NAME = "Hiero"
-
-
-def _show_no_gui():
-    """Popup with information about how to register a new GUI
-
-    In the event of no GUI being registered or available,
-    this information dialog will appear to guide the user
-    through how to get set up with one.
-
-    """
-
-    try:
-        from PyQt5 import QtWidgets, QtGui
-    except ImportError:
-        raise ImportError("pyblish-qml requires PyQt5 bindings.")
-
-    @contextlib.contextmanager
-    def application():
-        app = QtWidgets.QApplication.instance()
-
-        if not app:
-            app = QtWidgets.QApplication(sys.argv)
-            yield app
-            app.exec_()
-        else:
-            yield app
-
-    with application():
-        messagebox = QtWidgets.QMessageBox()
-        messagebox.setIcon(messagebox.Warning)
-        messagebox.setWindowIcon(QtGui.QIcon(os.path.join(
-            os.path.dirname(pyblish.__file__),
-            "icons",
-            "logo-32x32.svg"))
-        )
-
-        spacer = QtWidgets.QWidget()
-        spacer.setMinimumSize(400, 0)
-        spacer.setSizePolicy(QtWidgets.QSizePolicy.Minimum,
-                             QtWidgets.QSizePolicy.Expanding)
-
-        layout = messagebox.layout()
-        layout.addWidget(spacer, layout.rowCount(), 0, 1, layout.columnCount())
-
-        messagebox.setWindowTitle("Uh oh")
-        messagebox.setText("Is Pyblish QML running?")
-
-        informative = """\
-Pyblish QML does not appear to be running.
-
-Press \"Show details...\" below for information on how to
- run it it.
-"""
-
-        detailed = """\
-This GUI requires a separate, standalone process to be running
-in the background in order to make use of it from within {host}
-Make sure to run python -m pyblish_qml prior to showing it from
-from {host}.
-
-See the documentation for further information.
-- https://github.com/pyblish/pyblish-qml#
-
-""".format(host=self.ACTIVE_HOST_NAME or "a host")
-
-        messagebox.setInformativeText(informative)
-        messagebox.setDetailedText(detailed)
-
-        messagebox.setStandardButtons(messagebox.Ok)
-        messagebox.show()

@@ -4,23 +4,10 @@ from .version import (
     __version__
 )
 
-from .host import (
-    register_dispatch_wrapper,
-    deregister_dispatch_wrapper,
-    dispatch_wrapper,
-    uninstall,
-    install,
-    show,
-)
+_state = {}
 
 __all__ = [
     "__version__",
     "version",
     "version_info",
-    "register_dispatch_wrapper",
-    "deregister_dispatch_wrapper",
-    "dispatch_wrapper",
-    "install",
-    "uninstall",
-    "show",
 ]

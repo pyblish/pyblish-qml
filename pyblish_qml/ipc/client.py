@@ -1,101 +1,14 @@
-"""Client communication library
-
-This library is responsible for intercepting and processing
-both incoming and outgoing communication. Incoming communication
-is parsed into "Object Proxys" (see below) whereas outgoing
-communication is serialised back into its original JSON.
-
-"""
+"""Speak to parent process"""
 
 import sys
 import json
-import socket
 
-from ..vendor.six.moves import xmlrpc_client as xmlrpclib
-
-# Dependencies
 import pyblish.api
 import pyblish.plugin
 
 
-class RpcProxy(object):
-    """Wrap ServerProxy with logic and object proxies
-
-    The proxy mirrors the remote interface to provide an
-    as-similar experience as possible.
-
-    """
-
-    _instance = None
-
-    def __getattr__(self, attr):
-        """Any call not overloaded, simply pass it on"""
-        return getattr(self._proxy, attr)
-
-    def __init__(self, port, user=None, password=None):
-        self.cached_context = list()
-        self.cached_discover = list()
-
-        transport = xmlrpclib.Transport()
-
-        self._proxy = xmlrpclib.ServerProxy(
-            "http://{auth}127.0.0.1:{port}/pyblish".format(
-                port=port,
-                auth=("{user}:{pwd}@".format(
-                    user=user, pwd=password)
-                ) if user else ""),
-            allow_none=True,
-            transport=transport)
-
-    def test(self, **vars):
-        """Vars can only be passed as a non-keyword argument"""
-        return self._proxy.test(vars)
-
-    def ping(self):
-        """Convert Fault to True/False"""
-        try:
-            self._proxy.ping()
-        except (socket.timeout, socket.error):
-            return False
-        return True
-
-    def process(self, plugin, context, instance=None, action=None):
-        """Transmit a `process` request to host
-
-        Arguments:
-            plugin (PluginProxy): Plug-in to process
-            context (ContextProxy): Filtered context
-            instance (InstanceProxy, optional): Instance to process
-            action (str, optional): Action to process
-
-        """
-
-        plugin = plugin.to_json()
-        instance = instance.to_json() if instance is not None else None
-        return self._proxy.process(plugin, instance, action)
-
-    def repair(self, plugin, context, instance=None):
-        plugin = plugin.to_json()
-        instance = instance.to_json() if instance is not None else None
-        return self._proxy.repair(plugin, instance)
-
-    def context(self):
-        self.cached_context = ContextProxy.from_json(self._proxy.context())
-        return self.cached_context
-
-    def discover(self):
-        self.cached_discover[:] = list()
-        for plugin in self._proxy.discover():
-            self.cached_discover.append(PluginProxy.from_json(plugin))
-
-        return self.cached_discover
-
-    def emit(self, signal, **kwargs):
-        self._proxy.emit(signal, kwargs)
-
-
-class PopenProxy(object):
-    """Messages sent from QML to server"""
+class Proxy(object):
+    """Messages sent from QML to parent process"""
 
     def __init__(self):
         self.cached_context = list()
@@ -165,7 +78,8 @@ class PopenProxy(object):
         sys.stdout.flush()
 
         try:
-            response = loads(raw_input())
+            message = sys.stdin.readline()
+            response = _byteify(json.loads(message, object_hook=_byteify))
         except TypeError as e:
             print(e)
         else:
@@ -173,29 +87,24 @@ class PopenProxy(object):
                 return response["payload"]
 
 
-def loads(json_text):
-    """Load json as bytes instead of unicode"""
-    return _byteify(
-        json.loads(json_text, object_hook=_byteify)
-    )
-
-
 def _byteify(data):
-    # Convert unicode
+    """Convert unicode to bytes"""
+
+    # Unicode
     if isinstance(data, unicode):
         return data.encode('utf-8')
 
-    # Convert members of lists
+    # Members of lists
     if isinstance(data, list):
         return [_byteify(item) for item in data]
 
-    # Convert members of dicts
+    # Members of dicts
     if isinstance(data, dict):
         return {
             _byteify(key): _byteify(value) for key, value in data.iteritems()
         }
 
-    # if it's anything else, return it in its original form
+    # Anything else, return the original form
     return data
 
 

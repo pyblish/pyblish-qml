@@ -11,7 +11,7 @@ import threading
 from PyQt5 import QtCore, QtGui, QtQuick, QtTest
 
 # Local libraries
-from . import util, compat, server, control, ipc, settings
+from . import util, compat, control, settings, ipc
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
@@ -35,18 +35,11 @@ class Window(QtQuick.QQuickView):
     def event(self, event):
         """Allow GUI to be closed upon holding Shift"""
         if event.type() == QtCore.QEvent.Close:
-            modifiers = self.parent.queryKeyboardModifiers()
-            shift_pressed = QtCore.Qt.ShiftModifier & modifiers
 
-            if shift_pressed or hasattr(self.parent, "__debugging__"):
-                event.accept()
-
-            elif "publishing" in self.parent.controller.states:
+            if "publishing" in self.parent.controller.states:
                 event.ignore()
-
             else:
-                event.ignore()
-                self.parent.hide()
+                event.accept()
 
         return super(Window, self).event(event)
 
@@ -59,11 +52,9 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    show_signal = QtCore.pyqtSignal(int, QtCore.QVariant)
-    hide_signal = QtCore.pyqtSignal()
-    quit_signal = QtCore.pyqtSignal()
-    app_message = QtCore.pyqtSignal(str)
-    standalone_signal = QtCore.pyqtSignal()
+    shown = QtCore.pyqtSignal()
+    hidden = QtCore.pyqtSignal()
+    quitted = QtCore.pyqtSignal()
 
     def __init__(self, source):
         super(Application, self).__init__(sys.argv)
@@ -87,21 +78,15 @@ class Application(QtGui.QGuiApplication):
         self.clients = dict()
         self.current_client = None
 
-        self.show_signal.connect(self.show)
-        self.hide_signal.connect(self.hide)
-        self.quit_signal.connect(self.quit)
-        self.standalone_signal.connect(self.on_standalone)
+        self.shown.connect(self.show)
+        self.hidden.connect(self.hide)
+        self.quitted.connect(self.quit)
 
         window.setSource(QtCore.QUrl.fromLocalFile(source))
 
     def on_status_changed(self, status):
         if status == QtQuick.QQuickView.Error:
             self.quit()
-
-    def register_heartbeat(self, port):
-        if port not in self.clients:
-            self.register_client(port)
-        self.clients[port]["lastSeen"] = time.time()
 
     def register_client(self, port):
         self.current_client = port
@@ -112,7 +97,7 @@ class Application(QtGui.QGuiApplication):
     def deregister_client(self, port):
         self.clients.pop(port)
 
-    def show(self, port, client_settings=None):
+    def show(self, client_settings=None):
         """Display GUI
 
         Once the QML interface has been loaded, use this
@@ -134,18 +119,13 @@ class Application(QtGui.QGuiApplication):
             window.setTitle(client_settings["WindowTitle"])
 
         print("Settings:")
-        for key, value in client_settings.items():
+        for key, value in settings.to_dict().items():
             print("  %s = %s" % (key, value))
 
         previously_hidden = not window.isVisible()
 
         window.requestActivate()
         window.showNormal()
-
-        new_client = False
-        if settings.current_host_port() != port:
-            new_client = True
-            settings.set_current_host_port(port)
 
         if os.name == "nt":
             # Work-around for window appearing behind
@@ -154,26 +134,23 @@ class Application(QtGui.QGuiApplication):
             window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
             window.setFlags(previous_flags)
 
-        if previously_hidden or new_client:
-            self.reset()
+        if previously_hidden:
+            # Give statemachine enough time to boot up
+            if not any(state in self.controller.states
+                       for state in ["ready", "finished"]):
+                util.timer("ready")
 
-    def reset(self):
-        # Give statemachine enough time to boot up
-        if not any(state in self.controller.states
-                   for state in ["ready", "finished"]):
-            util.timer("ready")
+                ready = QtTest.QSignalSpy(self.controller.ready)
 
-            ready = QtTest.QSignalSpy(self.controller.ready)
+                count = len(ready)
+                ready.wait(1000)
+                if len(ready) != count + 1:
+                    print("Warning: Could not enter ready state")
 
-            count = len(ready)
-            ready.wait(1000)
-            if len(ready) != count + 1:
-                print("Warning: Could not enter ready state")
+                util.timer_end("ready", "Awaited statemachine for %.2f ms")
 
-            util.timer_end("ready", "Awaited statemachine for %.2f ms")
-
-        self.controller.show.emit()
-        self.controller.reset()
+            self.controller.show.emit()
+            self.controller.reset()
 
     def hide(self):
         """Hide GUI
@@ -185,127 +162,70 @@ class Application(QtGui.QGuiApplication):
 
         self.window.hide()
 
-    def on_standalone(self):
-        """The process is running solo"""
-        self.app_message.emit("Running standalone")
-        if not hasattr(self, "__debugging__"):
-            print("Quitting due to loneliness")
-            time.sleep(1)
-            self.quit()
-
     def listen(self):
         """Listen on incoming messages from host
 
-        Usage:
-            >> from pyblish_qml import client
-            >> proxy = client.proxy()
-            >> proxy.show()   # Show a hidden GUI
-            >> proxy.close()  # Close GUI permanently
-            >> proxy.kill()   # Close GUI forcefully (careful)
+        TODO(marcus): We can't use this, as we are already listening on stdin
+            through client.py. Do use this, we will have to find a way to
+            receive multiple signals from the same stdin, and channel them
+            to their corresponding source.
 
         """
 
-        service = server.QmlApi(self)
+        def _listen():
+            for line in iter(sys.stdin.readline, b""):
+                try:
+                    data = json.loads(line)
 
-        kwargs = {
-            "port": 9090,
-            "service": service,
-        }
+                except:
+                    # This must be a regular error message
+                    sys.stdout.write(line)
 
-        t = threading.Thread(target=server._serve, kwargs=kwargs)
+                else:
+                    if data["header"] == "pyblish-qml:popen.parent":
+                        payload = data["payload"]
+
+                        # We can't call methods directly, as we are running
+                        # in a thread. Instead, we emit signals that do the
+                        # job for us.
+                        signal = {
+                            "show": "shown",
+                            "hide": "hidden",
+                            "quit": "quitted"
+                        }.get(payload["signal"])
+
+                        if not signal:
+                            print("'{name}' was unavailable.".format(
+                                **payload))
+                        else:
+                            getattr(self, payload["name"]).emit()
+
+                    else:
+                        # If it is JSON, but not one of ours, just print it.
+                        sys.stdout.write(line)
+
+        t = threading.Thread(target=_listen)
         t.daemon = True
         t.start()
 
-        def listen_popen():
-            while True:
-                try:
-                    message = raw_input()
-                except EOFError:
-                    break
 
-                try:
-                    data = json.loads(message)
-                except:
-                    continue
-
-                if data["header"] == "pyblish-qml:popen.request":
-                    payload = data["payload"]
-                    getattr(service, payload["name"])()
-
-        # t = threading.Thread(target=listen_popen)
-        # t.daemon = True
-        # t.start()
-
-
-def main(source=None, debug=False, validate=True, popen=False):
+def main(aschild=False):
     """Start the Qt-runtime and show the window
 
     Arguments:
-        source (str): QML entry-point
-        debug (bool, optional): Run in debug-mode. Defaults to False
-        validate (bool, optional): Whether the environment should be validated
-            prior to launching. Defaults to True
+        aschild (bool, optional): Run as child of parent process
 
     """
 
-    # Initialise OS compatiblity
-    compat.main()
-
-    print("Starting Pyblish..")
-    util.timer("application")
-
-    # debug mode
-    if not debug:
-        app = Application(source or APP_PATH)
-        app.listen()
-
-        if popen:
-            print("Launching via popen")
-            app.__debugging__ = True
-            app.window.show()
-            app.reset()
-
-            # app.show_signal.emit(0, {
-            #     "ContextLabel": "World",
-            #     "WindowTitle": "Pyblish (DEBUG)",
-            #     "WindowSize": (430, 600)
-            # })
+    if aschild:
+        print("Starting pyblish-qml..")
+        compat.main()
+        app = Application(APP_PATH)
+        app.show()
+        return app.exec_()
 
     else:
-        port = 6000
-
-        app = Application(source or APP_PATH)
-        app.listen()
-        app.__debugging__ = True
-
-        print("Starting in debug-mode")
-        print("Looking for server..")
-        proxy = ipc.client.RpcProxy(port)
-
-        if not proxy.ping():
-            os.environ["PYBLISH_CLIENT_PORT"] = str(port)
-
-            print("No existing server found, creating..")
-            thread = threading.Thread(
-                target=ipc.server.start_debug_server,
-                kwargs={"port": port})
-            thread.daemon = True
-            thread.start()
-
-            print("Debug server created successfully.")
-            print("Running mocked RPC server @ 127.0.0.1:%s" % port)
-
-        app.show_signal.emit(port, {
-            "ContextLabel": "World",
-            "WindowTitle": "Pyblish (DEBUG)",
-            "WindowSize": (430, 600)
-        })
-
-    util.timer_end("application", "Spent %.2f ms creating the application")
-
-    return app.exec_()
-
-
-if __name__ == "__main__":
-    main(debug=True,
-         validate=False)
+        print("Starting pyblish-qml server..")
+        ipc.server.Server(
+            service=ipc.service.MockService(),
+        ).wait()
