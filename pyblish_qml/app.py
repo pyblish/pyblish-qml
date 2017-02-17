@@ -209,7 +209,7 @@ class Application(QtGui.QGuiApplication):
         t.start()
 
 
-def main(aschild=False):
+def main(demo=False, aschild=False):
     """Start the Qt-runtime and show the window
 
     Arguments:
@@ -226,6 +226,5 @@ def main(aschild=False):
 
     else:
         print("Starting pyblish-qml server..")
-        ipc.server.Server(
-            service=ipc.service.MockService(),
-        ).wait()
+        service = ipc.service.MockService() if demo else ipc.service.Service()
+        ipc.server.Server(service).wait()
