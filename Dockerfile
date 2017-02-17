@@ -3,8 +3,7 @@
 # cd pyblish-qml
 # docker run --rm -v $(pwd):/pyblish-qml pyblish/pyblish-qml
 
-
-FROM ubuntu:14.04
+FROM ubuntu:16.10
 
 MAINTAINER marcus@abstractfactory.io
 
