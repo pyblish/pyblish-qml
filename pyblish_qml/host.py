@@ -49,8 +49,14 @@ def install():
 
     """
 
+    if _state.get("installed"):
+        sys.stdout.write("Already installed, uninstalling..\n")
+        uninstall()
+
     install_callbacks()
     install_host()
+
+    _state["installed"] = True
 
 
 def uninstall():
@@ -67,6 +73,11 @@ def show(parent=None):
 
     """
 
+    # Automatically install if not already installed.
+    if not _state.get("installed"):
+        install()
+
+    # Only allow a single instance at any time.
     if _state.get("currentServer"):
         _state.get("currentServer").stop()
 
