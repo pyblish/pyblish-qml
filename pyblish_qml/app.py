@@ -36,10 +36,12 @@ class Window(QtQuick.QQuickView):
         """Allow GUI to be closed upon holding Shift"""
         if event.type() == QtCore.QEvent.Close:
 
-            if "publishing" in self.parent.controller.states:
-                event.ignore()
-            else:
+            states = self.parent.controller.states
+            if any(state in states for state in ("ready", "finished")):
                 event.accept()
+            else:
+                print("Not ready")
+                event.ignore()
 
         return super(Window, self).event(event)
 
