@@ -68,6 +68,7 @@ class Server(object):
         python = (
             python or
             _state.get("pythonExecutable") or
+            os.getenv("PYBLISH_QML_PYTHON_EXECUTABLE") or
             which("python") or
             which("python3")
         )
@@ -75,7 +76,11 @@ class Server(object):
         if python is None:
             raise ValueError("Could not locate Python executable.")
 
-        pyqt5 = pyqt5 or _state.get("pyqt5")
+        pyqt5 = (
+            pyqt5 or
+            _state.get("pyqt5") or
+            os.getenv("PYBLISH_QML_PYQT5")
+        )
 
         if pyqt5 is None:
             try:
