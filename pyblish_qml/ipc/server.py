@@ -173,7 +173,15 @@ def listen(transmitter, receiver, service):
                 wrapper = _state.get("dispatchWrapper", default_wrapper)
 
                 func = getattr(service, payload["name"])
-                result = wrapper(func, *args)
+                result = wrapper(func, *args)  # block..
+
+                # Note(marcus): This is where we wait for the host to
+                # finish. Technically, we could kill the GUI at this
+                # point which would make the following commands throw
+                # an exception. However, no host is capable of kill
+                # the GUI whilst running a command. The host is locked
+                # until finished, which means we are guaranteed to
+                # always respond.
 
                 data = json.dumps({
                     "header": "pyblish-qml:popen.response",
