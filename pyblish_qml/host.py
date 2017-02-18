@@ -70,57 +70,15 @@ def show(parent=None):
     if _state.get("currentServer"):
         _state.get("currentServer").stop()
 
-    class Splash(QtWidgets.QWidget):
-        def __init__(self, parent=None):
-            super(Splash, self).__init__(parent)
-            self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-            self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-            self.setWindowFlags(
-                QtCore.Qt.WindowStaysOnTopHint |
-                QtCore.Qt.FramelessWindowHint
-            )
-
-            pixmap = QtGui.QPixmap(SPLASH_PATH)
-            image = QtWidgets.QLabel()
-            image.setPixmap(pixmap)
-
-            layout = QtWidgets.QVBoxLayout(self)
-            layout.addWidget(image)
-
-            label = QtWidgets.QLabel(self)
-            label.move(20, 170)
-            label.show()
-
-            self.count = 0
-            self.label = label
-
-            self.setStyleSheet("""
-                QLabel {
-                    color: white
-                }
-            """)
-
-            loop = QtCore.QTimer()
-            loop.timeout.connect(self.animate)
-            loop.start(330)
-
-            self.loop = loop
-
-            self.animate()
-            self.resize(200, 200)
-
-        def animate(self):
-            self.label.setText("loading" + "." * self.count)
-            self.count = (self.count + 1) % 4
-
     splash = Splash()
     splash.show()
 
     def on_shown():
         splash.close()
-        pyblish.api.deregister_callback("pyblishQmlShown", on_shown)
+        pyblish.api.deregister_callback(*callback)
 
-    pyblish.api.register_callback("pyblishQmlShown", on_shown)
+    callback = "pyblishQmlShown", on_shown
+    pyblish.api.register_callback(*callback)
 
     server = ipc.server.Server(
         service=ipc.service.Service(),
@@ -248,3 +206,55 @@ def _install_hiero():
 
     settings.ContextLabel = "Hiero"
     settings.WindowTitle = "Pyblish (Hiero)"
+
+
+class Splash(QtWidgets.QWidget):
+    """Splash screen for loading QML via subprocess
+
+    Loading pyblish-qml may take some time, so when loading
+    from within an existing interpreter, such as Maya, this
+    splash screen can keep the user company during that time.
+
+    """
+
+    def __init__(self, parent=None):
+        super(Splash, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.setWindowFlags(
+            QtCore.Qt.WindowStaysOnTopHint |
+            QtCore.Qt.FramelessWindowHint
+        )
+
+        pixmap = QtGui.QPixmap(SPLASH_PATH)
+        image = QtWidgets.QLabel()
+        image.setPixmap(pixmap)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(image)
+
+        label = QtWidgets.QLabel(self)
+        label.move(20, 170)
+        label.show()
+
+        self.count = 0
+        self.label = label
+
+        self.setStyleSheet("""
+            QLabel {
+                color: white
+            }
+        """)
+
+        loop = QtCore.QTimer()
+        loop.timeout.connect(self.animate)
+        loop.start(330)
+
+        self.loop = loop
+
+        self.animate()
+        self.resize(200, 200)
+
+    def animate(self):
+        self.label.setText("loading" + "." * self.count)
+        self.count = (self.count + 1) % 4
