@@ -70,7 +70,8 @@ class Application(QtGui.QGuiApplication):
         engine = window.engine()
         engine.addImportPath(QML_IMPORT_DIR)
 
-        controller = control.Controller()
+        host = ipc.client.Proxy()
+        controller = control.Controller(host)
 
         context = engine.rootContext()
         context.setContextProperty("app", controller)
@@ -78,6 +79,7 @@ class Application(QtGui.QGuiApplication):
         self.window = window
         self.engine = engine
         self.controller = controller
+        self.host = host
         self.clients = dict()
         self.current_client = None
 
@@ -121,7 +123,8 @@ class Application(QtGui.QGuiApplication):
             window.setHeight(client_settings["WindowSize"][1])
             window.setTitle(client_settings["WindowTitle"])
 
-        message = ["Settings:"]
+        message = list()
+        message.append("Settings: ")
         for key, value in settings.to_dict().items():
             message.append("  %s = %s" % (key, value))
 
@@ -179,7 +182,7 @@ class Application(QtGui.QGuiApplication):
 
         def _listen():
             while True:
-                line = self.controller.host.channels["parent"].get()
+                line = self.host.channels["parent"].get()
                 payload = json.loads(line)["payload"]
 
                 # We can't call methods directly, as we are running

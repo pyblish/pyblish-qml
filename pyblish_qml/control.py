@@ -8,7 +8,7 @@ from PyQt5 import QtCore
 import pyblish.logic
 
 # Local libraries
-from . import util, models, version, ipc
+from . import util, models, version
 
 qtproperty = util.pyqtConstantProperty
 
@@ -53,13 +53,11 @@ class Controller(QtCore.QObject):
     resultModel = qtproperty(lambda self: self.data["models"]["result"])
     resultProxy = qtproperty(lambda self: self.data["proxies"]["result"])
 
-    def __init__(self, parent=None):
+    def __init__(self, host, parent=None):
         super(Controller, self).__init__(parent)
 
         # Connection to host
-        # Defaults to using ipc, and updated whenever a new
-        # host makes a connection via RPC.
-        self.host = ipc.client.Proxy()
+        self.host = host
 
         self.data = {
             "models": {
