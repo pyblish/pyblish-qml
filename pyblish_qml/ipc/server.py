@@ -4,8 +4,9 @@ import json
 import threading
 import subprocess
 
-
 from .. import _state
+
+CREATE_NO_WINDOW = 0x08000000
 
 
 def default_wrapper(func, *args, **kwargs):
@@ -15,8 +16,8 @@ def default_wrapper(func, *args, **kwargs):
 class Proxy(object):
     """Speak to child process"""
 
-    def __init__(self, popen):
-        self.popen = popen
+    def __init__(self, server):
+        self.popen = server.popen
 
     def show(self, settings=None):
         """Show the GUI
@@ -73,8 +74,13 @@ class Server(object):
         print("Using Python @ '%s'" % python)
         print("Using PyQt5 @ '%s'" % pyqt5)
 
-        self.popen = subprocess.Popen(
-            [python, "-u", "-m", "pyblish_qml", "--aschild"],
+        self.popen = subprocess.Popen([
+            python, "-u", "-m", "pyblish_qml",
+
+            # Indicate that this is a child of the parent process,
+            # and that it should expect to speak with the parent
+            "--aschild"],
+
             env=dict(os.environ, **{
 
                 # Hosts naturally assume their Python distribution
@@ -94,10 +100,9 @@ class Server(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
 
-            # CREATE_NO_WINDOW
             # This is only relevant on Windows, but does
             # no harm on other OSs.
-            creationflags=0x08000000
+            creationflags=CREATE_NO_WINDOW
         )
 
         self.listen()
@@ -132,7 +137,7 @@ class Server(object):
                     sys.stdout.write(line)
 
                 else:
-                    if response["header"] == "pyblish-qml:popen.request":
+                    if response.get("header") == "pyblish-qml:popen.request":
                         payload = response["payload"]
                         args = payload["args"]
 
