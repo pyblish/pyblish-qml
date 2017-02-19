@@ -2,17 +2,27 @@
 
 import sys
 import json
+import threading
 
 import pyblish.api
 import pyblish.plugin
+
+from ..vendor.six.moves import queue
 
 
 class Proxy(object):
     """Messages sent from QML to parent process"""
 
+    channels = {
+        "response": queue.Queue(),
+        "parent": queue.Queue(),
+    }
+
     def __init__(self):
         self.cached_context = list()
         self.cached_discover = list()
+
+        self._listen()
 
     def stats(self):
         return self._dispatch("stats")
@@ -62,14 +72,61 @@ class Proxy(object):
     def emit(self, signal, **kwargs):
         self._dispatch("emit", args=[signal, kwargs])
 
-    def _dispatch(self, func, args=None, kwargs=None):
+    def _listen(self):
+        """Listen for messages passed from parent
+
+        This method distributes messages received via stdin to their
+        corresponding channel. Based on the format of the incoming
+        message, the message is forwarded to its corresponding channel
+        to be processed by its corresponding handler.
+
+        """
+
+        def _listen():
+            """This runs in a thread"""
+            for line in iter(sys.stdin.readline, b""):
+                try:
+                    response = json.loads(line)
+
+                except Exception as e:
+                    # The parent has passed on a message that
+                    # isn't formatted in any particular way.
+                    # This is likely a bug.
+                    raise e
+
+                else:
+                    if response.get("header") == "pyblish-qml:popen.response":
+                        self.channels["response"].put(line)
+
+                    elif response.get("header") == "pyblish-qml:popen.parent":
+                        self.channels["parent"].put(line)
+
+                    else:
+                        # The parent has passed on a message that
+                        # is JSON, but not in any format we recognise.
+                        # This is likely a bug.
+                        raise Exception("Unhandled message "
+                                        "passed to Popen, '%s'" % line)
+
+        thread = threading.Thread(target=_listen)
+        thread.daemon = True
+        thread.start()
+
+    def _dispatch(self, func, args=None):
+        """Send message to parent process
+
+        Arguments:
+            func (str): Name of function for parent to call
+            args (list, optional): Arguments passed to function when called
+
+        """
+
         data = json.dumps(
             {
                 "header": "pyblish-qml:popen.request",
                 "payload": {
                     "name": func,
                     "args": args or list(),
-                    "kwargs": kwargs or dict(),
                 }
             }
         )
@@ -77,8 +134,15 @@ class Proxy(object):
         sys.stdout.write(data + "\n")
         sys.stdout.flush()
 
+        # This should never happen. Each request is immediately
+        # responded to, always. If it isn't the next line will block.
+        # If multiple responses were made, then this will fail.
+        # Both scenarios are bugs.
+        assert self.channels["response"].empty(), (
+            "There were pending messages in the response channel")
+
         try:
-            message = sys.stdin.readline()
+            message = self.channels["response"].get()
             response = _byteify(json.loads(message, object_hook=_byteify))
         except TypeError as e:
             print(e)

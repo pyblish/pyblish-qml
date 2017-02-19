@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import json
+import traceback
 import threading
 
 # Dependencies
@@ -54,7 +55,7 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    shown = QtCore.pyqtSignal()
+    shown = QtCore.pyqtSignal(QtCore.QVariant)
     hidden = QtCore.pyqtSignal()
     quitted = QtCore.pyqtSignal()
 
@@ -120,9 +121,11 @@ class Application(QtGui.QGuiApplication):
             window.setHeight(client_settings["WindowSize"][1])
             window.setTitle(client_settings["WindowTitle"])
 
-        print("Settings:")
+        message = ["Settings:"]
         for key, value in settings.to_dict().items():
-            print("  %s = %s" % (key, value))
+            message.append("  %s = %s" % (key, value))
+
+        print("\n".join(message))
 
         previously_hidden = not window.isVisible()
 
@@ -175,36 +178,28 @@ class Application(QtGui.QGuiApplication):
         """
 
         def _listen():
-            for line in iter(sys.stdin.readline, b""):
-                try:
-                    data = json.loads(line)
+            while True:
+                line = self.controller.host.channels["parent"].get()
+                payload = json.loads(line)["payload"]
 
-                except:
-                    # This must be a regular error message
-                    sys.stdout.write(line)
+                # We can't call methods directly, as we are running
+                # in a thread. Instead, we emit signals that do the
+                # job for us.
+                signal = {
+                    "show": "shown",
+                    "hide": "hidden",
+                    "quit": "quitted"
+                }.get(payload["name"])
 
+                if not signal:
+                    print("'{name}' was unavailable.".format(
+                        **payload))
                 else:
-                    if data["header"] == "pyblish-qml:popen.parent":
-                        payload = data["payload"]
-
-                        # We can't call methods directly, as we are running
-                        # in a thread. Instead, we emit signals that do the
-                        # job for us.
-                        signal = {
-                            "show": "shown",
-                            "hide": "hidden",
-                            "quit": "quitted"
-                        }.get(payload["signal"])
-
-                        if not signal:
-                            print("'{name}' was unavailable.".format(
-                                **payload))
-                        else:
-                            getattr(self, payload["name"]).emit()
-
-                    else:
-                        # If it is JSON, but not one of ours, just print it.
-                        sys.stdout.write(line)
+                    try:
+                        getattr(self, signal).emit(
+                            *payload.get("args", []))
+                    except Exception:
+                        traceback.print_exc()
 
         t = threading.Thread(target=_listen)
         t.daemon = True
@@ -223,6 +218,7 @@ def main(demo=False, aschild=False):
         print("Starting pyblish-qml..")
         compat.main()
         app = Application(APP_PATH)
+        app.listen()
         app.show()
         return app.exec_()
 
