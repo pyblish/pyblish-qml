@@ -116,6 +116,13 @@ def _toggle_instance(instance, new_value, old_value):
 
 
 def register_python_executable(path):
+    """Expose Python executable to server
+
+    The Python executable must be compatible with the
+    version of PyQt5 installed or provided on the system.
+
+    """
+
     _state["pythonExecutable"] = path
 
 
@@ -124,11 +131,16 @@ def registered_python_executable():
 
 
 def register_pyqt5(path):
+    """Expose PyQt5 to Python
+
+    The exposed PyQt5 must be compatible with the exposed Python.
+
+    Arguments:
+        path (str): Absolute path to directory containing PyQt5
+
+    """
+
     _state["pyqt5"] = path
-
-
-def registered_pyqt5():
-    return _state.get("pyqt5")
 
 
 def install_host():

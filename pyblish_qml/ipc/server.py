@@ -64,52 +64,39 @@ class Server(object):
     def __init__(self, service, python=None, pyqt5=None):
         super(Server, self).__init__()
         self.service = service
+        self.listening = False
 
-        python = (
-            python or
-            _state.get("pythonExecutable") or
-            os.getenv("PYBLISH_QML_PYTHON_EXECUTABLE") or
-            which("python") or
-            which("python3")
-        )
+        python = python or find_python()
+        pyqt5 = pyqt5 or find_pyqt5(python)
 
-        if python is None:
-            raise ValueError("Could not locate Python executable.")
-
-        pyqt5 = (
-            pyqt5 or
-            _state.get("pyqt5") or
-            os.getenv("PYBLISH_QML_PYQT5")
-        )
-
-        if pyqt5 is None:
-            try:
-                cmd = "import imp;print(imp.find_module('PyQt5')[1])"
-                pyqt5 = subprocess.check_output([python, "-c", cmd]).rstrip()
-            except subprocess.CalledProcessError:
-                raise ValueError("Could not locate PyQt5")
-
-        print("Found Python @ '%s'" % python)
-        print("Found PyQt5 @ '%s'" % pyqt5)
-
-        CREATE_NO_WINDOW = 0x08000000
+        print("Using Python @ '%s'" % python)
+        print("Using PyQt5 @ '%s'" % pyqt5)
 
         self.popen = subprocess.Popen(
             [python, "-u", "-m", "pyblish_qml", "--aschild"],
             env=dict(os.environ, **{
+
+                # Hosts naturally assume their Python distribution
+                # is the only one. We'll have to explicitly say
+                # to use ours instead.
                 "PYTHONHOME": os.path.split(python)[0],
-                "PYTHONPATH": os.pathsep.join([
-                    os.getenv("PYTHONPATH", ""),
+
+                # Include PyQt5 for this session, without interfering
+                # with the PYTHONPATH of the parent process.
+                "PYTHONPATH": os.pathsep.join(path for path in [
+                    os.getenv("PYTHONPATH"),
                     pyqt5,
-                ])
+                ] if path is not None)
             }),
+
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
 
+            # CREATE_NO_WINDOW
             # This is only relevant on Windows, but does
             # no harm on other OSs.
-            creationflags=CREATE_NO_WINDOW
+            creationflags=0x08000000
         )
 
         self.listen()
@@ -133,66 +120,87 @@ class Server(object):
 
         """
 
-        for channel in (self.popen.stdout, self.popen.stderr):
-            thread = threading.Thread(
-                target=listen,
-                args=[
-                    channel,
-                    self.popen.stdin,
-                    self.service
-                ]
-            )
+        def _listen():
+            """This runs in a thread"""
+            for line in iter(self.popen.stdout.readline, b""):
+                try:
+                    response = json.loads(line)
 
+                except Exception:
+                    # This must be a regular message.
+                    sys.stdout.write(line)
+
+                else:
+                    if response["header"] == "pyblish-qml:popen.request":
+                        payload = response["payload"]
+                        args = payload["args"]
+
+                        wrapper = _state.get("dispatchWrapper",
+                                             default_wrapper)
+
+                        func = getattr(self.service, payload["name"])
+                        result = wrapper(func, *args)  # block..
+
+                        # Note(marcus): This is where we wait for the host to
+                        # finish. Technically, we could kill the GUI at this
+                        # point which would make the following commands throw
+                        # an exception. However, no host is capable of kill
+                        # the GUI whilst running a command. The host is locked
+                        # until finished, which means we are guaranteed to
+                        # always respond.
+
+                        data = json.dumps({
+                            "header": "pyblish-qml:popen.response",
+                            "payload": result
+                        })
+
+                        self.popen.stdin.write(data + "\n")
+                        self.popen.stdin.flush()
+
+                    else:
+                        # In the off chance that a message
+                        # was successfully decoded as JSON,
+                        # but *wasn't* a request, just print it.
+                        sys.stdout.write(line)
+
+        if not self.listening:
+            thread = threading.Thread(target=_listen)
             thread.daemon = True
             thread.start()
 
+            self.listening = True
 
-def listen(transmitter, receiver, service):
-    """Make requests to `transmitter` and receive responses via `receiver`
 
-    Arguments:
-        transmitter (file): A file-like object, such as sys.stdout
-        receiver (file): A file-like object, such as sys.stdin
-        service (object): Requests are made to this object
+def find_python():
+    """Search for Python automatically"""
+    python = (
+        _state.get("pythonExecutable") or
+        os.getenv("PYBLISH_QML_PYTHON_EXECUTABLE") or
+        which("python") or
+        which("python3")
+    )
 
-    """
+    if not python:
+        raise ValueError("Could not locate Python executable.")
 
-    for line in iter(transmitter.readline, b""):
+    return python
+
+
+def find_pyqt5(python):
+    """Search for PyQt5 automatically"""
+    pyqt5 = (
+        _state.get("pyqt5") or
+        os.getenv("PYBLISH_QML_PYQT5")
+    )
+
+    if pyqt5 is None:
         try:
-            response = json.loads(line)
+            cmd = "import imp;print(imp.find_module('PyQt5')[1])"
+            pyqt5 = subprocess.check_output([python, "-c", cmd]).rstrip()
+        except subprocess.CalledProcessError:
+            raise ValueError("Could not locate PyQt5")
 
-        except Exception:
-            # This must be a regular message.
-            sys.stdout.write(line)
-
-        else:
-            if response["header"] == "pyblish-qml:popen.request":
-                payload = response["payload"]
-                args = payload["args"]
-
-                wrapper = _state.get("dispatchWrapper", default_wrapper)
-
-                func = getattr(service, payload["name"])
-                result = wrapper(func, *args)  # block..
-
-                # Note(marcus): This is where we wait for the host to
-                # finish. Technically, we could kill the GUI at this
-                # point which would make the following commands throw
-                # an exception. However, no host is capable of kill
-                # the GUI whilst running a command. The host is locked
-                # until finished, which means we are guaranteed to
-                # always respond.
-
-                data = json.dumps({
-                    "header": "pyblish-qml:popen.response",
-                    "payload": result
-                })
-
-                receiver.write(data + "\n")
-                receiver.flush()
-
-            else:
-                sys.stdout.write(line)
+    return pyqt5
 
 
 def which(program):
