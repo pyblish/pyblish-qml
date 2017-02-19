@@ -4,6 +4,7 @@ import json
 import threading
 import subprocess
 
+
 from .. import _state
 
 
@@ -25,7 +26,7 @@ class Proxy(object):
 
         """
 
-        self._dispatch("show")
+        self._dispatch("show", [settings or {}])
 
     def hide(self):
         """Hide the GUI"""
@@ -175,12 +176,20 @@ def find_python():
     """Search for Python automatically"""
     python = (
         _state.get("pythonExecutable") or
-        os.getenv("PYBLISH_QML_PYTHON_EXECUTABLE") or
+
+        # Support for multiple executables.
+        next((
+            exe for exe in
+            os.getenv("PYBLISH_QML_PYTHON_EXECUTABLE", "").split(os.pathsep)
+            if os.path.isfile(exe)), None
+        ) or
+
+        # Search PATH for executables.
         which("python") or
         which("python3")
     )
 
-    if not python:
+    if not python or not os.path.isfile(python):
         raise ValueError("Could not locate Python executable.")
 
     return python
