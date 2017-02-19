@@ -204,9 +204,9 @@ class Application(QtGui.QGuiApplication):
                     except Exception:
                         traceback.print_exc()
 
-        t = threading.Thread(target=_listen)
-        t.daemon = True
-        t.start()
+        thread = threading.Thread(target=_listen)
+        thread.daemon = True
+        thread.start()
 
 
 def main(demo=False, aschild=False):
@@ -218,14 +218,21 @@ def main(demo=False, aschild=False):
     """
 
     if aschild:
-        print("Starting pyblish-qml..")
+        print("Starting pyblish-qml")
         compat.main()
         app = Application(APP_PATH)
         app.listen()
-        app.show()
+
+        print("Done, don't forget to call `show()`")
         return app.exec_()
 
     else:
         print("Starting pyblish-qml server..")
         service = ipc.service.MockService() if demo else ipc.service.Service()
-        ipc.server.Server(service).wait()
+        server = ipc.server.Server(service)
+
+        if demo:
+            proxy = ipc.server.Proxy(server)
+            proxy.show(settings.to_dict())
+
+        server.wait()

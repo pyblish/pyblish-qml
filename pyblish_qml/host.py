@@ -77,9 +77,18 @@ def show(parent=None):
     if not _state.get("installed"):
         install()
 
-    # Only allow a single instance at any time.
+    # Show existing GUI
     if _state.get("currentServer"):
-        _state.get("currentServer").stop()
+        server = _state["currentServer"]
+        proxy = ipc.server.Proxy(server)
+
+        try:
+            proxy.show(settings.to_dict())
+            return server
+
+        except IOError:
+            # The running instance has already been closed.
+            _state.pop("currentServer")
 
     splash = Splash()
     splash.show()
@@ -95,24 +104,36 @@ def show(parent=None):
         service=ipc.service.Service(),
     )
 
+    proxy = ipc.server.Proxy(server)
+    proxy.show(settings.to_dict())
+
+    # Store reference to server for future calls
     _state["currentServer"] = server
 
-    print("Available as pyblish_qml.api.current_server()")
+    print("Success. QML server available as "
+          "pyblish_qml.api.current_server()")
 
     return server
 
 
 def install_callbacks():
     pyblish.api.register_callback("instanceToggled", _toggle_instance)
+    pyblish.api.register_callback("pluginToggled", _toggle_plugin)
 
 
 def uninstall_callbacks():
     pyblish.api.deregister_callback("instanceToggled", _toggle_instance)
+    pyblish.api.deregister_callback("pluginToggled", _toggle_plugin)
 
 
 def _toggle_instance(instance, new_value, old_value):
-    """Alter instance upon visually toggling instance"""
+    """Alter instance upon visually toggling it"""
     instance.data["publish"] = new_value
+
+
+def _toggle_plugin(plugin, new_value, old_value):
+    """Alter plugin upon visually toggling it"""
+    plugin.active = new_value
 
 
 def register_python_executable(path):
