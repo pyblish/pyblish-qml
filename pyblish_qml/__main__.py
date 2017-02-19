@@ -14,7 +14,7 @@ def cli():
 
     kwargs = parser.parse_args()
 
-    return app.main(demo=kwargs.demo, aschild=kwargs.aschild)
+    return app.main(**kwargs.__dict__)
 
 
 sys.exit(cli())
