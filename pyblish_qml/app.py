@@ -130,8 +130,6 @@ class Application(QtGui.QGuiApplication):
 
         print("\n".join(message))
 
-        previously_hidden = not window.isVisible()
-
         window.requestActivate()
         window.showNormal()
 
@@ -142,23 +140,22 @@ class Application(QtGui.QGuiApplication):
             window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
             window.setFlags(previous_flags)
 
-        if previously_hidden:
-            # Give statemachine enough time to boot up
-            if not any(state in self.controller.states
-                       for state in ["ready", "finished"]):
-                util.timer("ready")
+        # Give statemachine enough time to boot up
+        if not any(state in self.controller.states
+                   for state in ["ready", "finished"]):
+            util.timer("ready")
 
-                ready = QtTest.QSignalSpy(self.controller.ready)
+            ready = QtTest.QSignalSpy(self.controller.ready)
 
-                count = len(ready)
-                ready.wait(1000)
-                if len(ready) != count + 1:
-                    print("Warning: Could not enter ready state")
+            count = len(ready)
+            ready.wait(1000)
+            if len(ready) != count + 1:
+                print("Warning: Could not enter ready state")
 
-                util.timer_end("ready", "Awaited statemachine for %.2f ms")
+            util.timer_end("ready", "Awaited statemachine for %.2f ms")
 
-            self.controller.show.emit()
-            self.controller.reset()
+        self.controller.show.emit()
+        self.controller.reset()
 
     def hide(self):
         """Hide GUI
