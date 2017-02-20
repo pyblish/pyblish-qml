@@ -100,9 +100,13 @@ def show(parent=None):
     callback = "pyblishQmlShown", on_shown
     pyblish.api.register_callback(*callback)
 
-    server = ipc.server.Server(
-        service=ipc.service.Service(),
-    )
+    try:
+        service = ipc.service.Service()
+        server = ipc.server.Server(service)
+    except Exception as e:
+        # If for some reason, the GUI fails to show.
+        sys.stderr.write(str(e) + "\n")
+        on_shown()
 
     proxy = ipc.server.Proxy(server)
     proxy.show(settings.to_dict())
