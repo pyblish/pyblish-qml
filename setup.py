@@ -37,6 +37,7 @@ qml_package_data.append(os.path.join("qml", "Perspective", "qmldir"))
 
 # icon file is in root dir
 qml_package_data.append("icon.ico")
+qml_package_data.append("splash.png")
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -72,7 +73,7 @@ setup(
         "pyblish_qml": qml_package_data + [
             "vendor/jsonschema/schemas/*.json"
         ],
-        "pyblish_qml.rpc": [
+        "pyblish_qml.ipc": [
             "schema/*.json",
         ]
     },
