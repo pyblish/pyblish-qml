@@ -17,9 +17,6 @@ function showContextMenu(parent, children, x, y) {
   var component = Qt.createComponent("contextMenu.qml")
   var x, y;
 
-  x = parent.mapToItem(root).x + x
-  y = parent.mapToItem(root).y + y
-
   var menu = component.createObject(root, {
     "children": children,
     "menuX": x,
