@@ -27,7 +27,7 @@ class Proxy(object):
 
         """
 
-        self._dispatch("show", [settings or {}])
+        self._dispatch("show", args=[settings or {}])
 
     def hide(self):
         """Hide the GUI"""
@@ -38,7 +38,7 @@ class Proxy(object):
         self._dispatch("quit")
 
     def kill(self):
-        """Forcefully destroy the process, this does not return"""
+        """Forcefully destroy the process"""
         self.popen.kill()
 
     def _dispatch(self, func, args=None):
@@ -61,12 +61,21 @@ class Server(object):
 
     This server relies on stdout and stdin for interprocess communication.
 
+    Arguments:
+        service (service.Service): Dispatch requests to this service
+        python (str, optional): Absolute path to Python executable
+        pyqt5 (str, optional): Absolute path to PyQt5
+
     """
 
     def __init__(self, service, python=None, pyqt5=None):
         super(Server, self).__init__()
         self.service = service
         self.listening = False
+
+        # The server may be run within Maya or some other host,
+        # in which case we refer to it as running embedded.
+        is_embedded = os.path.split(sys.executable)[-1].lower() != "python.exe"
 
         python = python or find_python()
         pyqt5 = pyqt5 or find_pyqt5(python)
@@ -100,9 +109,8 @@ class Server(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
 
-            # This is only relevant on Windows, but does
-            # no harm on other OSs.
-            creationflags=CREATE_NO_WINDOW
+            # This is only relevant on Windows, but does no harm on other OSs.
+            creationflags=CREATE_NO_WINDOW if is_embedded else 0x0
         )
 
         self.listen()
