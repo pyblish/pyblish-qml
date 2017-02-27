@@ -6,3 +6,5 @@ cover
 docs/_*
 build
 playground.py
+*.qmlc
+*.jsc
