@@ -5,6 +5,7 @@ import threading
 import subprocess
 
 from .. import _state
+from ..vendor import six
 
 CREATE_NO_WINDOW = 0x08000000
 
@@ -52,7 +53,10 @@ class Proxy(object):
             }
         )
 
-        self.popen.stdin.write(data + "\n")
+        if six.PY3:
+            data = data.encode("ascii")
+
+        self.popen.stdin.write(data + b"\n")
         self.popen.stdin.flush()
 
 
@@ -102,14 +106,14 @@ class Server(object):
                 "PYTHONPATH": os.pathsep.join(path for path in [
                     os.getenv("PYTHONPATH"),
                     pyqt5,
-                ] if path is not None)
+                ] if path is not None),
             }),
 
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
 
-            # This is only relevant on Windows, but does no harm on other OSs.
+            # Only relevant on Windows, does no harm on other OSs.
             creationflags=CREATE_NO_WINDOW if is_embedded else 0x0
         )
 
@@ -137,6 +141,10 @@ class Server(object):
         def _listen():
             """This runs in a thread"""
             for line in iter(self.popen.stdout.readline, b""):
+
+                if six.PY3:
+                    line = line.decode("utf8")
+
                 try:
                     response = json.loads(line)
 
@@ -168,7 +176,10 @@ class Server(object):
                             "payload": result
                         })
 
-                        self.popen.stdin.write(data + "\n")
+                        if six.PY3:
+                            data = data.encode("ascii")
+
+                        self.popen.stdin.write(data + b"\n")
                         self.popen.stdin.flush()
 
                     else:
@@ -222,7 +233,7 @@ def find_pyqt5(python):
         except subprocess.CalledProcessError:
             raise ValueError("Could not locate PyQt5")
 
-    return pyqt5
+    return pyqt5.decode("utf8") if six.PY3 else pyqt5
 
 
 def which(program):

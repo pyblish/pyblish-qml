@@ -7,6 +7,7 @@ import threading
 import pyblish.api
 import pyblish.plugin
 
+from ..vendor import six
 from ..vendor.six.moves import queue
 
 
@@ -143,9 +144,15 @@ class Proxy(object):
 
         try:
             message = self.channels["response"].get()
-            response = _byteify(json.loads(message, object_hook=_byteify))
+
+            if six.PY3:
+                response = json.loads(message)
+            else:
+                response = _byteify(json.loads(message, object_hook=_byteify))
+
         except TypeError as e:
-            print(e)
+            raise e
+
         else:
             assert response["header"] == "pyblish-qml:popen.response", response
             return response["payload"]
@@ -155,8 +162,8 @@ def _byteify(data):
     """Convert unicode to bytes"""
 
     # Unicode
-    if isinstance(data, unicode):
-        return data.encode('utf-8')
+    if isinstance(data, six.text_type):
+        return data.encode("utf-8")
 
     # Members of lists
     if isinstance(data, list):
@@ -165,7 +172,7 @@ def _byteify(data):
     # Members of dicts
     if isinstance(data, dict):
         return {
-            _byteify(key): _byteify(value) for key, value in data.iteritems()
+            _byteify(key): _byteify(value) for key, value in data.items()
         }
 
     # Anything else, return the original form
