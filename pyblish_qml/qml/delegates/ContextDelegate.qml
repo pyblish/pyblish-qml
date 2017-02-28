@@ -36,10 +36,6 @@ BaseDelegate {
                     "value": object.pyblishQmlVersion
                 },
                 {
-                    "key": "Port",
-                    "value": object.port == -1 ? "subprocess" : object.port
-                },
-                {
                     "key": "User",
                     "value": object.user
                 },
