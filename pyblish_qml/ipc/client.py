@@ -147,8 +147,8 @@ class Proxy(object):
         except TypeError as e:
             print(e)
         else:
-            if response["header"] == "pyblish-qml:popen.response":
-                return response["payload"]
+            assert response["header"] == "pyblish-qml:popen.response", response
+            return response["payload"]
 
 
 def _byteify(data):
