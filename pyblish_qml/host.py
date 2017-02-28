@@ -190,7 +190,7 @@ def install_host():
 
 def _install_maya():
     """Helper function to Autodesk Maya support"""
-    from maya import utils
+    from maya import cmds, utils
 
     def threaded_wrapper(func, *args, **kwargs):
         return utils.executeInMainThreadWithResult(
@@ -198,6 +198,23 @@ def _install_maya():
 
     sys.stdout.write("Setting up Pyblish QML in Maya\n")
     register_dispatch_wrapper(threaded_wrapper)
+
+    def on_application_quit():
+        try:
+            _state["currentServer"].popen.kill()
+
+        except KeyError:
+            # No server started
+            pass
+
+        except OSError:
+            # Already dead
+            pass
+
+    cmds.scriptJob(
+        event=["quitApplication", on_application_quit],
+        protected=True
+    )
 
     # Configure GUI
     settings.ContextLabel = "Maya"
