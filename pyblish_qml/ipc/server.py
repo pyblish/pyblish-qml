@@ -87,6 +87,17 @@ class Server(object):
         print("Using Python @ '%s'" % python)
         print("Using PyQt5 @ '%s'" % pyqt5)
 
+        # Protect against an erroneous parent environment
+        # The environment passed to subprocess is inherited from
+        # its parent, but the parent may - at run time - have
+        # made the environment invalid. For example, a unicode
+        # key or value in `os.environ` is not a valid environment.
+        assert all(isinstance(key, str) for key in os.environ), (
+            "One or more of your environment variable keys are not <str>")
+
+        assert all(isinstance(key, str) for key in os.environ.values()), (
+            "One or more of your environment variable values are not <str>")
+
         self.popen = subprocess.Popen([
             python, "-u", "-m", "pyblish_qml",
 
