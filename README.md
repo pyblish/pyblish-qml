@@ -326,10 +326,10 @@ And this will appear once expanded.
 Customise Context label and Window title.
 
 ```python
-import pyblish_qml
-pyblish_qml.settings.WindowTitle = "My Title"
-pyblish_qml.settings.WindowSize = (430, 600)
-pyblish_qml.settings.ContextLabel = "The World"
+from pyblish_qml import settings
+settings.WindowTitle = "My Title"
+settings.WindowSize = (430, 600)
+settings.ContextLabel = "The World"
 ```
 
 Each setting is applied when the GUI is shown, which means you can change them any time before then, including between subsequent runs.

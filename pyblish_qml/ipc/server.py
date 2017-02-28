@@ -87,6 +87,17 @@ class Server(object):
         print("Using Python @ '%s'" % python)
         print("Using PyQt5 @ '%s'" % pyqt5)
 
+        # Protect against an erroneous parent environment
+        # The environment passed to subprocess is inherited from
+        # its parent, but the parent may - at run time - have
+        # made the environment invalid. For example, a unicode
+        # key or value in `os.environ` is not a valid environment.
+        assert all(isinstance(key, str) for key in os.environ), (
+            "One or more of your environment variable keys are not <str>")
+
+        assert all(isinstance(key, str) for key in os.environ.values()), (
+            "One or more of your environment variable values are not <str>")
+
         self.popen = subprocess.Popen([
             python, "-u", "-m", "pyblish_qml",
 
@@ -230,10 +241,17 @@ def find_pyqt5(python):
         try:
             cmd = "import imp;print(imp.find_module('PyQt5')[1])"
             pyqt5 = subprocess.check_output([python, "-c", cmd]).rstrip()
+
+            if six.PY3:
+                pyqt5 = pyqt5.decode("utf8")
+
         except subprocess.CalledProcessError:
             raise ValueError("Could not locate PyQt5")
 
-    return pyqt5.decode("utf8") if six.PY3 else pyqt5
+    elif "PyQt5" not in os.listdir(pyqt5):
+        raise ValueError("PyQt5 not found in '%s'" % pyqt5)
+
+    return pyqt5
 
 
 def which(program):

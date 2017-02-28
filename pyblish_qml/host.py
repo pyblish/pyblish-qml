@@ -1,6 +1,7 @@
 import os
 import sys
 import inspect
+import traceback
 
 import pyblish.api
 
@@ -94,7 +95,13 @@ def show(parent=None):
     splash.show()
 
     def on_shown():
-        splash.close()
+        try:
+            splash.close()
+
+        except RuntimeError:
+            # Splash already closed
+            pass
+
         pyblish.api.deregister_callback(*callback)
 
     callback = "pyblishQmlShown", on_shown
@@ -103,10 +110,10 @@ def show(parent=None):
     try:
         service = ipc.service.Service()
         server = ipc.server.Server(service)
-    except Exception as e:
+    except:
         # If for some reason, the GUI fails to show.
-        sys.stderr.write(str(e) + "\n")
-        on_shown()
+        traceback.print_exc()
+        return on_shown()
 
     proxy = ipc.server.Proxy(server)
     proxy.show(settings.to_dict())
@@ -147,6 +154,8 @@ def register_python_executable(path):
     version of PyQt5 installed or provided on the system.
 
     """
+
+    assert os.path.isfile(path), "Must be a file, such as python.exe"
 
     _state["pythonExecutable"] = path
 
