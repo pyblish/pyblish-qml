@@ -94,7 +94,13 @@ def show(parent=None):
     splash.show()
 
     def on_shown():
-        splash.close()
+        try:
+            splash.close()
+
+        except RuntimeError:
+            # Splash already closed
+            pass
+
         pyblish.api.deregister_callback(*callback)
 
     callback = "pyblishQmlShown", on_shown
