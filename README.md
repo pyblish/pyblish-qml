@@ -55,21 +55,45 @@ $ python -m pyblish_qml --demo
 
 ### Usage
 
-In any of the [supported hosts](#supported-hosts), call `show()`.
+In any of the supported hosts, call show().
 
 ```python
 import pyblish_qml
 pyblish_qml.show()
 ```
 
-You may also use it in conjuction with `register_gui`, for automatic appearance in host application menus.
+<br>
+
+First you need to tell QML where Python and PyQt5 is.
+
+```python
+from pyblish_qml import api, show
+
+# Tell QML about dependencies
+api.register_python_executable("C:/Python27/python.exe")
+api.register_pyqt5("C:/modules/python-qt5")
+
+show()
+```
+
+Alternatively, you may use environment variables instead.
+
+```bash
+$ set PYBLISH_QML_PYTHON_EXECUTABLE=c:\python27\python.exe
+$ set PYBLISH_QML_PYQT5=c:\modules\python-qt5
+$ maya  # for example..
+```
+
+> Keep in mind that you don't have to register PyQt5 unless the Python executable you register isn't able to find it on its own. Also keep in mind that the directory you need to register is the parent directory of the `PyQt5` Python package.
+
+Either way, once QML is aware of where dependencies are, you may register it with `pyblish-base` and have it appear automatically in file-menus of software, like with `pyblish-qml`.
 
 ```python
 from pyblish import api
 api.register_gui("pyblish_qml")
 ```
 
-See [pyblish-maya](https://github.com/pyblish/pyblish-maya#usage) for details.
+See [pyblish-maya](https://github.com/pyblish/pyblish-maya#usage) for an example.
 
 <br>
 <br>
@@ -322,72 +346,6 @@ class CollectContextLabel(pyblish.api.ContextPlugin):
 
 The GUI will read the current label after having processed *all* collectors. Any change after Collection will not be visible in the GUI.
 
-### Usage
-
-Run Pyblish QML from any terminal, then show it from your favourite digital content creation software.
-
-**Server**
-
-```bash
-# From any terminal
-$ python -m pyblish_qml
-```
-
-**Client**
-
-```python
-# From your favourite DCC
-import pyblish_qml
-pyblish_qml.show()
-```
-
-<br>
-<br>
-<br>
-
-### Under the Hood
-
-Pyblish QML runs as an independent process on your computer, and communicates with your host via interprocess communication through remote-procedure calls (RPC).
-
-It uses the standard [`xmlrpc`](https://docs.python.org/2/library/xmlrpclib.html) library and default to responding to calls via port number `9090`.
-
-```python
->>> from xmlrpclib import ServerProxy
->>> proxy = ServerProxy("http://127.0.0.1:9090", allow_none=True)
->>> proxy.ping()
-{'message': 'Hello, whomever you are'}
-```
-
-When you show Pyblish QML from within a host, you are effectively making an IPC connection and calling `show` with parameters relative the currently running process.
-
-```python
->>> proxy.show(9001, {})
-# GUI appears
-```
-
-The `9001` refers to the port number through which Pyblish QML may reach whomever is asking it to show. When calling `pyblish_qml.show()`, a listener is automatically started for you to receive calls from Pyblish QML; unless one is already running.
-
-```python
-def show():
-    if not listener_started:
-        start_listener()
-
-    proxy.show()
-```
-
-You can manually start such a listener by calling..
-
-```python
-import pyblish_qml
-pyblish_qml.install()
-```
-
-This needs only happen once. To shutdown the listener, you may call..
-
-```python
-pyblish_qml.uninstall()
-```
-
 <br>
 <br>
 <br>
@@ -399,7 +357,6 @@ Pyblish QML fills the same gap as Pyblish Lite, with a few notable differences.
 **Pros**
 
 - Asynchronous operation - use the GUI during intense processing
-- Faster startup time - it's running before you are
 - Smoother visuals - animations galore
 - Inspect individual items - tens of instances, hundreds of plug-ins? no problem
 - Filter terminal via keyword search - thousands of log entries? no problem
@@ -407,21 +364,8 @@ Pyblish QML fills the same gap as Pyblish Lite, with a few notable differences.
 **Cons**
 
 - Requires PyQt5 (and either Python 2 or 3)
-- Supports only one publish at a time, for one logged on user at a time ([#199](https://github.com/pyblish/pyblish-qml/issues/199))
 
-Development wise, Pyblish QML is written in.. you guessed it, QML. Whereas Pyblish Lite is written using classig widgets. QML is a new graphical user interface language for OpenGL developed by the same group, Qt.
-
-<br>
-<br>
-<br>
-
-### Common Problems
-
-Due to the inherent complexity of the client/server-style implementation of this project, some of the below problems are likely to puzzle you at first.
-
-![image](https://cloud.githubusercontent.com/assets/2152766/16816779/882b6880-4937-11e6-842a-0becb69e5855.png)
-
-Search the [Issues](https://github.com/pyblish/pyblish-qml/issues/new) section, if nothing is found feel free to open your own issue or [report a problem on the forums](http://forums.pyblish.com).
+Development wise, Pyblish QML is written in.. you guessed it, QML. Whereas Pyblish Lite is written using classic widgets. QML is a new graphical user interface language for OpenGL developed by the same group, Qt.
 
 <br>
 <br>
