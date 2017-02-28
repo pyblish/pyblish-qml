@@ -154,6 +154,8 @@ def register_python_executable(path):
 
     """
 
+    assert os.path.isfile(path), "Must be a file, such as python.exe"
+
     _state["pythonExecutable"] = path
 
 
