@@ -13,36 +13,24 @@ The Pyblish QML project provides a graphical frontend to [Pyblish](http://pyblis
 
 ### Requirements
 
-The Pyblish QML **client** depends on [pyblish-base](https://github.com/pyblish/pyblish-base) and Python 2 or 3, whereas the **server** requires PyQt5.
+Pyblish QML requires an external Python 2 or 3 distribution with PyQt5.4+.
 
-- **Any platform** 
- 
- PyQt5 is available on PyPI, but only for Python 3.5. For any other distribution, see below.
+- [Python 3.5 any platform](../wiki/Python-3.5-Any-Platform)
+- [Python 2.7 on Windows](../wiki/Python-2.7-Windows)
+- [Python 2.7 on CentOS 7](../wiki/Python-2.7-CentOS)
+- [Python 2.7 on Ubuntu 14.10](../wiki/Python-2.7-Ubuntu)
+- [Python 2.7 on MacOS](../wiki/Python-2.7-MacOS)
 
- ```bash
-$ pip install PyQt5
+Before use, point to your Python executable like this.
+
+```bash
+$ set PYBLISH_QML_PYTHON_EXECUTABLE=c:\python27\python.exe
 ```
 
-- **Windows**
+This assumes the Python distribution has access to PyQt5 via e.g. `python -c "import PyQt5"`. If not, you may point to the directory containing it like this.
 
- On Windows, you may download and install the binary distribution from the [Riverbank Software website](https://www.riverbankcomputing.com/software/pyqt/download5).
-
-- **Debian**
-
- Like most Linux distribution, Debian will have PyQt5 available via its native package manager.
-
- ```bash
-$ apt-get install python3-pyqt5 python3-pyqt5.qtquick
-```
-
- See `yum` for Red Hat based distributions.
-
-- **MacOS**
-
- Finally, brew provides a pre-compiled distribution for Python 3 as well.
-
- ```bash
-$ brew install pyqt5
+```bash
+$ set PYBLISH_QML_PYQT5=c:\path\to\pyqt
 ```
 
 <br>
@@ -65,10 +53,33 @@ $ python -m pyblish_qml --demo
 <br>
 <br>
 
+### Usage
+
+In any of the [supported hosts](#supported-hosts), call `show()`.
+
+```python
+import pyblish_qml
+pyblish_qml.show()
+```
+
+You may also use it in conjuction with `register_gui`, for automatic appearance in host application menus.
+
+```python
+from pyblish import api
+api.register_gui("pyblish_qml")
+```
+
+See [pyblish-maya](https://github.com/pyblish/pyblish-maya#usage) for details.
+
+<br>
+<br>
+<br>
+
 ### Documentation
 
 Below is the current and full documentation of QML.
 
+- [Supported hosts](#supported-hosts)
 - [Data](#data)
 - [Perspective](#perspective)
 - [Visualise order of operation](#order)
@@ -76,6 +87,17 @@ Below is the current and full documentation of QML.
 - [Plug-in documentation](#plug-in-documentation)
 - [Log messages](#log-messages)
 - [Exception messages](#exception-messages)
+
+<br>
+
+#### Supported Hosts
+
+These are the hosts automatically recognised by pyblish-qml.
+
+- Maya
+- Nuke
+- Houdini
+- Hiero
 
 <br>
 

@@ -1,5 +1,4 @@
 
-# Standard library
 import os
 import sys
 import time
@@ -7,23 +6,23 @@ import getpass
 import logging
 import traceback
 
-# Pyblish Library
 import pyblish.api
 import pyblish.lib
 import pyblish.plugin
 
-# Local Library
 from . import mocking, formatting
 
-_log = logging.getLogger("pyblish-rpc")
+_log = logging.getLogger("pyblish-qml")
 
 
-class RpcService(object):
+def IdList(items):
+    return pyblish.lib.ItemList("id", items)
+
+
+class Service(object):
     _count = 0
-    __instances = property(
-        lambda self: pyblish.lib.ItemList("id", self._context))
-    __plugins = property(
-        lambda self: pyblish.lib.ItemList("id", self._plugins))
+    __instances = property(lambda self: IdList(self._context))
+    __plugins = property(lambda self: IdList(self._plugins))
 
     def __init__(self):
         self._context = None
@@ -139,9 +138,9 @@ class RpcService(object):
         pyblish.api.emit(signal, **kwargs)
 
 
-class MockRpcService(RpcService):
+class MockService(Service):
     def __init__(self, delay=0.01, *args, **kwargs):
-        super(MockRpcService, self).__init__(*args, **kwargs)
+        super(MockService, self).__init__(*args, **kwargs)
         self.delay = delay
 
     def discover(self):
@@ -149,9 +148,9 @@ class MockRpcService(RpcService):
 
     def reset(self):
         self._context = pyblish.api.Context()
-        self._plugins = pyblish.lib.ItemList("id", mocking.plugins)
+        self._plugins = IdList(mocking.plugins)
         self._provider = pyblish.plugin.Provider()
 
     def process(self, *args, **kwargs):
         time.sleep(self.delay)
-        return super(MockRpcService, self).process(*args, **kwargs)
+        return super(MockService, self).process(*args, **kwargs)

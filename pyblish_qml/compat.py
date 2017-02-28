@@ -77,7 +77,6 @@ def test_pyblish_availability():
     try:
         __import__("pyblish")
         __import__("pyblish_qml")
-        __import__("pyblish_rpc")
     except:
         raise Exception("Pyblish not found")
 
