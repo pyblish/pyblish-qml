@@ -4,8 +4,6 @@ from .version import (
     __version__
 )
 
-import settings
-
 
 def show(parent=None):
     from . import host
@@ -19,6 +17,4 @@ __all__ = [
     "version",
     "show",
     "version_info",
-
-    "settings",
 ]
