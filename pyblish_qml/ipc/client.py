@@ -132,15 +132,15 @@ class Proxy(object):
             }
         )
 
-        sys.stdout.write(data + "\n")
-        sys.stdout.flush()
-
         # This should never happen. Each request is immediately
         # responded to, always. If it isn't the next line will block.
         # If multiple responses were made, then this will fail.
         # Both scenarios are bugs.
         assert self.channels["response"].empty(), (
             "There were pending messages in the response channel")
+
+        sys.stdout.write(data + "\n")
+        sys.stdout.flush()
 
         try:
             message = self.channels["response"].get()
