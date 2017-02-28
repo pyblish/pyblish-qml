@@ -12,7 +12,6 @@ HeartbeatInterval = 60
 
 self = sys.modules[__name__]
 self._callbacks = dict()
-# self._dispatch_wrapper = None
 
 
 def from_dict(settings):
