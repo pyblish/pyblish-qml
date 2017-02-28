@@ -1,6 +1,7 @@
 import os
 import sys
 import inspect
+import traceback
 
 import pyblish.api
 
@@ -109,9 +110,9 @@ def show(parent=None):
     try:
         service = ipc.service.Service()
         server = ipc.server.Server(service)
-    except Exception as e:
+    except:
         # If for some reason, the GUI fails to show.
-        sys.stderr.write(str(e) + "\n")
+        traceback.print_exc()
         return on_shown()
 
     proxy = ipc.server.Proxy(server)
