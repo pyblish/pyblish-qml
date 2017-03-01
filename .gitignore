@@ -8,3 +8,4 @@ build
 playground.py
 *.qmlc
 *.jsc
+.idea/
