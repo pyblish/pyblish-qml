@@ -8,6 +8,7 @@ from .. import _state
 from ..vendor import six
 
 CREATE_NO_WINDOW = 0x08000000
+IS_WIN32 = sys.platform == "win32"
 
 
 def default_wrapper(func, *args, **kwargs):
@@ -98,36 +99,38 @@ class Server(object):
         assert all(isinstance(key, str) for key in os.environ.values()), (
             "One or more of your environment variable values are not <str>")
 
-        self.popen = subprocess.Popen([
+        environ = os.environ.copy()
+
+        # Some hosts define their own home directories as Python's.
+        # This causes the subprocess to mistake it for its own home.
+        environ.pop("PYTHONHOME", None)
+
+        # Append PyQt5 to existing PYTHONPATH, if available
+        environ["PYTHONPATH"] = os.pathsep.join(
+            path for path in [os.getenv("PYTHONPATH"), pyqt5]
+            if path is not None
+        )
+
+        kwargs = dict(args=[
             python, "-u", "-m", "pyblish_qml",
 
             # Indicate that this is a child of the parent process,
             # and that it should expect to speak with the parent
             "--aschild"],
 
-            env=dict(os.environ, **{
-
-                # Hosts naturally assume their Python distribution
-                # is the only one. We'll have to explicitly say
-                # to use ours instead.
-                "PYTHONHOME": os.path.split(python)[0],
-
-                # Include PyQt5 for this session, without interfering
-                # with the PYTHONPATH of the parent process.
-                "PYTHONPATH": os.pathsep.join(path for path in [
-                    os.getenv("PYTHONPATH"),
-                    pyqt5,
-                ] if path is not None),
-            }),
+            env=environ,
 
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-
-            # Only relevant on Windows, does no harm on other OSs.
-            creationflags=CREATE_NO_WINDOW if is_embedded else 0x0
         )
 
+        if IS_WIN32 and is_embedded:
+            # This will prevent an embedded Python
+            # from opening an external terminal window.
+            kwargs["creationflags"] = CREATE_NO_WINDOW
+
+        self.popen = subprocess.Popen(**kwargs)
         self.listen()
 
     def stop(self):
