@@ -240,20 +240,6 @@ def find_pyqt5(python):
         os.getenv("PYBLISH_QML_PYQT5")
     )
 
-    if pyqt5 is None:
-        try:
-            cmd = "import imp;print(imp.find_module('PyQt5')[1])"
-            pyqt5 = subprocess.check_output([python, "-c", cmd]).rstrip()
-
-            if six.PY3:
-                pyqt5 = pyqt5.decode("utf8")
-
-        except subprocess.CalledProcessError:
-            raise ValueError("Could not locate PyQt5")
-
-    elif "PyQt5" not in os.listdir(pyqt5):
-        raise ValueError("PyQt5 not found in '%s'" % pyqt5)
-
     return pyqt5
 
 
