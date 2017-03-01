@@ -15,11 +15,11 @@ The Pyblish QML project provides a graphical frontend to [Pyblish](http://pyblis
 
 Pyblish QML requires an external Python 2 or 3 distribution with PyQt5.4+.
 
-- [Python 3.5 any platform](../wiki/Python-3.5-Any-Platform)
-- [Python 2.7 on Windows](../wiki/Python-2.7-Windows)
-- [Python 2.7 on CentOS 7](../wiki/Python-2.7-CentOS)
-- [Python 2.7 on Ubuntu 14.10](../wiki/Python-2.7-Ubuntu)
-- [Python 2.7 on MacOS](../wiki/Python-2.7-MacOS)
+- [Python 3.5 any platform](../../wiki/Python-3.5-Any-Platform)
+- [Python 2.7 on Windows](../../wiki/Python-2.7-Windows)
+- [Python 2.7 on CentOS 7](../../wiki/Python-2.7-CentOS)
+- [Python 2.7 on Ubuntu 14.10](../../wiki/Python-2.7-Ubuntu)
+- [Python 2.7 on MacOS](../../wiki/Python-2.7-MacOS)
 
 Before use, point to your Python executable like this.
 
