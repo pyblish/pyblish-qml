@@ -36,15 +36,28 @@ class Window(QtQuick.QQuickView):
     def event(self, event):
         """Allow GUI to be closed upon holding Shift"""
         if event.type() == QtCore.QEvent.Close:
-
+            modifiers = self.parent.queryKeyboardModifiers()
+            shift_pressed = QtCore.Qt.ShiftModifier & modifiers
             states = self.parent.controller.states
-            if any(state in states for state in ("ready", "finished")):
+
+            if shift_pressed:
+                print("Force quitted..")
                 event.accept()
+
+            elif any(state in states for state in ("ready", "finished")):
+                event.accept()
+
             else:
-                print("Not ready")
+                print("Not ready, hold SHIFT to force an exit")
                 event.ignore()
 
         return super(Window, self).event(event)
+
+    def keyPressEvent(self, event):
+        """Delegate keyboard events"""
+
+        if event.key() == QtCore.Qt.Key_Return:
+            return self.on_enter()
 
 
 class Application(QtGui.QGuiApplication):
