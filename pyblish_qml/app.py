@@ -85,6 +85,7 @@ class Application(QtGui.QGuiApplication):
 
         host = ipc.client.Proxy()
         controller = control.Controller(host)
+        controller.finished.connect(lambda: window.alert(0))
 
         context = engine.rootContext()
         context.setContextProperty("app", controller)
