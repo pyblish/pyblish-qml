@@ -197,9 +197,24 @@ def install_host():
             break
 
 
+def _on_application_quit():
+    """Automatically kill QML on host exit"""
+
+    try:
+        _state["currentServer"].popen.kill()
+
+    except KeyError:
+        # No server started
+        pass
+
+    except OSError:
+        # Already dead
+        pass
+
+
 def _install_maya():
     """Helper function to Autodesk Maya support"""
-    from maya import cmds, utils
+    from maya import utils
 
     def threaded_wrapper(func, *args, **kwargs):
         return utils.executeInMainThreadWithResult(
@@ -208,22 +223,8 @@ def _install_maya():
     sys.stdout.write("Setting up Pyblish QML in Maya\n")
     register_dispatch_wrapper(threaded_wrapper)
 
-    def on_application_quit():
-        try:
-            _state["currentServer"].popen.kill()
-
-        except KeyError:
-            # No server started
-            pass
-
-        except OSError:
-            # Already dead
-            pass
-
-    cmds.scriptJob(
-        event=["quitApplication", on_application_quit],
-        protected=True
-    )
+    app = QtWidgets.QApplication.instance()
+    app.aboutToQuit.connect(_on_application_quit)
 
     # Configure GUI
     settings.ContextLabel = "Maya"
@@ -240,6 +241,9 @@ def _install_houdini():
 
     sys.stdout.write("Setting up Pyblish QML in Houdini\n")
     register_dispatch_wrapper(threaded_wrapper)
+
+    app = QtWidgets.QApplication.instance()
+    app.aboutToQuit.connect(_on_application_quit)
 
     settings.ContextLabel = "Houdini"
     settings.WindowTitle = "Pyblish (Houdini)"
@@ -259,6 +263,9 @@ def _install_nuke():
     sys.stdout.write("Setting up Pyblish QML in Nuke\n")
     register_dispatch_wrapper(threaded_wrapper)
 
+    app = QtWidgets.QApplication.instance()
+    app.aboutToQuit.connect(_on_application_quit)
+
     settings.ContextLabel = "Nuke"
     settings.WindowTitle = "Pyblish (Nuke)"
 
@@ -277,6 +284,9 @@ def _install_hiero():
 
     sys.stdout.write("Setting up Pyblish QML in Hiero\n")
     register_dispatch_wrapper(threaded_wrapper)
+
+    app = QtWidgets.QApplication.instance()
+    app.aboutToQuit.connect(_on_application_quit)
 
     settings.ContextLabel = "Hiero"
     settings.WindowTitle = "Pyblish (Hiero)"

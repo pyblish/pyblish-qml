@@ -378,8 +378,8 @@ Tests are automatically run at each commit to GitHub via Travis-CI. You can run 
 ```bash
 $ git clone https://github.com/pyblish/pyblish-qml.git
 $ cd pyblish-qml
-$ docker build -t pyblish/pyblish-qml .
-$ docker run --rm -v $(pwd):/pyblish-qml pyblish/pyblish-qml
+$ . build_docker.sh  # Only needed once
+$ . test_docker.sh
 # Doctest: pyblish_qml.models.Item ... ok
 # Doctest: pyblish_qml.util.ItemList ... ok
 # Reset works ... ok
