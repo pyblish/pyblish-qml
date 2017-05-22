@@ -242,8 +242,7 @@ def main(demo=False, aschild=False):
         service = ipc.service.MockService() if demo else ipc.service.Service()
         server = ipc.server.Server(service)
 
-        if demo:
-            proxy = ipc.server.Proxy(server)
-            proxy.show(settings.to_dict())
+        proxy = ipc.server.Proxy(server)
+        proxy.show(settings.to_dict())
 
         server.wait()
