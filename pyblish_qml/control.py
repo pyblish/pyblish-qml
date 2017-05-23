@@ -719,12 +719,13 @@ class Controller(QtCore.QObject):
                       % abs(stats["requestCount"]))
 
             # Reset Context
-            context = self.data["models"]["item"].instances[0]
-            context.hasError = False
-            context.succeeded = False
-            context.processed = False
-            context.isProcessing = False
-            context.currentProgress = 0
+            context_item = self.data["models"]["item"].instances[0]
+            context_item.hasError = False
+            context_item.succeeded = False
+            context_item.processed = False
+            context_item.isProcessing = False
+            context_item.currentProgress = 0
+            context_item.label = context.data.get("label")
 
             self.initialised.emit()
 
