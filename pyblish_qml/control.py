@@ -23,6 +23,7 @@ class Controller(QtCore.QObject):
     show = QtCore.pyqtSignal()
     hide = QtCore.pyqtSignal()
 
+    firstRun = QtCore.pyqtSignal()
     publishing = QtCore.pyqtSignal()
     repairing = QtCore.pyqtSignal()
     stopping = QtCore.pyqtSignal()
@@ -40,6 +41,10 @@ class Controller(QtCore.QObject):
     saved = QtCore.pyqtSignal()
     finished = QtCore.pyqtSignal()
     initialised = QtCore.pyqtSignal()
+    commented = QtCore.pyqtSignal()
+    commenting = QtCore.pyqtSignal(str,
+                                   str,
+                                   arguments=["summary", "description"])
 
     state_changed = QtCore.pyqtSignal(str, arguments=["state"])
 
@@ -63,8 +68,11 @@ class Controller(QtCore.QObject):
             "models": {
                 "item": models.ItemModel(),
                 "result": models.ResultModel(),
-            }
+            },
+            "comment": [],
+            "firstRun": True
         }
+
         self.data.update({
             "proxies": {
                 "item": models.ProxyModel(self.data["models"]["item"]),
@@ -117,6 +125,7 @@ class Controller(QtCore.QObject):
                                       QtCore.Qt.QueuedConnection)
 
         self.state_changed.connect(self.on_state_changed)
+        self.commenting.connect(self.on_commenting)
 
     def on_show(self):
         self.host.emit("pyblishQmlShown")
@@ -254,9 +263,33 @@ class Controller(QtCore.QObject):
         machine.start()
         return machine
 
+    @QtCore.pyqtSlot(result=str)
+    def summary(self):
+        """Return first line of comment"""
+        try:
+            return self.data["comment"][0]
+        except IndexError:
+            return None
+
+    @QtCore.pyqtSlot(result=str)
+    def description(self):
+        """Return subseqent lines of comment (if any)"""
+        try:
+            return self.data["comment"][1]
+        except IndexError:
+            return None
+
     @QtCore.pyqtProperty(str, notify=state_changed)
     def state(self):
         return self.data["state"]["current"]
+
+    @QtCore.pyqtProperty(bool, notify=commented)
+    def hasComment(self):
+        return any(self.data["comment"])
+
+    @QtCore.pyqtProperty(bool, constant=True)
+    def commentEnabled(self):
+        return "comment" in self.host.cached_context.data
 
     @property
     def states(self):
@@ -564,6 +597,23 @@ class Controller(QtCore.QObject):
 
     # Event handlers
 
+    def on_commenting(self, summary, description):
+        """The user is entering a comment"""
+
+        def update():
+            comment = "\n".join(
+                entry for entry in self.data["comment"]
+                if entry
+            )
+
+            context = self.host.cached_context
+            context.data["comment"] = comment
+            self.data.update({"comment": (summary, description)})
+            self.commented.emit()
+
+        # Update local cache a little later
+        util.schedule(update, 100, channel="commenting")
+
     def on_about_to_process(self, plugin, instance):
         """Reflect currently running pair in GUI"""
 
@@ -674,6 +724,24 @@ class Controller(QtCore.QObject):
             self.initialised.emit()
 
             self.data["models"]["item"].update_compatibility()
+
+            # Remember comment across resets
+            comment = self.data["comment"]
+            if comment:
+                print("Installing local comment..")
+                self.host.cached_context.data["comment"] = comment
+            else:
+                print("No local comment, reading from context..")
+                summary, description = (self.host.cached_context.data.get(
+                    "comment", "").split("\n", 1) + [None]
+                )[:2]
+
+                self.data["comment"] = [summary, description]
+
+            if self.data["firstRun"]:
+                self.firstRun.emit()
+                self.data["firstRun"] = False
+
             self.host.emit("reset", context=None)
 
         def on_run(plugins):

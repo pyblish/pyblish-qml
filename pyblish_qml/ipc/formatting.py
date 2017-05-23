@@ -131,6 +131,7 @@ def format_data(data):
         "family",
         "families",
         "publish",
+        "comment",
 
         # Provided by service.py
         "host",

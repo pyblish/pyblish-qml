@@ -17,6 +17,7 @@ View {
     signal stop
     signal reset
     signal save
+    signal comment
 
     width: 200
     height: 40
@@ -37,6 +38,19 @@ View {
         }
 
         spacing: 3
+
+        AwesomeButton {
+            elevation: 1
+
+            size: 25
+            iconSize: 14
+
+            tooltip: visible ? "Comment.." : ""
+
+            name: app.hasComment ? "comment" : "comment-o"
+            onClicked: footer.comment()
+            visible: mode == 0 ? true : false
+        }
 
         AwesomeButton {
             elevation: 1

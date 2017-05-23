@@ -1,4 +1,6 @@
 import QtQuick 2.3
+import QtQuick.Layouts 1.1
+
 import Pyblish 0.1
 import Pyblish.ListItems 0.1
 
@@ -61,7 +63,7 @@ Item {
         id: tabView
 
         anchors.top: tabBar.bottom
-        anchors.bottom: footer.top
+        anchors.bottom: commentBox.top
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.margins: tabView.margins
         anchors.bottomMargin: 0
@@ -173,6 +175,20 @@ Item {
         }
     }
 
+    CommentBox {
+        id: commentBox
+
+        // Enable editing only when the GUI is not busy with something else
+        readOnly: overview.state != ""
+
+        anchors {
+            bottom: footer.top
+            left: parent.left
+            right: parent.right
+        }
+
+        height: isMaximised ? parent.height - footer.height : isUp ? 150 : 0
+    }
 
     Footer {
         id: footer
@@ -189,6 +205,7 @@ Item {
         onReset: app.reset()
         onStop: app.stop()
         onSave: app.save()
+        onComment: commentBox.height > 75 ? commentBox.down() : commentBox.up()
     }
 
     Connections {
@@ -196,6 +213,12 @@ Item {
 
         onError: setMessage(message)
         onInfo: setMessage(message)
+
+        onFirstRun: {
+            app.commentEnabled ? commentBox.up() : null
+            commentBox.summary = app.summary()
+            commentBox.description = app.description()
+        }
 
         onStateChanged: {
             if (state == "ready") {
