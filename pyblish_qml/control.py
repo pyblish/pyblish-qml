@@ -611,6 +611,7 @@ class Controller(QtCore.QObject):
             self.data.update({"comment": (summary, description)})
 
             # Notify subscribers of the comment
+            self.host.update(key="comment", value=comment)
             self.host.emit("commented", comment=comment)
 
             self.commented.emit()

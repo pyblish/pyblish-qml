@@ -110,7 +110,7 @@ def show(parent=None):
     try:
         service = ipc.service.Service()
         server = ipc.server.Server(service)
-    except:
+    except Exception:
         # If for some reason, the GUI fails to show.
         traceback.print_exc()
         return on_shown()
