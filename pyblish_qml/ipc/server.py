@@ -88,28 +88,47 @@ class Server(object):
         print("Using Python @ '%s'" % python)
         print("Using PyQt5 @ '%s'" % pyqt5)
 
-        # Protect against an erroneous parent environment
-        # The environment passed to subprocess is inherited from
-        # its parent, but the parent may - at run time - have
-        # made the environment invalid. For example, a unicode
-        # key or value in `os.environ` is not a valid environment.
-        assert all(isinstance(key, str) for key in os.environ), (
-            "One or more of your environment variable keys are not <str>")
-
-        assert all(isinstance(key, str) for key in os.environ.values()), (
-            "One or more of your environment variable values are not <str>")
-
-        environ = os.environ.copy()
-
-        # Some hosts define their own home directories as Python's.
-        # This causes the subprocess to mistake it for its own home.
-        environ.pop("PYTHONHOME", None)
+        # Maintain the absolute minimum of environment variables,
+        # to avoid issues on invalid types.
+        if IS_WIN32:
+            environ = {
+                key: os.getenv(key)
+                for key in ("USERNAME",
+                            "SYSTEMROOT",
+                            "PYTHONPATH",
+                            "PATH")
+                if os.getenv(key)
+            }
+        else:
+            # OSX and Linux users are left to fend for themselves.
+            environ = os.environ.copy()
 
         # Append PyQt5 to existing PYTHONPATH, if available
         environ["PYTHONPATH"] = os.pathsep.join(
             path for path in [os.getenv("PYTHONPATH"), pyqt5]
             if path is not None
         )
+
+        # Protect against an erroneous parent environment
+        # The environment passed to subprocess is inherited from
+        # its parent, but the parent may - at run time - have
+        # made the environment invalid. For example, a unicode
+        # key or value in `os.environ` is not a valid environment.
+        if not all(isinstance(key, str) for key in environ):
+            print("One or more of your environment variable "
+                  "keys are not <str>")
+
+            for key in os.environ:
+                if not isinstance(key, str):
+                    print("- %s is not <str>" % key)
+
+        if not all(isinstance(key, str) for key in environ.values()):
+            print("One or more of your environment "
+                  "variable values are not <str>")
+
+            for key, value in os.environ.items():
+                if not isinstance(value, str):
+                    print("- Value of %s=%s is not <str>" % (key, value))
 
         kwargs = dict(args=[
             python, "-u", "-m", "pyblish_qml",
