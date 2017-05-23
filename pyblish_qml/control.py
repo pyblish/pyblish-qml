@@ -609,6 +609,10 @@ class Controller(QtCore.QObject):
             context = self.host.cached_context
             context.data["comment"] = comment
             self.data.update({"comment": (summary, description)})
+
+            # Notify subscribers of the comment
+            self.host.emit("commented", comment=comment)
+
             self.commented.emit()
 
         # Update local cache a little later
