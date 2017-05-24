@@ -185,6 +185,7 @@ Item {
             bottom: footer.top
             left: parent.left
             right: parent.right
+            top: (isMaximised && height == parent.height - footer.height) ? tabBar.top : undefined
         }
 
         height: isMaximised ? parent.height - footer.height : isUp ? 150 : 0
