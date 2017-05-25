@@ -130,7 +130,8 @@ class Application(QtGui.QGuiApplication):
             window.setWidth(client_settings["WindowSize"][0])
             window.setHeight(client_settings["WindowSize"][1])
             window.setTitle(client_settings["WindowTitle"])
-
+            window.setFramePosition(QtCore.QPoint(client_settings["WindowPosition"][0], client_settings["WindowPosition"][1]))
+            
         message = list()
         message.append("Settings: ")
         for key, value in settings.to_dict().items():
