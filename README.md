@@ -133,6 +133,7 @@ Some data within each Instance and Context are special to QML.
 |:----------|:-----------------|:-------------------
 | `publish` | Instance         | The on/off state of the toggle.
 | `label`   | Context/Instance | Draw this instead of an instance's `name`
+| `comment` | Context          | Display and edit comment in GUI
 
 <br>
 

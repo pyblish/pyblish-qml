@@ -9,6 +9,8 @@ BaseGroupDelegate {
         TextArea {
             id: textArea
 
+            font.family: "consolas"
+
             anchors.fill: parent
             anchors.margins: 10
             text: modelData.item.doc || "No documentation"

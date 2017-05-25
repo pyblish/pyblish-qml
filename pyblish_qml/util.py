@@ -10,6 +10,7 @@ _async_threads = []
 _data = {
     "dispatch_wrapper": None
 }
+_jobs = dict()
 
 
 class QState(QtCore.QState):
@@ -167,6 +168,29 @@ class _Async(QtCore.QThread):
 
 def _async_cleanup(obj):
     _async_threads.remove(obj)
+
+
+def schedule(func, time, channel="default"):
+    """Run `func` at a later `time` in a dedicated `channel`
+
+    Given an arbitrary function, call this function after a given
+    timeout. It will ensure that only one "job" is running within
+    the given channel at any one time and cancel any currently
+    running job if a new job is submitted before the timeout.
+
+    """
+
+    try:
+        _jobs[channel].stop()
+    except (AttributeError, KeyError):
+        pass
+
+    timer = QtCore.QTimer()
+    timer.setSingleShot(True)
+    timer.timeout.connect(func)
+    timer.start(time)
+
+    _jobs[channel] = timer
 
 
 class Timer(object):

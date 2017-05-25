@@ -53,12 +53,6 @@ class Window(QtQuick.QQuickView):
 
         return super(Window, self).event(event)
 
-    def keyPressEvent(self, event):
-        """Delegate keyboard events"""
-
-        if event.key() == QtCore.Qt.Key_Return:
-            return self.on_enter()
-
 
 class Application(QtGui.QGuiApplication):
     """Pyblish QML wrapper around QGuiApplication
@@ -169,7 +163,9 @@ class Application(QtGui.QGuiApplication):
             util.timer_end("ready", "Awaited statemachine for %.2f ms")
 
         self.controller.show.emit()
-        self.controller.reset()
+
+        # Allow time for QML to initialise
+        util.schedule(self.controller.reset, 500, channel="main")
 
     def hide(self):
         """Hide GUI
@@ -242,8 +238,7 @@ def main(demo=False, aschild=False):
         service = ipc.service.MockService() if demo else ipc.service.Service()
         server = ipc.server.Server(service)
 
-        if demo:
-            proxy = ipc.server.Proxy(server)
-            proxy.show(settings.to_dict())
+        proxy = ipc.server.Proxy(server)
+        proxy.show(settings.to_dict())
 
         server.wait()
