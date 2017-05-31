@@ -188,7 +188,8 @@ def install_host():
     for install in (_install_maya,
                     _install_houdini,
                     _install_nuke,
-                    _install_hiero):
+                    _install_hiero,
+                    _install_standalone):
         try:
             install()
         except ImportError:
@@ -290,6 +291,23 @@ def _install_hiero():
 
     settings.ContextLabel = "Hiero"
     settings.WindowTitle = "Pyblish (Hiero)"
+
+
+def _install_standalone():
+    """Helper function to Pyblish Standalone support"""
+    import pyblish_standalone
+
+    def threaded_wrapper(func, *args, **kwargs):
+        return func(args, kwargs)
+
+    sys.stdout.write("Setting up Pyblish QML in Pyblish Standalone\n")
+    register_dispatch_wrapper(threaded_wrapper)
+
+    app = QtWidgets.QApplication(sys.argv)
+    app.aboutToQuit.connect(_on_application_quit)
+
+    settings.ContextLabel = "Standalone"
+    settings.WindowTitle = "Pyblish (Standalone)"
 
 
 class Splash(QtWidgets.QWidget):
