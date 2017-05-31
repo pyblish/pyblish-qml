@@ -226,9 +226,9 @@ def _install_maya():
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
 
-    if settings.ContextLabel == "Context":
+    if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Maya"
-    if settings.WindowTitle == "Pyblish":
+    if settings.WindowTitle == settings.WindowTitleDefault:
         settings.WindowTitle = "Pyblish (Maya)"
 
 
@@ -246,9 +246,9 @@ def _install_houdini():
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
 
-    if settings.ContextLabel == "Context":
+    if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Houdini"
-    if settings.WindowTitle == "Pyblish":
+    if settings.WindowTitle == settings.WindowTitleDefault:
         settings.WindowTitle = "Pyblish (Houdini)"
 
 
@@ -269,9 +269,9 @@ def _install_nuke():
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
 
-    if settings.ContextLabel == "Context":
+    if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Nuke"
-    if settings.WindowTitle == "Pyblish":
+    if settings.WindowTitle == settings.WindowTitleDefault:
         settings.WindowTitle = "Pyblish (Nuke)"
 
 
@@ -293,9 +293,9 @@ def _install_hiero():
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
 
-    if settings.ContextLabel == "Context":
+    if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Hiero"
-    if settings.WindowTitle == "Pyblish":
+    if settings.WindowTitle == settings.WindowTitleDefault:
         settings.WindowTitle = "Pyblish (Hiero)"
 
 

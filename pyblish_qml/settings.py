@@ -2,8 +2,8 @@ import sys
 
 # User-editable settings
 
-ContextLabel = "Context"
-WindowTitle = "Pyblish"
+ContextLabel = ContextLabelDefault = "Context"
+WindowTitle = WindowTitleDefault = "Pyblish"
 WindowSize = (430, 600)
 WindowPosition = (100, 100)
 HeartbeatInterval = 60
