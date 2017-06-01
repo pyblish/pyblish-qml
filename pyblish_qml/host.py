@@ -298,12 +298,12 @@ def _install_standalone():
     import pyblish_standalone
 
     def threaded_wrapper(func, *args, **kwargs):
-        return func(args, kwargs)
+        return func(*args, **kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Pyblish Standalone\n")
     register_dispatch_wrapper(threaded_wrapper)
 
-    app = QtWidgets.QApplication(sys.argv)
+    app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
 
     settings.ContextLabel = "Standalone"
