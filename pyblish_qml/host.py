@@ -226,9 +226,10 @@ def _install_maya():
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
 
-    # Configure GUI
-    settings.ContextLabel = "Maya"
-    settings.WindowTitle = "Pyblish (Maya)"
+    if settings.ContextLabel == settings.ContextLabelDefault:
+        settings.ContextLabel = "Maya"
+    if settings.WindowTitle == settings.WindowTitleDefault:
+        settings.WindowTitle = "Pyblish (Maya)"
 
 
 def _install_houdini():
@@ -245,8 +246,10 @@ def _install_houdini():
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
 
-    settings.ContextLabel = "Houdini"
-    settings.WindowTitle = "Pyblish (Houdini)"
+    if settings.ContextLabel == settings.ContextLabelDefault:
+        settings.ContextLabel = "Houdini"
+    if settings.WindowTitle == settings.WindowTitleDefault:
+        settings.WindowTitle = "Pyblish (Houdini)"
 
 
 def _install_nuke():
@@ -266,8 +269,10 @@ def _install_nuke():
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
 
-    settings.ContextLabel = "Nuke"
-    settings.WindowTitle = "Pyblish (Nuke)"
+    if settings.ContextLabel == settings.ContextLabelDefault:
+        settings.ContextLabel = "Nuke"
+    if settings.WindowTitle == settings.WindowTitleDefault:
+        settings.WindowTitle = "Pyblish (Nuke)"
 
 
 def _install_hiero():
@@ -288,8 +293,10 @@ def _install_hiero():
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
 
-    settings.ContextLabel = "Hiero"
-    settings.WindowTitle = "Pyblish (Hiero)"
+    if settings.ContextLabel == settings.ContextLabelDefault:
+        settings.ContextLabel = "Hiero"
+    if settings.WindowTitle == settings.WindowTitleDefault:
+        settings.WindowTitle = "Pyblish (Hiero)"
 
 
 class Splash(QtWidgets.QWidget):
