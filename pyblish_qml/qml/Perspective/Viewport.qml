@@ -34,32 +34,32 @@ Item {
                         load: true,
                     },
                     {
-                        type: "path",
-                        name: "Path",
-                        closed: true,
-                        item: root.item,
-                        load: item.itemType == "plugin"
-                    },
-                    {
                         type: "documentation",
                         name: "Documentation",
-                        closed: true,
+                        opened: true,
                         item: root.item,
                         load: item.itemType == "plugin"
                     },
                     {
                         type: "results",
-                        name: "Errors",
-                        closed: false,
+                        name: "Errors (" + app.errorProxy.rowCount() + ")",
+                        opened: app.errorProxy.rowCount() ? true : false,
                         model: app.errorProxy,
                         load: true
                     },
                     {
                         type: "results",
-                        name: "Records",
-                        closed: false,
+                        name: "Records (" + app.recordProxy.rowCount() + ")",
+                        opened: app.recordProxy.rowCount() ? true : false,
                         model: app.recordProxy,
                         load: true,
+                    },
+                    {
+                        type: "path",
+                        name: "Path",
+                        opened: false,
+                        item: root.item,
+                        load: item.itemType == "plugin"
                     },
                     {
                         type: "spacer",
