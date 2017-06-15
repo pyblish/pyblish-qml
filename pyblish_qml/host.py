@@ -188,7 +188,8 @@ def install_host():
     for install in (_install_maya,
                     _install_houdini,
                     _install_nuke,
-                    _install_hiero):
+                    _install_hiero,
+                    _install_nukestudio):
         try:
             install()
         except ImportError:
@@ -297,6 +298,29 @@ def _install_hiero():
         settings.ContextLabel = "Hiero"
     if settings.WindowTitle == settings.WindowTitleDefault:
         settings.WindowTitle = "Pyblish (Hiero)"
+
+
+def _install_nukestudio():
+    """Helper function to The Foundry Hiero support"""
+    import nuke
+
+    if "--studio" not in nuke.rawArgs:
+        raise ImportError
+
+    def threaded_wrapper(func, *args, **kwargs):
+        return nuke.executeInMainThreadWithResult(
+            func, args, kwargs)
+
+    sys.stdout.write("Setting up Pyblish QML in NukeStudio\n")
+    register_dispatch_wrapper(threaded_wrapper)
+
+    app = QtWidgets.QApplication.instance()
+    app.aboutToQuit.connect(_on_application_quit)
+
+    if settings.ContextLabel == settings.ContextLabelDefault:
+        settings.ContextLabel = "NukeStudio"
+    if settings.WindowTitle == settings.WindowTitleDefault:
+        settings.WindowTitle = "Pyblish (NukeStudio)"
 
 
 class Splash(QtWidgets.QWidget):
