@@ -9,7 +9,7 @@ Column {
     property Component item
     property alias gutter: gutter.visible
 
-    property bool opened: true
+    property bool opened: modelData.opened
 
     spacing: 0
 
@@ -85,7 +85,7 @@ Column {
         }
     }
 
-    Spacer {
-        height: opened ? 20 : 0
-    }
+    // Spacer {
+    //     height: opened ? 20 : 0
+    // }
 }
