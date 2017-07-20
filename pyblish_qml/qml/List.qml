@@ -30,6 +30,8 @@ ListView {
         status: {
             if (object.isProcessing)
                 return "processing"
+            if (object.hasWarning)
+                return "warning"
             if (object.hasError)
                 return "error"
             if (object.succeeded)

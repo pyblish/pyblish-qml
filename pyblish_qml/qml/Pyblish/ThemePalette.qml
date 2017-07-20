@@ -23,7 +23,7 @@ QtObject {
     readonly property color dividerColor: shade(0.12)
     
     readonly property color successColor: "#77AE24"
-    readonly property color warningColor: "#597221"
+    readonly property color warningColor: "#FF9829"
     readonly property color errorColor: Qt.rgba(1.0, 0.2, 0.2)
 
     /*!
