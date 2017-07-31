@@ -599,6 +599,12 @@ instances = [
             "family": "failure",
             "fail": True
         }
+    },
+    {
+        "name": "More Families",
+        "data": {
+            "families": ["stark", "lannister"]
+        }
     }
 ]
 

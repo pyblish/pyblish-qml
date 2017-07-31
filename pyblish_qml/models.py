@@ -384,9 +384,9 @@ class ItemModel(AbstractModel):
         item["hasCompatible"] = True
 
         # Visualised in Perspective
-        item["familiesConcatenated"] = instance["data"].get("family", "")
-        item["familiesConcatenated"] += ", ".join(
-            instance["data"].get("families", []))
+        families = [instance["data"]["family"]]
+        families.extend(instance["data"].get("families", []))
+        item["familiesConcatenated"] += ", ".join(families)
 
         item = self.add_item(item)
         self.instances.append(item)
