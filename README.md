@@ -33,6 +33,8 @@ This assumes the Python distribution has access to PyQt5 via e.g. `python -c "im
 $ set PYBLISH_QML_PYQT5=c:\path\to\pyqt
 ```
 
+Pyblish QML is not fully backwards compatible with Pyblish. Pyblish QML requires Pyblish 1.2.1 or higher.
+
 <br>
 <br>
 <br>
