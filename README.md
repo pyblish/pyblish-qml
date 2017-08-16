@@ -330,6 +330,7 @@ Customise Context label and Window title.
 from pyblish_qml import settings
 settings.WindowTitle = "My Title"
 settings.WindowSize = (430, 600)
+settings.WindowPosition = (100, 100)
 settings.ContextLabel = "The World"
 ```
 
