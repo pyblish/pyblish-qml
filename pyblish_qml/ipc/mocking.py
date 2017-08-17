@@ -658,7 +658,7 @@ pyblish.api.sort_plugins(plugins)
 
 # Callbacks
 def close_callback():
-    print "Custom callback when closing..."
+    print("Custom callback when closing...")
 
 
 pyblish.api.register_callback("pyblishQmlClose", close_callback)
