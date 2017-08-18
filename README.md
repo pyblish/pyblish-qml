@@ -405,5 +405,5 @@ $ nosetests3 --verbose --with-doctest --exe --exclude=vendor
 **Python 2**
 ```bash
 $ cd pyblish-qml
-$ nose --verbose --with-doctest --exe --exclude=vendor
+$ python -m nose --verbose --with-doctest --exe --exclude=vendor
 ```
