@@ -395,3 +395,17 @@ $ . test_docker.sh
 # 
 # OK
 ```
+
+If you don't have Docker available you can test with these commands.
+
+**Python 3**
+```bash
+$ cd pyblish-qml
+$ nosetests3 --verbose --with-doctest --exe --exclude=vendor
+```
+
+**Python 2**
+```bash
+$ cd pyblish-qml
+$ nose --verbose --with-doctest --exe --exclude=vendor
+```
