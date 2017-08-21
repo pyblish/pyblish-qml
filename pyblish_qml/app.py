@@ -39,15 +39,14 @@ class Window(QtQuick.QQuickView):
             modifiers = self.parent.queryKeyboardModifiers()
             shift_pressed = QtCore.Qt.ShiftModifier & modifiers
             states = self.parent.controller.states
-            close_signal = "pyblishQmlClose"
 
             if shift_pressed:
                 print("Force quitted..")
-                self.parent.controller.host.emit(close_signal)
+                self.parent.controller.host.emit("pyblishQmlCloseForced")
                 event.accept()
 
             elif any(state in states for state in ("ready", "finished")):
-                self.parent.controller.host.emit(close_signal)
+                self.parent.controller.host.emit("pyblishQmlClose")
                 event.accept()
 
             else:
