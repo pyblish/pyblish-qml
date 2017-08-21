@@ -42,9 +42,11 @@ class Window(QtQuick.QQuickView):
 
             if shift_pressed:
                 print("Force quitted..")
+                self.parent.controller.host.emit("pyblishQmlCloseForced")
                 event.accept()
 
             elif any(state in states for state in ("ready", "finished")):
+                self.parent.controller.host.emit("pyblishQmlClose")
                 event.accept()
 
             else:
