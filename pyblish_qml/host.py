@@ -66,7 +66,7 @@ def uninstall():
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
-def show(parent=None):
+def show(parent=None, targets=[]):
     """Attempt to show GUI
 
     Requires install() to have been run first, and
@@ -109,7 +109,7 @@ def show(parent=None):
 
     try:
         service = ipc.service.Service()
-        server = ipc.server.Server(service)
+        server = ipc.server.Server(service, targets=targets)
     except Exception:
         # If for some reason, the GUI fails to show.
         traceback.print_exc()

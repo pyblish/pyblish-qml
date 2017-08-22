@@ -58,11 +58,19 @@ class Controller(QtCore.QObject):
     resultModel = qtproperty(lambda self: self.data["models"]["result"])
     resultProxy = qtproperty(lambda self: self.data["proxies"]["result"])
 
-    def __init__(self, host, parent=None):
+    def __init__(self, host, parent=None, targets=[]):
         super(Controller, self).__init__(parent)
 
         # Connection to host
         self.host = host
+
+        self.targets = targets
+        # If no targets are passed to pyblish-qml, we assume that we want all
+        # targets. This is to facilitate getting all plugins on
+        # pyblish_qml.show().
+        if not self.targets:
+            self.targets = ["default"]
+        print("Targets: {0}".format(", ".join(self.targets)))
 
         self.data = {
             "models": {
@@ -758,6 +766,8 @@ class Controller(QtCore.QObject):
         def on_discover(plugins, context):
             collectors = list()
 
+            plugins = pyblish.api.plugins_by_targets(plugins, self.targets)
+
             for plugin in plugins:
                 self.data["models"]["item"].add_plugin(plugin.to_json())
 
@@ -778,6 +788,7 @@ class Controller(QtCore.QObject):
 
         def on_context(context):
             context.data["pyblishQmlVersion"] = version
+            context.data["targets"] = ", ".join(self.targets)
 
             self.data["models"]["item"].add_context(context.to_json())
             self.data["models"]["result"].add_context(context.to_json())

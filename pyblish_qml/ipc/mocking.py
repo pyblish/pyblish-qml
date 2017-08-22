@@ -538,6 +538,24 @@ class InactiveInstanceCollectorPlugin(pyblish.api.InstancePlugin):
         raise TypeError("I shouldn't have run in the first place")
 
 
+class TargetedCollector(pyblish.api.ContextPlugin):
+    """Target collector to "studio" target."""
+    order = pyblish.api.CollectorOrder
+    targets = ["studio"]
+
+    def process(self, context):
+        pass
+
+
+class TargetedValidator(pyblish.api.ContextPlugin):
+    """Target validator to "studio" target."""
+    order = pyblish.api.ValidatorOrder
+    targets = ["studio"]
+
+    def process(self, context):
+        pass
+
+
 instances = [
     {
         "name": "Peter01",
@@ -650,7 +668,10 @@ plugins = [
     LongRunningValidator,
 
     RearrangingPlugin,
-    InactiveInstanceCollectorPlugin
+    InactiveInstanceCollectorPlugin,
+
+    TargetedCollector,
+    TargetedValidator
 ]
 
 pyblish.api.sort_plugins(plugins)

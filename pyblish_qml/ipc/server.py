@@ -73,7 +73,7 @@ class Server(object):
 
     """
 
-    def __init__(self, service, python=None, pyqt5=None):
+    def __init__(self, service, python=None, pyqt5=None, targets=[]):
         super(Server, self).__init__()
         self.service = service
         self.listening = False
@@ -148,6 +148,10 @@ class Server(object):
             # This will prevent an embedded Python
             # from opening an external terminal window.
             kwargs["creationflags"] = CREATE_NO_WINDOW
+
+        if targets:
+            kwargs["args"].append("--targets")
+            kwargs["args"].extend(targets)
 
         self.popen = subprocess.Popen(**kwargs)
         self.listen()

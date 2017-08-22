@@ -44,6 +44,10 @@ BaseDelegate {
                     "value": object.host
                 },
                 {
+                    "key": "Targets",
+                    "value": object.targets
+                },
+                {
                     "key": "Connected",
                     "value": Date(Date.parse(object.connectTime))
                 }]

@@ -68,7 +68,7 @@ class Application(QtGui.QGuiApplication):
     hidden = QtCore.pyqtSignal()
     quitted = QtCore.pyqtSignal()
 
-    def __init__(self, source):
+    def __init__(self, source, targets=[]):
         super(Application, self).__init__(sys.argv)
 
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
@@ -80,7 +80,7 @@ class Application(QtGui.QGuiApplication):
         engine.addImportPath(QML_IMPORT_DIR)
 
         host = ipc.client.Proxy()
-        controller = control.Controller(host)
+        controller = control.Controller(host, targets=targets)
         controller.finished.connect(lambda: window.alert(0))
 
         context = engine.rootContext()
@@ -224,7 +224,7 @@ class Application(QtGui.QGuiApplication):
         thread.start()
 
 
-def main(demo=False, aschild=False):
+def main(demo=False, aschild=False, targets=[]):
     """Start the Qt-runtime and show the window
 
     Arguments:
@@ -235,7 +235,7 @@ def main(demo=False, aschild=False):
     if aschild:
         print("Starting pyblish-qml")
         compat.main()
-        app = Application(APP_PATH)
+        app = Application(APP_PATH, targets)
         app.listen()
 
         print("Done, don't forget to call `show()`")
@@ -244,7 +244,7 @@ def main(demo=False, aschild=False):
     else:
         print("Starting pyblish-qml server..")
         service = ipc.service.MockService() if demo else ipc.service.Service()
-        server = ipc.server.Server(service)
+        server = ipc.server.Server(service, targets=targets)
 
         proxy = ipc.server.Proxy(server)
         proxy.show(settings.to_dict())
