@@ -65,12 +65,6 @@ class Controller(QtCore.QObject):
         self.host = host
 
         self.targets = targets
-        # If no targets are passed to pyblish-qml, we assume that we want all
-        # targets. This is to facilitate getting all plugins on
-        # pyblish_qml.show().
-        if not self.targets:
-            self.targets = ["default"]
-        print("Targets: {0}".format(", ".join(self.targets)))
 
         self.data = {
             "models": {
