@@ -67,6 +67,9 @@ class Application(QtGui.QGuiApplication):
     shown = QtCore.pyqtSignal(QtCore.QVariant)
     hidden = QtCore.pyqtSignal()
     quitted = QtCore.pyqtSignal()
+    risen = QtCore.pyqtSignal()
+    inFocused = QtCore.pyqtSignal()
+    outFocused = QtCore.pyqtSignal()
 
     def __init__(self, source):
         super(Application, self).__init__(sys.argv)
@@ -96,6 +99,9 @@ class Application(QtGui.QGuiApplication):
         self.shown.connect(self.show)
         self.hidden.connect(self.hide)
         self.quitted.connect(self.quit)
+        self.risen.connect(self.rise)
+        self.inFocused.connect(self.inFocus)
+        self.outFocused.connect(self.outFocus)
 
         window.setSource(QtCore.QUrl.fromLocalFile(source))
 
@@ -185,6 +191,22 @@ class Application(QtGui.QGuiApplication):
 
         self.window.hide()
 
+    def rise(self):
+        """Rise GUI from hidden"""
+        self.window.show()
+
+    def inFocus(self):
+        """Set GUI on-top flag"""
+        if os.name == "nt":
+            previous_flags = self.window.flags()
+            self.window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
+
+    def outFocus(self):
+        """Remove GUI on-top flag"""
+        if os.name == "nt":
+            previous_flags = self.window.flags()
+            self.window.setFlags(previous_flags ^ QtCore.Qt.WindowStaysOnTopHint)
+
     def listen(self):
         """Listen on incoming messages from host
 
@@ -206,7 +228,10 @@ class Application(QtGui.QGuiApplication):
                 signal = {
                     "show": "shown",
                     "hide": "hidden",
-                    "quit": "quitted"
+                    "quit": "quitted",
+                    "rise": "risen",
+                    "inFocus": "inFocused",
+                    "outFocus": "outFocused",
                 }.get(payload["name"])
 
                 if not signal:
