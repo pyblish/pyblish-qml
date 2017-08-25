@@ -68,10 +68,7 @@ Rectangle {
 
             KeyNavigation.priority: KeyNavigation.BeforeItem
 
-            onTextChanged: {
-                app.commenting(text);
-                console.log(text);
-            }
+            onTextChanged: app.commenting(text)
         }
     }
 }
