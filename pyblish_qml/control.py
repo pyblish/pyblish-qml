@@ -601,6 +601,8 @@ class Controller(QtCore.QObject):
         """The user is entering a comment"""
 
         def update():
+            self.data.update({"comment": (summary, description)})
+
             comment = "\n".join(
                 entry for entry in self.data["comment"]
                 if entry
@@ -608,7 +610,6 @@ class Controller(QtCore.QObject):
 
             context = self.host.cached_context
             context.data["comment"] = comment
-            self.data.update({"comment": (summary, description)})
 
             # Notify subscribers of the comment
             self.host.update(key="comment", value=comment)
