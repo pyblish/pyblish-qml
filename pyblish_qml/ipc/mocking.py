@@ -538,6 +538,14 @@ class InactiveInstanceCollectorPlugin(pyblish.api.InstancePlugin):
         raise TypeError("I shouldn't have run in the first place")
 
 
+class CommentPlugin(pyblish.api.ContextPlugin):
+    """Display whatever comment was entered"""
+    order = pyblish.api.ValidatorOrder
+
+    def process(self, context):
+        self.log.info(context.data.get("comment", "No comment"))
+
+
 instances = [
     {
         "name": "Peter01",
@@ -650,7 +658,9 @@ plugins = [
     LongRunningValidator,
 
     RearrangingPlugin,
-    InactiveInstanceCollectorPlugin
+    InactiveInstanceCollectorPlugin,
+
+    CommentPlugin,
 ]
 
 pyblish.api.sort_plugins(plugins)
