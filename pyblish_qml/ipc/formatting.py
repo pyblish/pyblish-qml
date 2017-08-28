@@ -267,6 +267,7 @@ def format_plugin(plugin):
         "optional": plugin.optional,
         "hosts": plugin.hosts,
         "families": plugin.families,
+        "targets": plugin.targets,
         "doc": inspect.getdoc(plugin),
         "active": plugin.active,
         "match": plugin.match,

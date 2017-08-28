@@ -546,6 +546,24 @@ class CommentPlugin(pyblish.api.ContextPlugin):
         self.log.info(context.data.get("comment", "No comment"))
 
 
+class TargetedCollector(pyblish.api.ContextPlugin):
+    """Target collector to "studio" target."""
+    order = pyblish.api.CollectorOrder
+    targets = ["studio"]
+
+    def process(self, context):
+        pass
+
+
+class TargetedValidator(pyblish.api.ContextPlugin):
+    """Target validator to "studio" target."""
+    order = pyblish.api.ValidatorOrder
+    targets = ["studio"]
+
+    def process(self, context):
+        pass
+
+
 instances = [
     {
         "name": "Peter01",
@@ -661,6 +679,9 @@ plugins = [
     InactiveInstanceCollectorPlugin,
 
     CommentPlugin,
+
+    TargetedCollector,
+    TargetedValidator,
 ]
 
 pyblish.api.sort_plugins(plugins)

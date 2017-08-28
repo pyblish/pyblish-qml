@@ -85,7 +85,7 @@ class Server(object):
 
     """
 
-    def __init__(self, service, python=None, pyqt5=None):
+    def __init__(self, service, python=None, pyqt5=None, targets=[]):
         super(Server, self).__init__()
         self.service = service
         self.listening = False
@@ -160,6 +160,17 @@ class Server(object):
             # This will prevent an embedded Python
             # from opening an external terminal window.
             kwargs["creationflags"] = CREATE_NO_WINDOW
+
+        # If no targets are passed to pyblish-qml, we assume that we want the
+        # default target and the registered targets. This is to facilitate
+        # getting all plugins on pyblish_qml.show().
+        import pyblish.api
+        if not targets:
+            targets = ["default"] + pyblish.api.registered_targets()
+        print("Targets: {0}".format(", ".join(targets)))
+
+        kwargs["args"].append("--targets")
+        kwargs["args"].extend(targets)
 
         self.popen = subprocess.Popen(**kwargs)
         self.listen()

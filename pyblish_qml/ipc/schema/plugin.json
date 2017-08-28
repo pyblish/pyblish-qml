@@ -19,6 +19,10 @@
             "type": "array",
             "items": {"type": "string"}
         },
+        "targets": {
+            "type": "array",
+            "items": {"type": "string"}
+        },
         "order": {
             "type": "number"
         },
