@@ -538,6 +538,14 @@ class InactiveInstanceCollectorPlugin(pyblish.api.InstancePlugin):
         raise TypeError("I shouldn't have run in the first place")
 
 
+class CommentPlugin(pyblish.api.ContextPlugin):
+    """Display whatever comment was entered"""
+    order = pyblish.api.ValidatorOrder
+
+    def process(self, context):
+        self.log.info(context.data.get("comment", "No comment"))
+
+
 class TargetedCollector(pyblish.api.ContextPlugin):
     """Target collector to "studio" target."""
     order = pyblish.api.CollectorOrder
@@ -670,8 +678,10 @@ plugins = [
     RearrangingPlugin,
     InactiveInstanceCollectorPlugin,
 
+    CommentPlugin,
+
     TargetedCollector,
-    TargetedValidator
+    TargetedValidator,
 ]
 
 pyblish.api.sort_plugins(plugins)

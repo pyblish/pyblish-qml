@@ -42,9 +42,7 @@ class Controller(QtCore.QObject):
     finished = QtCore.pyqtSignal()
     initialised = QtCore.pyqtSignal()
     commented = QtCore.pyqtSignal()
-    commenting = QtCore.pyqtSignal(str,
-                                   str,
-                                   arguments=["summary", "description"])
+    commenting = QtCore.pyqtSignal(str, arguments=["comment"])
 
     state_changed = QtCore.pyqtSignal(str, arguments=["state"])
 
@@ -71,7 +69,7 @@ class Controller(QtCore.QObject):
                 "item": models.ItemModel(),
                 "result": models.ResultModel(),
             },
-            "comment": [],
+            "comment": "",
             "firstRun": True
         }
 
@@ -266,20 +264,9 @@ class Controller(QtCore.QObject):
         return machine
 
     @QtCore.pyqtSlot(result=str)
-    def summary(self):
+    def comment(self):
         """Return first line of comment"""
-        try:
-            return self.data["comment"][0]
-        except IndexError:
-            return None
-
-    @QtCore.pyqtSlot(result=str)
-    def description(self):
-        """Return subseqent lines of comment (if any)"""
-        try:
-            return self.data["comment"][1]
-        except IndexError:
-            return None
+        return self.data["comment"]
 
     @QtCore.pyqtProperty(str, notify=state_changed)
     def state(self):
@@ -287,7 +274,7 @@ class Controller(QtCore.QObject):
 
     @QtCore.pyqtProperty(bool, notify=commented)
     def hasComment(self):
-        return any(self.data["comment"])
+        return True if self.data["comment"] else False
 
     @QtCore.pyqtProperty(bool, constant=True)
     def commentEnabled(self):
@@ -599,18 +586,13 @@ class Controller(QtCore.QObject):
 
     # Event handlers
 
-    def on_commenting(self, summary, description):
+    def on_commenting(self, comment):
         """The user is entering a comment"""
 
         def update():
-            comment = "\n".join(
-                entry for entry in self.data["comment"]
-                if entry
-            )
-
             context = self.host.cached_context
             context.data["comment"] = comment
-            self.data.update({"comment": (summary, description)})
+            self.data["comment"] = comment
 
             # Notify subscribers of the comment
             self.host.update(key="comment", value=comment)
@@ -740,11 +722,8 @@ class Controller(QtCore.QObject):
                 self.host.cached_context.data["comment"] = comment
             else:
                 print("No local comment, reading from context..")
-                summary, description = (self.host.cached_context.data.get(
-                    "comment", "").split("\n", 1) + [None]
-                )[:2]
-
-                self.data["comment"] = [summary, description]
+                comment = self.host.cached_context.data.get("comment", "")
+                self.data["comment"] = comment
 
             if self.data["firstRun"]:
                 self.firstRun.emit()

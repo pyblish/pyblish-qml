@@ -39,6 +39,18 @@ class Proxy(object):
         """Ask the GUI to quit"""
         self._dispatch("quit")
 
+    def rise(self):
+        """Rise GUI from hidden"""
+        self._dispatch("rise")
+
+    def inFocus(self):
+        """Set GUI on-top flag"""
+        self._dispatch("inFocus")
+
+    def outFocus(self):
+        """Remove GUI on-top flag"""
+        self._dispatch("outFocus")
+
     def kill(self):
         """Forcefully destroy the process"""
         self.popen.kill()

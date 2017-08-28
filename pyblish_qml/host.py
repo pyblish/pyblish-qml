@@ -213,6 +213,84 @@ def _on_application_quit():
         pass
 
 
+def _connect_host_event(app):
+    """Connect some event from host to QML
+    
+    Host will connect following event to QML:
+    QEvent.Show                -> rise QML
+    QEvent.Hide                -> hide QML
+    QEvent.WindowActivate      -> set QML on top
+    QEvent.WindowDeactivate    -> remove QML on top
+    """
+
+    class HostEventFilter(QtWidgets.QWidget):
+
+        eventList = [QtCore.QEvent.Show, QtCore.QEvent.Hide, 
+                QtCore.QEvent.WindowActivate, QtCore.QEvent.WindowDeactivate]
+
+        def getServer(self):
+            server = None
+            try:
+                server = _state["currentServer"]
+            except KeyError:
+                # No server started
+                pass
+            return server
+
+        def eventFilter(self, widget, event):
+            if event.type() in self.eventList:
+                server = self.getServer()
+                if not server:
+                    return False
+                else:
+                    proxy = ipc.server.Proxy(server)
+
+                if event.type() == QtCore.QEvent.Show:
+                    try:
+                        proxy.rise()
+                        return True
+                    except IOError:
+                        # The running instance has already been closed.
+                        _state.pop("currentServer")
+                if event.type() == QtCore.QEvent.Hide:
+                    try:
+                        proxy.hide()
+                        return True
+                    except IOError:
+                        # The running instance has already been closed.
+                        _state.pop("currentServer")
+                if event.type() == QtCore.QEvent.WindowActivate:
+                    try:
+                        proxy.inFocus()
+                        return True
+                    except IOError:
+                        # The running instance has already been closed.
+                        _state.pop("currentServer")
+                if event.type() == QtCore.QEvent.WindowDeactivate:
+                    try:
+                        proxy.outFocus()
+                        return True
+                    except IOError:
+                        # The running instance has already been closed.
+                        _state.pop("currentServer")
+            return False
+
+    # Get top window in host
+    app_top_window = app.activeWindow()
+    while True:
+        parent_window = app_top_window.parent()
+        if parent_window:
+            app_top_window = parent_window
+        else:
+            break
+    # install event filter
+    try:
+        host_event_filter = HostEventFilter(app_top_window)
+        app_top_window.installEventFilter(host_event_filter)
+    except Exception:
+        pass
+
+
 def _install_maya():
     """Helper function to Autodesk Maya support"""
     from maya import utils
@@ -226,6 +304,7 @@ def _install_maya():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Maya"
@@ -246,6 +325,7 @@ def _install_houdini():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Houdini"
@@ -269,6 +349,7 @@ def _install_nuke():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Nuke"
@@ -293,6 +374,7 @@ def _install_hiero():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Hiero"
@@ -316,6 +398,7 @@ def _install_nukestudio():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "NukeStudio"

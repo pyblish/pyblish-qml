@@ -217,8 +217,7 @@ Item {
 
         onFirstRun: {
             app.commentEnabled ? commentBox.up() : null
-            commentBox.summary = app.summary()
-            commentBox.description = app.description()
+            commentBox.text = app.comment()
         }
 
         onStateChanged: {
