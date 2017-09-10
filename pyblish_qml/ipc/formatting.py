@@ -267,7 +267,10 @@ def format_plugin(plugin):
         "optional": plugin.optional,
         "hosts": plugin.hosts,
         "families": plugin.families,
-        "targets": plugin.targets,
+
+        # New in pyblish-base 1.5.2
+        "targets": getattr(plugin, "targets", list()),
+
         "doc": inspect.getdoc(plugin),
         "active": plugin.active,
         "match": plugin.match,
