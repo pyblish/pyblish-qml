@@ -739,7 +739,10 @@ class Controller(QtCore.QObject):
         def on_discover(plugins, context):
             collectors = list()
 
-            plugins = pyblish.api.plugins_by_targets(plugins, self.targets)
+            # For backwards compatibility check for existance of
+            # "plugins_by_targets" method.
+            if hasattr(pyblish.api, "plugins_by_targets"):
+                plugins = pyblish.api.plugins_by_targets(plugins, self.targets)
 
             for plugin in plugins:
                 self.data["models"]["item"].add_plugin(plugin.to_json())
