@@ -70,6 +70,8 @@ class Application(QtGui.QGuiApplication):
     risen = QtCore.pyqtSignal()
     inFocused = QtCore.pyqtSignal()
     outFocused = QtCore.pyqtSignal()
+    published = QtCore.pyqtSignal()
+    validated = QtCore.pyqtSignal()
 
     def __init__(self, source, targets=[]):
         super(Application, self).__init__(sys.argv)
@@ -102,6 +104,8 @@ class Application(QtGui.QGuiApplication):
         self.risen.connect(self.rise)
         self.inFocused.connect(self.inFocus)
         self.outFocused.connect(self.outFocus)
+        self.published.connect(self.publish)
+        self.validated.connect(self.validate)
 
         window.setSource(QtCore.QUrl.fromLocalFile(source))
 
@@ -207,6 +211,14 @@ class Application(QtGui.QGuiApplication):
             previous_flags = self.window.flags()
             self.window.setFlags(previous_flags ^ QtCore.Qt.WindowStaysOnTopHint)
 
+    def publish(self):
+        """Fire up the publish sequence"""
+        self.controller.publish()
+
+    def validate(self):
+        """Fire up the validation sequance"""
+        self.controller.validate()
+
     def listen(self):
         """Listen on incoming messages from host
 
@@ -232,6 +244,8 @@ class Application(QtGui.QGuiApplication):
                     "rise": "risen",
                     "inFocus": "inFocused",
                     "outFocus": "outFocused",
+                    "publish": "published",
+                    "validate": "validated"
                 }.get(payload["name"])
 
                 if not signal:
