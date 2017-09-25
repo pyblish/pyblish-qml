@@ -55,6 +55,12 @@ class Proxy(object):
         """Forcefully destroy the process"""
         self.popen.kill()
 
+    def publish(self):
+        self._dispatch("publish")
+
+    def validate(self):
+        self._dispatch("validate")
+
     def _dispatch(self, func, args=None):
         data = json.dumps(
             {

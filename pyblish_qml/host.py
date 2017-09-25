@@ -126,6 +126,31 @@ def show(parent=None, targets=[]):
 
     return server
 
+def publish():
+    # get existing GUI
+    if _state.get("currentServer"):
+        server = _state["currentServer"]
+        proxy = ipc.server.Proxy(server)
+
+        try:
+            proxy.publish()
+
+        except IOError:
+            # The running instance has already been closed.
+            _state.pop("currentServer")
+
+def validate():
+    # get existing GUI
+    if _state.get("currentServer"):
+        server = _state["currentServer"]
+        proxy = ipc.server.Proxy(server)
+
+        try:
+            proxy.validate()
+
+        except IOError:
+            # The running instance has already been closed.
+            _state.pop("currentServer")
 
 def install_callbacks():
     pyblish.api.register_callback("instanceToggled", _toggle_instance)
