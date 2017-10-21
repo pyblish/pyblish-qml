@@ -692,7 +692,13 @@ class Controller(QtCore.QObject):
                                                                   plugin)
                     plugin.compatibleInstances = list(i.id for i in instances)
                 else:
-                    plugin.compatibleInstances = [context.id]
+             
+
+                    # When filtering to families at least a single instance 
+                    # with that family must be available for ContextPlugin
+                    if ("*" in plugin.families or 
+                          pyblish.logic.instances_by_plugin(context, plugin)):
+                        plugin.compatibleInstances = [context.id]
 
             self.data["models"]["item"].reorder(context)
 
@@ -1046,4 +1052,14 @@ def iterator(plugins, context):
                 yield plugin, instance
 
         else:
+        
+     
+            # When filtering to families at least a single instance with
+            # that family must be active in the current publish
+            if "*" not in plugin.families:
+                if not any(instance.data.get("publish") is not False 
+                           for instance in instances):
+                    continue
+                    
+        
             yield plugin, None
