@@ -692,12 +692,12 @@ class Controller(QtCore.QObject):
                                                                   plugin)
                     plugin.compatibleInstances = list(i.id for i in instances)
                 else:
-             
 
                     # When filtering to families at least a single instance 
                     # with that family must be available for ContextPlugin
-                    if ("*" in plugin.families or 
-                          pyblish.logic.instances_by_plugin(context, plugin)):
+                    has_wildcard = "*" in plugin.families
+                    has_one = pyblish.logic.instances_by_plugin(context, plugin) != []
+                    if has_wildcard or has_one:
                         plugin.compatibleInstances = [context.id]
 
             self.data["models"]["item"].reorder(context)
@@ -1052,14 +1052,12 @@ def iterator(plugins, context):
                 yield plugin, instance
 
         else:
-        
-     
             # When filtering to families at least a single instance with
             # that family must be active in the current publish
-            if "*" not in plugin.families:
-                if not any(instance.data.get("publish") is not False 
-                           for instance in instances):
-                    continue
-                    
-        
+            no_wildcard = "*" not in plugin.families
+            no_active_instance = not any(inst.data.get("publish") for inst in instances)
+
+            if no_wildcard and no_active_instance:
+                continue
+
             yield plugin, None
