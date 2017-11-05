@@ -17,6 +17,7 @@ defaults = {
         "familiesConcatenated": "",
         "isToggled": True,
         "hasWarning": False,
+        "persistWarning": False,
         "hasError": False,
         "actionHasError": False,
         "actionPending": True,
@@ -453,7 +454,7 @@ class ItemModel(AbstractModel):
             item.isProcessing = False
             item.currentProgress = 1
             item.processed = True
-            item.hasWarning = any([
+            item.hasWarning = item.persistWarning or any([
                 record["levelno"] == logging.WARNING
                 for record in result["records"]
             ])
@@ -465,6 +466,12 @@ class ItemModel(AbstractModel):
             else:
                 item.succeeded = True
                 item.amountPassed += 1
+
+            if item.hasWarning and not item.hasError:
+                item.persistWarning = True
+            else:
+                item.hasWarning = False
+                item.persistWarning = False
 
             item.duration += result["duration"]
             item.finishedAt = time.time()
