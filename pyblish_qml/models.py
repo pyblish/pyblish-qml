@@ -466,7 +466,7 @@ class ItemModel(AbstractModel):
                 item.succeeded = True
                 item.amountPassed += 1
 
-            if not (item.hasWarning and not item.hasError):
+            if item.hasError:
                 item.hasWarning = False
 
             item.duration += result["duration"]
