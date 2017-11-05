@@ -453,7 +453,7 @@ class ItemModel(AbstractModel):
             item.isProcessing = False
             item.currentProgress = 1
             item.processed = True
-            item.hasWarning |= any([
+            item.hasWarning = item.hasWarning or any([
                 record["levelno"] == logging.WARNING
                 for record in result["records"]
             ])
