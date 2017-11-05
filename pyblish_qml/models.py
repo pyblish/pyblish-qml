@@ -17,7 +17,6 @@ defaults = {
         "familiesConcatenated": "",
         "isToggled": True,
         "hasWarning": False,
-        "persistWarning": False,
         "hasError": False,
         "actionHasError": False,
         "actionPending": True,
@@ -467,11 +466,8 @@ class ItemModel(AbstractModel):
                 item.succeeded = True
                 item.amountPassed += 1
 
-            if item.hasWarning and not item.hasError:
-                item.persistWarning = True
-            else:
+            if not (item.hasWarning and not item.hasError):
                 item.hasWarning = False
-                item.persistWarning = False
 
             item.duration += result["duration"]
             item.finishedAt = time.time()
