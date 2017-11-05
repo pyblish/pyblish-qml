@@ -466,9 +466,6 @@ class ItemModel(AbstractModel):
                 item.succeeded = True
                 item.amountPassed += 1
 
-            if item.hasError:
-                item.hasWarning = False
-
             item.duration += result["duration"]
             item.finishedAt = time.time()
 
