@@ -132,6 +132,7 @@ def show(parent=None, targets=[], modal=None):
 
     return server
 
+
 def publish():
     # get existing GUI
     if _state.get("currentServer"):
@@ -145,6 +146,7 @@ def publish():
             # The running instance has already been closed.
             _state.pop("currentServer")
 
+
 def validate():
     # get existing GUI
     if _state.get("currentServer"):
@@ -157,6 +159,7 @@ def validate():
         except IOError:
             # The running instance has already been closed.
             _state.pop("currentServer")
+
 
 def install_callbacks():
     pyblish.api.register_callback("instanceToggled", _toggle_instance)
@@ -256,8 +259,12 @@ def _connect_host_event(app):
 
     class HostEventFilter(QtWidgets.QWidget):
 
-        eventList = [QtCore.QEvent.Show, QtCore.QEvent.Hide,
-                QtCore.QEvent.WindowActivate, QtCore.QEvent.WindowDeactivate]
+        eventList = [
+            QtCore.QEvent.Show,
+            QtCore.QEvent.Hide,
+            QtCore.QEvent.WindowActivate,
+            QtCore.QEvent.WindowDeactivate
+        ]
 
         def getServer(self):
             server = None
