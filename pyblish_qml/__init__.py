@@ -5,9 +5,9 @@ from .version import (
 )
 
 
-def show(parent=None, targets=[]):
+def show(parent=None, targets=[], modal=None):
     from . import host
-    return host.show(parent, targets)
+    return host.show(parent, targets, modal)
 
 
 _state = {}

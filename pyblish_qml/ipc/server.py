@@ -91,10 +91,18 @@ class Server(object):
 
     """
 
-    def __init__(self, service, python=None, pyqt5=None, targets=[]):
+    def __init__(self,
+                 service,
+                 python=None,
+                 pyqt5=None,
+                 targets=[],
+                 modal=False):
         super(Server, self).__init__()
         self.service = service
         self.listening = False
+
+        # Store modal state
+        self.modal = modal
 
         # The server may be run within Maya or some other host,
         # in which case we refer to it as running embedded.
@@ -179,7 +187,6 @@ class Server(object):
         kwargs["args"].extend(targets)
 
         self.popen = subprocess.Popen(**kwargs)
-        self.listen()
 
     def stop(self):
         try:
@@ -251,9 +258,12 @@ class Server(object):
                         sys.stdout.write(line)
 
         if not self.listening:
-            thread = threading.Thread(target=_listen)
-            thread.daemon = True
-            thread.start()
+            if self.modal:
+                _listen()
+            else:
+                thread = threading.Thread(target=_listen)
+                thread.daemon = True
+                thread.start()
 
             self.listening = True
 
