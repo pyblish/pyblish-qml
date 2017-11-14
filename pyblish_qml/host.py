@@ -41,7 +41,7 @@ def current_server():
     return _state.get("currentServer")
 
 
-def install():
+def install(modal):
     """Perform first time install
 
     Attributes:
@@ -55,7 +55,7 @@ def install():
         uninstall()
 
     install_callbacks()
-    install_host()
+    install_host(modal)
 
     _state["installed"] = True
 
@@ -66,7 +66,7 @@ def uninstall():
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
-def show(parent=None, targets=[]):
+def show(parent=None, targets=[], modal=None):
     """Attempt to show GUI
 
     Requires install() to have been run first, and
@@ -74,9 +74,13 @@ def show(parent=None, targets=[]):
 
     """
 
+    # Get modal mode from environment
+    if modal is None:
+        modal = bool(os.environ.get("PYBLISH_QML_MODAL", False))
+
     # Automatically install if not already installed.
     if not _state.get("installed"):
-        install()
+        install(modal)
 
     # Show existing GUI
     if _state.get("currentServer"):
@@ -109,7 +113,7 @@ def show(parent=None, targets=[]):
 
     try:
         service = ipc.service.Service()
-        server = ipc.server.Server(service, targets=targets)
+        server = ipc.server.Server(service, targets=targets, modal=modal)
     except Exception:
         # If for some reason, the GUI fails to show.
         traceback.print_exc()
@@ -124,7 +128,10 @@ def show(parent=None, targets=[]):
     print("Success. QML server available as "
           "pyblish_qml.api.current_server()")
 
+    server.listen()
+
     return server
+
 
 def publish():
     # get existing GUI
@@ -139,6 +146,7 @@ def publish():
             # The running instance has already been closed.
             _state.pop("currentServer")
 
+
 def validate():
     # get existing GUI
     if _state.get("currentServer"):
@@ -151,6 +159,7 @@ def validate():
         except IOError:
             # The running instance has already been closed.
             _state.pop("currentServer")
+
 
 def install_callbacks():
     pyblish.api.register_callback("instanceToggled", _toggle_instance)
@@ -202,7 +211,7 @@ def register_pyqt5(path):
     _state["pyqt5"] = path
 
 
-def install_host():
+def install_host(modal):
     """Install required components into supported hosts
 
     An unsupported host will still run, but may encounter issues,
@@ -216,7 +225,7 @@ def install_host():
                     _install_hiero,
                     _install_nukestudio):
         try:
-            install()
+            install(modal)
         except ImportError:
             pass
         else:
@@ -240,7 +249,7 @@ def _on_application_quit():
 
 def _connect_host_event(app):
     """Connect some event from host to QML
-    
+
     Host will connect following event to QML:
     QEvent.Show                -> rise QML
     QEvent.Hide                -> hide QML
@@ -250,8 +259,12 @@ def _connect_host_event(app):
 
     class HostEventFilter(QtWidgets.QWidget):
 
-        eventList = [QtCore.QEvent.Show, QtCore.QEvent.Hide, 
-                QtCore.QEvent.WindowActivate, QtCore.QEvent.WindowDeactivate]
+        eventList = [
+            QtCore.QEvent.Show,
+            QtCore.QEvent.Hide,
+            QtCore.QEvent.WindowActivate,
+            QtCore.QEvent.WindowDeactivate
+        ]
 
         def getServer(self):
             server = None
@@ -316,7 +329,7 @@ def _connect_host_event(app):
         pass
 
 
-def _install_maya():
+def _install_maya(modal):
     """Helper function to Autodesk Maya support"""
     from maya import utils
 
@@ -325,7 +338,8 @@ def _install_maya():
             func, *args, **kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Maya\n")
-    register_dispatch_wrapper(threaded_wrapper)
+    if not modal:
+        register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
@@ -337,7 +351,7 @@ def _install_maya():
         settings.WindowTitle = "Pyblish (Maya)"
 
 
-def _install_houdini():
+def _install_houdini(modal):
     """Helper function to SideFx Houdini support"""
     import hdefereval
 
@@ -346,7 +360,8 @@ def _install_houdini():
             func, *args, **kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Houdini\n")
-    register_dispatch_wrapper(threaded_wrapper)
+    if not modal:
+        register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
@@ -358,7 +373,7 @@ def _install_houdini():
         settings.WindowTitle = "Pyblish (Houdini)"
 
 
-def _install_nuke():
+def _install_nuke(modal):
     """Helper function to The Foundry Nuke support"""
     import nuke
 
@@ -370,7 +385,8 @@ def _install_nuke():
             func, args, kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Nuke\n")
-    register_dispatch_wrapper(threaded_wrapper)
+    if not modal:
+        register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
@@ -382,7 +398,7 @@ def _install_nuke():
         settings.WindowTitle = "Pyblish (Nuke)"
 
 
-def _install_hiero():
+def _install_hiero(modal):
     """Helper function to The Foundry Hiero support"""
     import hiero
     import nuke
@@ -395,7 +411,8 @@ def _install_hiero():
             func, args, kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Hiero\n")
-    register_dispatch_wrapper(threaded_wrapper)
+    if not modal:
+        register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
@@ -407,7 +424,7 @@ def _install_hiero():
         settings.WindowTitle = "Pyblish (Hiero)"
 
 
-def _install_nukestudio():
+def _install_nukestudio(modal):
     """Helper function to The Foundry Hiero support"""
     import nuke
 
@@ -419,7 +436,8 @@ def _install_nukestudio():
             func, args, kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in NukeStudio\n")
-    register_dispatch_wrapper(threaded_wrapper)
+    if not modal:
+        register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
