@@ -222,6 +222,7 @@ def install_host(modal):
     for install in (_install_maya,
                     _install_houdini,
                     _install_nuke,
+                    _install_nukeassist,
                     _install_hiero,
                     _install_nukestudio):
         try:
@@ -377,7 +378,12 @@ def _install_nuke(modal):
     """Helper function to The Foundry Nuke support"""
     import nuke
 
-    if "--hiero" in nuke.rawArgs or "--studio" in nuke.rawArgs:
+    nuke_launch = not (
+        "--hiero" in nuke.rawArgs or
+        "--studio" in nuke.rawArgs or
+        "--nukeassist" in nuke.rawArgs
+    )
+    if not nuke_launch:
         raise ImportError
 
     def threaded_wrapper(func, *args, **kwargs):
@@ -396,6 +402,31 @@ def _install_nuke(modal):
         settings.ContextLabel = "Nuke"
     if settings.WindowTitle == settings.WindowTitleDefault:
         settings.WindowTitle = "Pyblish (Nuke)"
+
+
+def _install_nukeassist(modal):
+    """Helper function to The Foundry NukeAssist support"""
+    import nuke
+
+    if "--nukeassist" not in nuke.rawArgs:
+        raise ImportError
+
+    def threaded_wrapper(func, *args, **kwargs):
+        return nuke.executeInMainThreadWithResult(
+            func, args, kwargs)
+
+    sys.stdout.write("Setting up Pyblish QML in NukeAssist\n")
+    if not modal:
+        register_dispatch_wrapper(threaded_wrapper)
+
+    app = QtWidgets.QApplication.instance()
+    app.aboutToQuit.connect(_on_application_quit)
+    _connect_host_event(app)
+
+    if settings.ContextLabel == settings.ContextLabelDefault:
+        settings.ContextLabel = "NukeAssist"
+    if settings.WindowTitle == settings.WindowTitleDefault:
+        settings.WindowTitle = "Pyblish (NukeAssist)"
 
 
 def _install_hiero(modal):
