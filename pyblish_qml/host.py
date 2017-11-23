@@ -378,12 +378,12 @@ def _install_nuke(modal):
     """Helper function to The Foundry Nuke support"""
     import nuke
 
-    nuke_launch = not (
+    not_nuke_launch = (
         "--hiero" in nuke.rawArgs or
         "--studio" in nuke.rawArgs or
         "--nukeassist" in nuke.rawArgs
     )
-    if not nuke_launch:
+    if not_nuke_launch:
         raise ImportError
 
     def threaded_wrapper(func, *args, **kwargs):
