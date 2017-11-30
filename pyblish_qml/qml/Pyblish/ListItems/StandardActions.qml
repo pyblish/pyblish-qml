@@ -84,7 +84,9 @@ MouseArea {
             id: label
             anchors.verticalCenter: parent.verticalCenter
             elide: Text.ElideRight
-            color: status == "warning" ? Qt.lighter(Theme.dark.warningColor, 1.4) : Theme.dark.textColor
+            color: status == "warning" ? Qt.lighter(Theme.dark.warningColor, 1.4)
+                 : !checked ? Qt.darker(Theme.dark.textColor)
+                 : Theme.dark.textColor
 
             Behavior on color {
                 ColorAnimation {
