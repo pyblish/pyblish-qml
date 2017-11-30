@@ -288,4 +288,5 @@ def main(demo=False, aschild=False, targets=[]):
         proxy = ipc.server.Proxy(server)
         proxy.show(settings.to_dict())
 
+        server.listen()
         server.wait()
