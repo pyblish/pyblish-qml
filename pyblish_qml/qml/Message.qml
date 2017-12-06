@@ -29,16 +29,5 @@ Label {
                 easing.type: Easing.OutQuint
             }
         }
-
-        PauseAnimation {
-            duration: 1000
-        }
-
-        NumberAnimation {
-            target: message
-            property: "opacity"
-            to: 0
-            duration: 2000
-        }
     }
 }
