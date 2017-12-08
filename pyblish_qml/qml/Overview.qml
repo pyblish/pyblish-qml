@@ -88,7 +88,12 @@ Item {
                 section.delegate: SectionItem {
                     text: section
 
-                    onClicked: {
+                    onSectionClicked: {
+                        hideState = !hideState
+                        app.hideSection(hideState, text)
+                    }
+
+                    onLabelClicked: {
                         checkState = !checkState
                         app.toggleSection(checkState, text)
                     }
@@ -116,7 +121,12 @@ Item {
                 section.delegate: SectionItem {
                     text: section
 
-                    onClicked: {
+                    onSectionClicked: {
+                        hideState = !hideState
+                        app.hideSection(hideState, text)
+                    }
+
+                    onLabelClicked: {
                         checkState = !checkState
                         app.toggleSection(checkState, text)
                     }

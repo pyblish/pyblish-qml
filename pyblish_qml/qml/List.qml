@@ -23,8 +23,8 @@ ListView {
         text: object.label || object.name
         active: object.optional
         checked: object.isToggled
+        hidden: object.isHidden
 
-        height: 20
         width: parent.width
 
         status: {

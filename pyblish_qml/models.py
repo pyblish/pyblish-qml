@@ -16,6 +16,7 @@ defaults = {
         "families": list(),
         "familiesConcatenated": "",
         "isToggled": True,
+        "isHidden": False,
         "hasWarning": False,
         "hasError": False,
         "actionHasError": False,
