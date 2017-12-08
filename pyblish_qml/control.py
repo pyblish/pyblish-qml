@@ -748,6 +748,8 @@ class Controller(QtCore.QObject):
 
         def on_run(plugins):
             """Fetch instances in their current state, right after reset"""
+            self.hideSection(True, "Collect")
+
             util.async(self.host.context,
                        callback=lambda context: on_finished(plugins, context))
 

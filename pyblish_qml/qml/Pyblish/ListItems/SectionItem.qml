@@ -9,7 +9,7 @@ Item {
     width: parent.width
 
     property bool checkState: true
-    property bool hideState: false
+    property bool hideState: text === "Collect" ? true: false
     property string text
 
     signal labelClicked
