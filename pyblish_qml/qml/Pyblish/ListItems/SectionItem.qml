@@ -16,41 +16,63 @@ Item {
     signal sectionClicked
 
     Rectangle{
-        id: background
-        anchors.fill: parent
+        id: iconBackground
+        width: 20
+        anchors.bottom: parent.bottom
+        anchors.top: parent.top
         opacity: ma.containsPress ? 0.5 :
                  ma.containsMouse ? 0.25 : 0
     }
 
-    Icon {
-        id: icon
-        name: "chevron-down-white"
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.rightMargin: 5
+    Rectangle{
+        id: labelBackground
+        anchors.bottom: parent.bottom
+        anchors.top: parent.top
+        anchors.left: iconBackground.right
+        anchors.right: parent.right
+        opacity: label_ma.containsPress ? 0.5 :
+                 label_ma.containsMouse ? 0.25 : 0
+    }
+
+    AwesomeIcon {
+        name: "plus"
+        opacity: !root.hideState ? 0.5: 0
+
+        anchors.verticalCenter: iconBackground.verticalCenter
+        anchors.horizontalCenter: iconBackground.horizontalCenter
+
         size: 10
-        rotation: root.hideState ? -90: 0
+    }
+
+    AwesomeIcon {
+        name: "minus"
+        opacity: root.hideState ? 0.5: 0
+
+        anchors.verticalCenter: iconBackground.verticalCenter
+        anchors.horizontalCenter: iconBackground.horizontalCenter
+
+        size: 10
     }
 
     Label {
         id: label
         text: root.text
-        opacity: label_ma.containsPress ? 1 :
-                 label_ma.containsMouse ? 0.75 : 0.5
-        anchors.verticalCenter: icon.verticalCenter
-        anchors.left: icon.right
+        opacity: 0.5
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.left: iconBackground.right
         anchors.leftMargin: 5
     }
 
     MouseArea{
         id: ma
-        anchors.fill: parent
+        anchors.fill: iconBackground
         hoverEnabled: true
         onClicked: root.sectionClicked()
     }
 
     MouseArea{
         id: label_ma
-        anchors.fill: label
+        anchors.fill: labelBackground
         hoverEnabled: true
         onClicked: root.labelClicked()
     }
