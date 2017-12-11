@@ -554,6 +554,7 @@ class ItemModel(AbstractModel):
     def reset(self):
         self.instances[:] = []
         self.plugins[:] = []
+        self.sections[:] = []
         super(ItemModel, self).reset()
 
 
