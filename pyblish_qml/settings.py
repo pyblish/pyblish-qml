@@ -7,6 +7,7 @@ WindowTitle = WindowTitleDefault = "Pyblish"
 WindowSize = (430, 600)
 WindowPosition = (100, 100)
 HeartbeatInterval = 60
+HiddenSections = ["Collect"]
 
 # Implementation details below.
 
