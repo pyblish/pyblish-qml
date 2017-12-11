@@ -757,12 +757,13 @@ class Controller(QtCore.QObject):
 
             self.host.emit("reset", context=None)
 
-        def on_run(plugins):
-            """Fetch instances in their current state, right after reset"""
             # Hidden sections
             for section in self.data["models"]["item"].sections:
                 if section.name in self.settings["HiddenSections"]:
                     self.hideSection(True, section.name)
+
+        def on_run(plugins):
+            """Fetch instances in their current state, right after reset"""
 
             util.async(self.host.context,
                        callback=lambda context: on_finished(plugins, context))
