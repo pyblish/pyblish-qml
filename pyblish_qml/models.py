@@ -517,6 +517,24 @@ class ItemModel(AbstractModel):
                 if actions:
                     item.actionsIconVisible = True
 
+            # Update section item
+            class DummySection(object):
+                hasWarning = False
+                hasError = False
+
+            section_item = DummySection()
+            for section in self.sections:
+                if item.itemType == "plugin" and section.name == item.verb:
+                    section_item = section
+                if item.itemType == "instance" and section.name == item.family:
+                    section_item = section
+
+            section_item.hasWarning = (
+                section_item.hasWarning or item.hasWarning
+            )
+            section_item.hasError = section_item.hasError or item.hasError
+            section_item.isProcessing = False
+
     def has_failed_validator(self):
         for validator in self.plugins:
             if validator.order != 1:

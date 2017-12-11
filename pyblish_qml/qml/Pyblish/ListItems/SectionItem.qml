@@ -14,8 +14,63 @@ Item {
     property bool hideState: object.isHidden
     property string text
 
+    property var statuses: {
+        "default": "white",
+        "processing": Theme.primaryColor,
+        "success": Theme.dark.successColor,
+        "warning": Theme.dark.warningColor,
+        "error": Theme.dark.errorColor
+    }
+
+    property string status: {
+        if (object.isProcessing)
+            return "processing"
+        if (object.hasError)
+            return "error"
+        if (object.hasWarning)
+            return "warning"
+        if (object.succeeded)
+            return "success"
+        return "default"
+    }
+
     signal labelClicked
     signal sectionClicked
+
+    Rectangle {
+        anchors.fill: parent
+        color: Theme.alpha("#000", 0.4)
+        opacity: status == "processing" ? 1.0 : 0
+        radius: 3
+
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: "white"
+            border.width: 1
+            radius: 3
+            visible: status == "processing" ? 1 : 0
+
+            SequentialAnimation on opacity {
+                running: true
+
+                NumberAnimation {
+                    from: .4
+                    to: 1
+                    duration: 800
+                    easing.type: Easing.InOutElastic
+                }
+                NumberAnimation {
+                    from: 1
+                    to: .4
+                    duration: 800
+                    easing.type: Easing.InOutElastic
+                }
+
+                loops: Animation.Infinite
+            }
+        }
+    }
 
     Rectangle {
         color: "#333"
@@ -74,6 +129,7 @@ Item {
     Label {
         id: label
         text: root.text
+        color: statuses[status]
         opacity: 0.5
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: iconBackground.right

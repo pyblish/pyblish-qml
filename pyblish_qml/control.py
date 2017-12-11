@@ -631,6 +631,12 @@ class Controller(QtCore.QObject):
 
         plugin_item = self.data["models"]["item"].plugins[plugin.id]
 
+        for section in self.data["models"]["item"].sections:
+            if section.name == plugin_item.verb:
+                section.isProcessing = True
+            if section.name == instance_item.family:
+                section.isProcessing = True
+
         instance_item.isProcessing = True
         plugin_item.isProcessing = True
 
