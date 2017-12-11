@@ -21,6 +21,14 @@ Item {
         border.color: "#222"
         anchors.fill: parent
         anchors.margins: 2
+
+        Rectangle {
+            color: "transparent"
+            border.width: 1
+            border.color: "#383838"
+            anchors.fill: parent
+            anchors.margins: 1
+        }
     }
 
     Rectangle {
