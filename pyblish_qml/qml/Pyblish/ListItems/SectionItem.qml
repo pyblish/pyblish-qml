@@ -5,7 +5,7 @@ import Pyblish 0.1
 Item {
     id: root
 
-    height: 25
+    height: 22
     width: parent.width
 
     property var object: {"isHidden": false}
@@ -15,7 +15,7 @@ Item {
     property string text
 
     property var statuses: {
-        "default": "white",
+        "default": "gray",
         "processing": Theme.primaryColor,
         "success": Theme.dark.successColor,
         "warning": Theme.dark.warningColor,
@@ -75,9 +75,10 @@ Item {
     Rectangle {
         color: "#333"
         border.width: 1
-        border.color: "#222"
+        border.color: statuses[status]
         anchors.fill: parent
         anchors.margins: 2
+        opacity: 0.5
 
         Rectangle {
             color: "transparent"
@@ -92,38 +93,37 @@ Item {
         id: iconBackground
         anchors.fill: parent
         anchors.margins: 3
-        anchors.rightMargin: parent.width - height
-        opacity: ma.containsPress ? 0.15 :
-                 ma.containsMouse ? 0.10 : 0
+        anchors.rightMargin: parent.width - height - 2
+        color: statuses[status]
+        opacity: ma.containsPress ? 0.9 :
+                 ma.containsMouse ? 0.7 : 0.4
     }
 
     Rectangle {
         id: labelBackground
         anchors.fill: parent
         anchors.margins: 3
-        anchors.leftMargin: height
+        anchors.leftMargin: height + 2
         opacity: labelMa.containsPress ? 0.15 :
                  labelMa.containsMouse ? 0.10 : 0
     }
 
     AwesomeIcon {
         name: "minus"
-        opacity: !root.hideState ? 0.5: 0
-        color: statuses[status]
+        opacity: !root.hideState ? 0.7: 0
         anchors.verticalCenter: iconBackground.verticalCenter
         anchors.horizontalCenter: iconBackground.horizontalCenter
 
-        size: 10
+        size: 9
     }
 
     AwesomeIcon {
         name: "plus"
-        opacity: root.hideState ? 0.5: 0
-        color: statuses[status]
+        opacity: root.hideState ? 0.7: 0
         anchors.verticalCenter: iconBackground.verticalCenter
         anchors.horizontalCenter: iconBackground.horizontalCenter
 
-        size: 10
+        size: 9
     }
 
     Label {
