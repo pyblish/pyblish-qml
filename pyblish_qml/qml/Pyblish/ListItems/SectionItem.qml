@@ -5,37 +5,52 @@ import Pyblish 0.1
 Item {
     id: root
 
-    height: 20
+    height: 25
     width: parent.width
 
     property bool checkState: true
-    property bool hideState: text === "Collect" ? true: false
+    property bool hideState: text == "Collect"
     property string text
 
     signal labelClicked
     signal sectionClicked
 
-    Rectangle{
-        id: iconBackground
-        width: 20
-        anchors.bottom: parent.bottom
-        anchors.top: parent.top
-        opacity: ma.containsPress ? 0.5 :
-                 ma.containsMouse ? 0.25 : 0
+    Rectangle {
+        color: "#333"
+        border.width: 1
+        border.color: "#222"
+        anchors.fill: parent
+        anchors.margins: 2
+
+        Rectangle {
+            color: "transparent"
+            border.width: 1
+            border.color: "#383838"
+            anchors.fill: parent
+            anchors.margins: 1
+        }
     }
 
-    Rectangle{
+    Rectangle {
+        id: iconBackground
+        anchors.fill: parent
+        anchors.margins: 3
+        anchors.rightMargin: parent.width - height
+        opacity: ma.containsPress ? 0.15 :
+                 ma.containsMouse ? 0.10 : 0
+    }
+
+    Rectangle {
         id: labelBackground
-        anchors.bottom: parent.bottom
-        anchors.top: parent.top
-        anchors.left: iconBackground.right
-        anchors.right: parent.right
-        opacity: label_ma.containsPress ? 0.5 :
-                 label_ma.containsMouse ? 0.25 : 0
+        anchors.fill: parent
+        anchors.margins: 3
+        anchors.leftMargin: height
+        opacity: labelMa.containsPress ? 0.15 :
+                 labelMa.containsMouse ? 0.10 : 0
     }
 
     AwesomeIcon {
-        name: "plus"
+        name: "minus"
         opacity: !root.hideState ? 0.5: 0
 
         anchors.verticalCenter: iconBackground.verticalCenter
@@ -45,7 +60,7 @@ Item {
     }
 
     AwesomeIcon {
-        name: "minus"
+        name: "plus"
         opacity: root.hideState ? 0.5: 0
 
         anchors.verticalCenter: iconBackground.verticalCenter
@@ -63,15 +78,15 @@ Item {
         anchors.leftMargin: 5
     }
 
-    MouseArea{
+    MouseArea {
         id: ma
         anchors.fill: iconBackground
         hoverEnabled: true
         onClicked: root.sectionClicked()
     }
 
-    MouseArea{
-        id: label_ma
+    MouseArea {
+        id: labelMa
         anchors.fill: labelBackground
         hoverEnabled: true
         onClicked: root.labelClicked()
