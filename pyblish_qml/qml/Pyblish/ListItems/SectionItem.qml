@@ -109,7 +109,7 @@ Item {
     AwesomeIcon {
         name: "minus"
         opacity: !root.hideState ? 0.5: 0
-
+        color: statuses[status]
         anchors.verticalCenter: iconBackground.verticalCenter
         anchors.horizontalCenter: iconBackground.horizontalCenter
 
@@ -119,7 +119,7 @@ Item {
     AwesomeIcon {
         name: "plus"
         opacity: root.hideState ? 0.5: 0
-
+        color: statuses[status]
         anchors.verticalCenter: iconBackground.verticalCenter
         anchors.horizontalCenter: iconBackground.horizontalCenter
 
@@ -129,7 +129,6 @@ Item {
     Label {
         id: label
         text: root.text
-        color: statuses[status]
         opacity: 0.5
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: iconBackground.right
