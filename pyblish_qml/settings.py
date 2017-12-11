@@ -36,4 +36,5 @@ def to_dict():
         "WindowSize",
         "WindowPosition",
         "HeartbeatInterval",
+        "HiddenSections"
     })

@@ -8,7 +8,7 @@ from PyQt5 import QtCore
 import pyblish.logic
 
 # Local libraries
-from . import util, models, version, settings
+from . import util, models, version
 
 qtproperty = util.pyqtConstantProperty
 
@@ -63,6 +63,8 @@ class Controller(QtCore.QObject):
         self.host = host
 
         self.targets = targets
+
+        self.settings = {}
 
         self.data = {
             "models": {
@@ -759,7 +761,7 @@ class Controller(QtCore.QObject):
             """Fetch instances in their current state, right after reset"""
             # Hidden sections
             for section in self.data["models"]["item"].sections:
-                if section.name in settings.HiddenSections:
+                if section.name in self.settings["HiddenSections"]:
                     self.hideSection(True, section.name)
 
             util.async(self.host.context,
