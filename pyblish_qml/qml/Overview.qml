@@ -87,10 +87,10 @@ Item {
                 section.property: "object.family"
                 section.delegate: SectionItem {
                     text: section
+                    object: app.pluginProxy.itemByName(section)
 
                     onSectionClicked: {
-                        hideState = !hideState
-                        app.hideSection(hideState, text)
+                        app.hideSection(!hideState, text)
                     }
 
                     onLabelClicked: {
@@ -120,10 +120,10 @@ Item {
                 section.property: "object.verb"
                 section.delegate: SectionItem {
                     text: section
+                    object: app.pluginProxy.itemByName(section)
 
                     onSectionClicked: {
-                        hideState = !hideState
-                        app.hideSection(hideState, text)
+                        app.hideSection(!hideState, text)
                     }
 
                     onLabelClicked: {

@@ -8,8 +8,10 @@ Item {
     height: 25
     width: parent.width
 
+    property var object: {"isHidden": false}
+
     property bool checkState: true
-    property bool hideState: text == "Collect"
+    property bool hideState: object.isHidden
     property string text
 
     signal labelClicked

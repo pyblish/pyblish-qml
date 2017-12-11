@@ -272,6 +272,7 @@ class ItemModel(AbstractModel):
         super(ItemModel, self).__init__(*args, **kwargs)
         self.plugins = util.ItemList(key="id")
         self.instances = util.ItemList(key="id")
+        self.sections = util.ItemList(key="id")
 
     def reorder(self, context):
         # Reorder instances in support of "cooperative collection"
@@ -357,6 +358,8 @@ class ItemModel(AbstractModel):
             if action["on"] == "all":
                 item["actionsIconVisible"] = True
 
+        self.add_section(item["verb"])
+
         item = self.add_item(item)
         self.plugins.append(item)
 
@@ -384,6 +387,8 @@ class ItemModel(AbstractModel):
         item["isToggled"] = instance["data"].get("publish", True)
         item["hasCompatible"] = True
 
+        self.add_section(item["family"])
+
         # Visualised in Perspective
         families = [instance["data"]["family"]]
         families.extend(instance["data"].get("families", []))
@@ -391,6 +396,30 @@ class ItemModel(AbstractModel):
 
         item = self.add_item(item)
         self.instances.append(item)
+
+    def add_section(self, name):
+        """Append `section` to model
+
+        Arguments:
+            name (str): Name of section
+        """
+
+        assert isinstance(name, str)
+
+        # Skip existing sections
+        for section in self.sections:
+            if section.name == name:
+                return section
+
+        item = defaults["common"].copy()
+        item["name"] = name
+
+        item["itemType"] = "section"
+
+        item = self.add_item(item)
+        self.sections.append(item)
+
+        return item
 
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_context(self, context, label=None):
@@ -676,6 +705,13 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         index = self.mapToSource(index)
         model = self.sourceModel()
         return model.items[index.row()]
+
+    @QtCore.pyqtSlot(str, result=QtCore.QObject)
+    def itemByName(self, name):
+        model = self.sourceModel()
+        for item in model.items:
+            if name == item.name:
+                return item
 
     @QtCore.pyqtSlot(str, str)
     def add_exclusion(self, role, value):

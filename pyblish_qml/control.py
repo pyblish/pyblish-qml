@@ -483,10 +483,13 @@ class Controller(QtCore.QObject):
         model = self.data["models"]["item"]
 
         for item in model.items:
-            if item.itemType == 'instance' and sectionLabel == item.family:
+            if item.itemType == "instance" and sectionLabel == item.family:
                 self.__hide_item(model, model.items.index(item))
 
-            if item.itemType == 'plugin' and item.verb == sectionLabel:
+            if item.itemType == "plugin" and item.verb == sectionLabel:
+                self.__hide_item(model, model.items.index(item))
+
+            if item.itemType == "section" and item.name == sectionLabel:
                 self.__hide_item(model, model.items.index(item))
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
