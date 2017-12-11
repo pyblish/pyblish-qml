@@ -87,7 +87,7 @@ Item {
                 section.property: "object.family"
                 section.delegate: SectionItem {
                     text: section
-                    object: app.pluginProxy.itemByName(section)
+                    object: app.instanceProxy.itemByName(section)
 
                     onSectionClicked: {
                         app.hideSection(!hideState, text)
