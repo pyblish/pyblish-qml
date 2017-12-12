@@ -17,7 +17,7 @@ Item {
     property var statuses: {
         "default": "gray",
         "processing": Theme.primaryColor,
-        "success": Theme.dark.successColor,
+        "success": "gray",
         "warning": Theme.dark.warningColor,
         "error": Theme.dark.errorColor
     }
