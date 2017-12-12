@@ -521,6 +521,7 @@ class ItemModel(AbstractModel):
             class DummySection(object):
                 hasWarning = False
                 hasError = False
+                succeeded = False
 
             section_item = DummySection()
             for section in self.sections:
@@ -533,6 +534,7 @@ class ItemModel(AbstractModel):
                 section_item.hasWarning or item.hasWarning
             )
             section_item.hasError = section_item.hasError or item.hasError
+            section_item.succeeded = section_item.succeeded or item.succeeded
             section_item.isProcessing = False
 
     def has_failed_validator(self):
