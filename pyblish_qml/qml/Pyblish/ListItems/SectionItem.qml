@@ -17,12 +17,14 @@ Item {
     property var statuses: {
         "default": "gray",
         "processing": Theme.primaryColor,
-        "success": "gray",
+        "success": Theme.dark.successColor,
         "warning": Theme.dark.warningColor,
         "error": Theme.dark.errorColor
     }
 
     property string status: {
+        if (!hideState)
+            return "default"
         if (object.isProcessing)
             return "processing"
         if (object.hasError)
