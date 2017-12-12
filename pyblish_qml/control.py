@@ -486,13 +486,13 @@ class Controller(QtCore.QObject):
 
         for item in model.items:
             if item.itemType == "instance" and sectionLabel == item.family:
-                self.__hide_item(model, model.items.index(item))
+                self.__hide_item(model, model.items.index(item), hideState)
 
             if item.itemType == "plugin" and item.verb == sectionLabel:
-                self.__hide_item(model, model.items.index(item))
+                self.__hide_item(model, model.items.index(item), hideState)
 
             if item.itemType == "section" and item.name == sectionLabel:
-                self.__hide_item(model, model.items.index(item))
+                self.__hide_item(model, model.items.index(item), hideState)
 
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def pluginData(self, index):
@@ -572,9 +572,9 @@ class Controller(QtCore.QObject):
 
         return data
 
-    def __hide_item(self, model, index):
+    def __hide_item(self, model, index, hideState):
         item = model.items[index]
-        item.isHidden = not item.isHidden
+        item.isHidden = hideState
 
     def __toggle_item(self, model, index):
         if "ready" not in self.states:
