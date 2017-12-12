@@ -154,7 +154,23 @@ class Validator3(pyblish.api.Validator):
     families = ["B"]
 
     def process_instance(self, instance):
-        pass
+        if instance.data["name"].startswith("S"):
+            self.log.warning("""Pop warning..,
+family "B" are not so friendly with instance name starts with "S"
+
+            """)
+
+
+class ValidateOnlyBadNews(pyblish.api.Validator):
+    """A validator that pop warning or error"""
+    optional = True
+    families = ["failure"]
+
+    def process_instance(self, instance):
+        if "Warning" in instance.name:
+            self.log.warning("%s Pop warning." % instance.name)
+        else:
+            assert False, "%s is invalid." % instance.name
 
 
 class ValidateFailureMock(pyblish.api.Validator):
@@ -627,6 +643,13 @@ instances = [
         }
     },
     {
+        "name": "Warning 3",
+        "data": {
+            "family": "failure",
+            "fail": False
+        }
+    },
+    {
         "name": "More Families",
         "data": {
             "families": ["stark", "lannister"]
@@ -642,6 +665,7 @@ plugins = [
     SelectInstances2,
     SelectDiInstances,
     SelectInstancesFailure,
+    ValidateOnlyBadNews,
     ValidateFailureMock,
     ValidateNamespace,
     ValidateIsIncompatible,
