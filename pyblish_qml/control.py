@@ -8,7 +8,7 @@ from PyQt5 import QtCore
 import pyblish.logic
 
 # Local libraries
-from . import util, models, version
+from . import util, models, version, settings
 
 qtproperty = util.pyqtConstantProperty
 
@@ -63,8 +63,6 @@ class Controller(QtCore.QObject):
         self.host = host
 
         self.targets = targets
-
-        self.settings = {}
 
         self.data = {
             "models": {
@@ -759,7 +757,7 @@ class Controller(QtCore.QObject):
 
             # Hidden sections
             for section in self.data["models"]["item"].sections:
-                if section.name in self.settings["HiddenSections"]:
+                if section.name in settings.HiddenSections:
                     self.hideSection(True, section.name)
 
         def on_run(plugins):

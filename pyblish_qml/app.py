@@ -154,8 +154,6 @@ class Application(QtGui.QGuiApplication):
         for key, value in settings.to_dict().items():
             message.append("  %s = %s" % (key, value))
 
-        self.controller.settings = settings.to_dict()
-
         print("\n".join(message))
 
         window.requestActivate()
