@@ -5,7 +5,7 @@ import Pyblish 0.1
 Item {
     id: root
 
-    height: 22
+    height: 25
     width: parent.width
 
     property var object: {"isHidden": false}
@@ -15,7 +15,7 @@ Item {
     property string text
 
     property var statuses: {
-        "default": "gray",
+        "default": "#222",
         "processing": Theme.primaryColor,
         "success": Theme.dark.successColor,
         "warning": Theme.dark.warningColor,
