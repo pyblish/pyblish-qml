@@ -101,6 +101,7 @@ Item {
 
     AwesomeIcon {
         name: "plus"
+        color: statuses[status]
         opacity: root.hideState ? 0.7: 0
         anchors.verticalCenter: iconBackground.verticalCenter
         anchors.horizontalCenter: iconBackground.horizontalCenter
@@ -115,16 +116,6 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: iconBackground.right
         anchors.leftMargin: 5
-    }
-
-    Rectangle {
-        id: indicator
-        anchors.fill: parent
-        anchors.margins: 1
-        color: "transparent"
-        border.color: statuses[status]
-        border.width: 1
-        visible: hideState
     }
 
     MouseArea {
