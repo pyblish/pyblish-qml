@@ -5,7 +5,7 @@ import Pyblish 0.1
 Item {
     id: root
 
-    height: 25
+    height: 20
     width: parent.width
 
     property var object: {"isHidden": false}
@@ -23,8 +23,6 @@ Item {
     }
 
     property string status: {
-        if (!hideState)
-            return "default"
         if (object.isProcessing)
             return "processing"
         if (object.hasError)
@@ -75,42 +73,24 @@ Item {
     }
 
     Rectangle {
-        color: "#333"
-        border.width: 1
-        border.color: statuses[status]
-        anchors.fill: parent
-        anchors.margins: 2
-        opacity: 0.5
-
-        Rectangle {
-            color: "transparent"
-            border.width: 1
-            border.color: "#383838"
-            anchors.fill: parent
-            anchors.margins: 1
-        }
-    }
-
-    Rectangle {
         id: iconBackground
         anchors.fill: parent
-        anchors.margins: 3
-        anchors.rightMargin: parent.width - height - 2
-        color: statuses[status]
-        opacity: ma.containsPress ? 0.9 :
-                 ma.containsMouse ? 0.7 : 0.4
+        anchors.rightMargin: parent.width - height
+        opacity: iconMa.containsPress ? 0.25 :
+                 iconMa.containsMouse ? 0.15 : 0
     }
 
     Rectangle {
         id: labelBackground
         anchors.fill: parent
-        anchors.margins: 3
-        anchors.leftMargin: height + 2
-        opacity: labelMa.containsPress ? 0.15 :
-                 labelMa.containsMouse ? 0.10 : 0
+        anchors.leftMargin: height
+        opacity: labelMa.containsPress ? 0.25 :
+                 labelMa.containsMouse ? 0.15 : 0
     }
 
     AwesomeIcon {
+        id: minusIcon
+
         name: "minus"
         opacity: !root.hideState ? 0.7: 0
         anchors.verticalCenter: iconBackground.verticalCenter
@@ -137,8 +117,18 @@ Item {
         anchors.leftMargin: 5
     }
 
+    Rectangle {
+        id: indicator
+        anchors.fill: parent
+        anchors.margins: 1
+        color: "transparent"
+        border.color: statuses[status]
+        border.width: 1
+        visible: hideState
+    }
+
     MouseArea {
-        id: ma
+        id: iconMa
         anchors.fill: iconBackground
         hoverEnabled: true
         onClicked: root.sectionClicked()
