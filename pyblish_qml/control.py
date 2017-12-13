@@ -8,7 +8,7 @@ from PyQt5 import QtCore
 import pyblish.logic
 
 # Local libraries
-from . import util, models, version
+from . import util, models, version, settings
 
 qtproperty = util.pyqtConstantProperty
 
@@ -478,6 +478,20 @@ class Controller(QtCore.QObject):
                             model,
                             model.items.index(item))
 
+    @QtCore.pyqtSlot(bool, str)
+    def hideSection(self, hideState, sectionLabel):
+        model = self.data["models"]["item"]
+
+        for item in model.items:
+            if item.itemType == "instance" and sectionLabel == item.family:
+                self.__hide_item(model, model.items.index(item), hideState)
+
+            if item.itemType == "plugin" and item.verb == sectionLabel:
+                self.__hide_item(model, model.items.index(item), hideState)
+
+            if item.itemType == "section" and item.name == sectionLabel:
+                self.__hide_item(model, model.items.index(item), hideState)
+
     @QtCore.pyqtSlot(int, result=QtCore.QVariant)
     def pluginData(self, index):
         models = self.data["models"]
@@ -556,6 +570,10 @@ class Controller(QtCore.QObject):
 
         return data
 
+    def __hide_item(self, model, index, hideState):
+        item = model.items[index]
+        item.isHidden = hideState
+
     def __toggle_item(self, model, index):
         if "ready" not in self.states:
             return self.error.emit("Not ready")
@@ -612,6 +630,12 @@ class Controller(QtCore.QObject):
             instance_item = self.data["models"]["item"].instances[instance.id]
 
         plugin_item = self.data["models"]["item"].plugins[plugin.id]
+
+        for section in self.data["models"]["item"].sections:
+            if section.name == plugin_item.verb:
+                section.isProcessing = True
+            if section.name == instance_item.family:
+                section.isProcessing = True
 
         instance_item.isProcessing = True
         plugin_item.isProcessing = True
@@ -731,8 +755,14 @@ class Controller(QtCore.QObject):
 
             self.host.emit("reset", context=None)
 
+            # Hidden sections
+            for section in self.data["models"]["item"].sections:
+                if section.name in settings.HiddenSections:
+                    self.hideSection(True, section.name)
+
         def on_run(plugins):
             """Fetch instances in their current state, right after reset"""
+
             util.async(self.host.context,
                        callback=lambda context: on_finished(plugins, context))
 

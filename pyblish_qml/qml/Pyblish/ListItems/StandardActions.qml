@@ -11,6 +11,7 @@ MouseArea {
 
     property bool active: false
     property bool checked: false
+    property bool hidden: false
     property alias status: indicator.status
 
     property alias text: label.text
@@ -22,6 +23,9 @@ MouseArea {
     acceptedButtons: Qt.RightButton
 
     onClicked: rightClicked(mouse)
+
+    height: !listItem.hidden ? 20: 0
+    visible: !listItem.hidden
 
     Rectangle {
         anchors.fill: parent

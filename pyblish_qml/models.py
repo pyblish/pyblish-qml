@@ -16,6 +16,7 @@ defaults = {
         "families": list(),
         "familiesConcatenated": "",
         "isToggled": True,
+        "isHidden": False,
         "hasWarning": False,
         "hasError": False,
         "actionHasError": False,
@@ -271,6 +272,7 @@ class ItemModel(AbstractModel):
         super(ItemModel, self).__init__(*args, **kwargs)
         self.plugins = util.ItemList(key="id")
         self.instances = util.ItemList(key="id")
+        self.sections = util.ItemList(key="id")
 
     def reorder(self, context):
         # Reorder instances in support of "cooperative collection"
@@ -356,6 +358,8 @@ class ItemModel(AbstractModel):
             if action["on"] == "all":
                 item["actionsIconVisible"] = True
 
+        self.add_section(item["verb"])
+
         item = self.add_item(item)
         self.plugins.append(item)
 
@@ -383,6 +387,8 @@ class ItemModel(AbstractModel):
         item["isToggled"] = instance["data"].get("publish", True)
         item["hasCompatible"] = True
 
+        self.add_section(item["family"])
+
         # Visualised in Perspective
         families = [instance["data"]["family"]]
         families.extend(instance["data"].get("families", []))
@@ -390,6 +396,30 @@ class ItemModel(AbstractModel):
 
         item = self.add_item(item)
         self.instances.append(item)
+
+    def add_section(self, name):
+        """Append `section` to model
+
+        Arguments:
+            name (str): Name of section
+        """
+
+        assert isinstance(name, str)
+
+        # Skip existing sections
+        for section in self.sections:
+            if section.name == name:
+                return section
+
+        item = defaults["common"].copy()
+        item["name"] = name
+
+        item["itemType"] = "section"
+
+        item = self.add_item(item)
+        self.sections.append(item)
+
+        return item
 
     @QtCore.pyqtSlot(QtCore.QVariant)
     def add_context(self, context, label=None):
@@ -487,6 +517,26 @@ class ItemModel(AbstractModel):
                 if actions:
                     item.actionsIconVisible = True
 
+            # Update section item
+            class DummySection(object):
+                hasWarning = False
+                hasError = False
+                succeeded = False
+
+            section_item = DummySection()
+            for section in self.sections:
+                if item.itemType == "plugin" and section.name == item.verb:
+                    section_item = section
+                if item.itemType == "instance" and section.name == item.family:
+                    section_item = section
+
+            section_item.hasWarning = (
+                section_item.hasWarning or item.hasWarning
+            )
+            section_item.hasError = section_item.hasError or item.hasError
+            section_item.succeeded = section_item.succeeded or item.succeeded
+            section_item.isProcessing = False
+
     def has_failed_validator(self):
         for validator in self.plugins:
             if validator.order != 1:
@@ -524,6 +574,7 @@ class ItemModel(AbstractModel):
     def reset(self):
         self.instances[:] = []
         self.plugins[:] = []
+        self.sections[:] = []
         super(ItemModel, self).reset()
 
 
@@ -675,6 +726,13 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
         index = self.mapToSource(index)
         model = self.sourceModel()
         return model.items[index.row()]
+
+    @QtCore.pyqtSlot(str, result=QtCore.QObject)
+    def itemByName(self, name):
+        model = self.sourceModel()
+        for item in model.items:
+            if name == item.name:
+                return item
 
     @QtCore.pyqtSlot(str, str)
     def add_exclusion(self, role, value):

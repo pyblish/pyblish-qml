@@ -333,6 +333,7 @@ settings.WindowTitle = "My Title"
 settings.WindowSize = (430, 600)
 settings.WindowPosition = (100, 100)
 settings.ContextLabel = "The World"
+settings.HiddenSections = ["Collect"]
 ```
 
 Each setting is applied when the GUI is shown, which means you can change them any time before then, including between subsequent runs.

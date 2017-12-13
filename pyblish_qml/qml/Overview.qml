@@ -87,8 +87,13 @@ Item {
                 section.property: "object.family"
                 section.delegate: SectionItem {
                     text: section
+                    object: app.instanceProxy.itemByName(section)
 
-                    onClicked: {
+                    onSectionClicked: {
+                        app.hideSection(!hideState, text)
+                    }
+
+                    onLabelClicked: {
                         checkState = !checkState
                         app.toggleSection(checkState, text)
                     }
@@ -115,8 +120,13 @@ Item {
                 section.property: "object.verb"
                 section.delegate: SectionItem {
                     text: section
+                    object: app.pluginProxy.itemByName(section)
 
-                    onClicked: {
+                    onSectionClicked: {
+                        app.hideSection(!hideState, text)
+                    }
+
+                    onLabelClicked: {
                         checkState = !checkState
                         app.toggleSection(checkState, text)
                     }
