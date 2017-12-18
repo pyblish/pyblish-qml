@@ -58,7 +58,15 @@ MouseArea {
 
         anchors.centerIn: parent
 
-        color: "transparent"
+        color: {
+          if (status == "success")
+            return Qt.darker(check.color, 1.5)
+          if (status == "warning")
+            return Qt.darker(check.color, 1.5)
+          if (status == "error")
+            return Qt.darker(check.color, 1.5)
+          return "transparent"
+        }
         border.color: check.color
         border.width: 1
     }

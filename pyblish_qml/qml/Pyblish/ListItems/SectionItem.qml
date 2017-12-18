@@ -15,7 +15,7 @@ Item {
     property string text
 
     property var statuses: {
-        "default": "#222",
+        "default": "#ddd",
         "processing": Theme.primaryColor,
         "success": Theme.dark.successColor,
         "warning": Theme.dark.warningColor,
