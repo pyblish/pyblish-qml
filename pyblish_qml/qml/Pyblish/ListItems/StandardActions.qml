@@ -74,18 +74,6 @@ MouseArea {
         CheckBox {
             id: indicator
 
-            icon: {
-                if (status == "processing")
-                    return ""
-                if (status == "error")
-                    return "exclamation"
-                if (status == "warning")
-                    return "check"
-                if (status == "success")
-                    return "check"
-                return "check"
-            }
-
             active: listItem.active
             checked: listItem.checked
 

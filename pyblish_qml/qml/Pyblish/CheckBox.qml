@@ -10,7 +10,6 @@ MouseArea {
 
     property bool active: true
     property bool checked: false
-    property alias icon: check.name
 
     property var statuses: {
         "default": "white",
