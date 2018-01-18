@@ -66,6 +66,17 @@ def uninstall():
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
+def _is_headless():
+    app = QtWidgets.QApplication.instance()
+    return (
+        # Maya 2017+ in standalone
+        not hasattr(app, "activeWindow") or
+
+        # Maya 2016-
+        not app.activeWindow()
+    )
+
+
 def show(parent=None, targets=[], modal=None):
     """Attempt to show GUI
 
@@ -95,9 +106,7 @@ def show(parent=None, targets=[], modal=None):
             # The running instance has already been closed.
             _state.pop("currentServer")
 
-    app = QtWidgets.QApplication.instance()
-
-    if isinstance(app, QtWidgets.QApplication):
+    if not _is_headless():
         # mayapy would have a QtGui.QGuiApplication
         splash = Splash()
         splash.show()
@@ -351,7 +360,7 @@ def _install_maya(modal):
 
     app = QtWidgets.QApplication.instance()
 
-    if isinstance(app, QtWidgets.QApplication):
+    if not _is_headless():
         # mayapy would have a QtGui.QGuiApplication
         app.aboutToQuit.connect(_on_application_quit)
         _connect_host_event(app)
