@@ -95,21 +95,28 @@ def show(parent=None, targets=[], modal=None):
             # The running instance has already been closed.
             _state.pop("currentServer")
 
-    splash = Splash()
-    splash.show()
+    app = QtWidgets.QApplication.instance()
 
-    def on_shown():
-        try:
-            splash.close()
+    if isinstance(app, QtWidgets.QApplication):
+        # mayapy would have a QtGui.QGuiApplication
+        splash = Splash()
+        splash.show()
 
-        except RuntimeError:
-            # Splash already closed
+        def on_shown():
+            try:
+                splash.close()
+
+            except RuntimeError:
+                # Splash already closed
+                pass
+
+            pyblish.api.deregister_callback(*callback)
+
+        callback = "pyblishQmlShown", on_shown
+        pyblish.api.register_callback(*callback)
+    else:
+        def on_shown():
             pass
-
-        pyblish.api.deregister_callback(*callback)
-
-    callback = "pyblishQmlShown", on_shown
-    pyblish.api.register_callback(*callback)
 
     try:
         service = ipc.service.Service()
@@ -343,8 +350,11 @@ def _install_maya(modal):
         register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
-    app.aboutToQuit.connect(_on_application_quit)
-    _connect_host_event(app)
+
+    if isinstance(app, QtWidgets.QApplication):
+        # mayapy would have a QtGui.QGuiApplication
+        app.aboutToQuit.connect(_on_application_quit)
+        _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Maya"
