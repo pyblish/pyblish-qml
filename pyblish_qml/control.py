@@ -305,7 +305,7 @@ class Controller(QtCore.QObject):
             "ordersWithError": set()
         }
 
-        for plug, instance in iterator(plugins, context):
+        for plug, instance in pyblish.logic.Iterator(plugins, context):
 
             state["nextOrder"] = plug.order
 
@@ -693,7 +693,7 @@ class Controller(QtCore.QObject):
                     plugin.compatibleInstances = list(i.id for i in instances)
                 else:
 
-                    # When filtering to families at least a single instance 
+                    # When filtering to families at least a single instance
                     # with that family must be available for ContextPlugin
                     has_wildcard = "*" in plugin.families
                     has_one = pyblish.logic.instances_by_plugin(context, plugin) != []
@@ -1029,35 +1029,3 @@ class Controller(QtCore.QObject):
 
         # Reset state
         util.async(lambda: next(iterator), callback=on_next)
-
-
-def iterator(plugins, context):
-    """An iterator for plug-in and instance pairs"""
-    test = pyblish.logic.registered_test()
-    state = {
-        "nextOrder": None,
-        "ordersWithError": set()
-    }
-
-    for plugin in plugins:
-        state["nextOrder"] = plugin.order
-
-        message = test(**state)
-        if message:
-            raise StopIteration("Stopped due to %s" % message)
-
-        instances = pyblish.api.instances_by_plugin(context, plugin)
-        if plugin.__instanceEnabled__:
-            for instance in instances:
-                yield plugin, instance
-
-        else:
-            # When filtering to families at least a single instance with
-            # that family must be active in the current publish
-            no_wildcard = "*" not in plugin.families
-            no_active_instance = not any(inst.data.get("publish") for inst in instances)
-
-            if no_wildcard and no_active_instance:
-                continue
-
-            yield plugin, None
