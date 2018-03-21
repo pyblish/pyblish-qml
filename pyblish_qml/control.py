@@ -687,18 +687,23 @@ class Controller(QtCore.QObject):
         def on_finished(plugins, context):
             # Compute compatibility
             for plugin in self.data["models"]["item"].plugins:
-                if plugin.instanceEnabled:
-                    instances = pyblish.logic.instances_by_plugin(context,
-                                                                  plugin)
-                    plugin.compatibleInstances = list(i.id for i in instances)
-                else:
 
-                    # When filtering to families at least a single instance
-                    # with that family must be available for ContextPlugin
+                if plugin.instanceEnabled:
+                    required = pyblish.logic.instances_by_plugin(context,
+                                                                 plugin)
+                else:
+                    # A ContextPlugin without wildcard is only compatible
+                    # when instance is present with correct family, see issue:
+                    # pyblish-base/#250
+                    # todo: introduce backwards compatibility
                     has_wildcard = "*" in plugin.families
-                    has_one = pyblish.logic.instances_by_plugin(context, plugin) != []
-                    if has_wildcard or has_one:
-                        plugin.compatibleInstances = [context.id]
+                    if has_wildcard:
+                        required = [context]
+                    else:
+                        required = pyblish.logic.instances_by_plugin(context,
+                                                                     plugin)
+
+                plugin.compatibleInstances = [i.id for i in required]
 
             self.data["models"]["item"].reorder(context)
 
