@@ -571,6 +571,11 @@ class Controller(QtCore.QObject):
                            new_value=new_value,
                            old_value=old_value)
 
+            # Update the plugin's active state so it processes correctly (#218)
+            plugin = next(plugin for plugin in self.host.cached_discover if
+                          plugin.id == item.id)
+            plugin.active = new_value
+
         if item.itemType == 'instance':
             self.host.emit("instanceToggled",
                            instance=item.id,
