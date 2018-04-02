@@ -499,9 +499,7 @@ class ItemModel(AbstractModel):
             item.duration += result["duration"]
             item.finishedAt = time.time()
 
-            if item.itemType == "plugin":
-                if item.actionsIconVisible:
-                    continue
+            if item.itemType == "plugin" and not item.actionsIconVisible:
 
                 actions = list(item.actions)
 
