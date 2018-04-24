@@ -13,7 +13,7 @@ The Pyblish QML project provides a graphical frontend to [Pyblish](http://pyblis
 
 ### Requirements
 
-Pyblish QML requires an external Python 2 or 3 distribution with PyQt5.4+.
+Pyblish QML requires an external Python 2 or 3 distribution with PyQt5.6+.
 
 - Pyblish 1.2.1 or higher
 - [Python 3.5 any platform](../../wiki/Python-3.5-Any-Platform)
