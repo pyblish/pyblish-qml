@@ -133,6 +133,9 @@ def format_data(data):
         "publish",
         "comment",
 
+        # Allows an instance to be non-optional (ie, mandatory)
+        "optional",
+
         # Provided by service.py
         "host",
         "port",
