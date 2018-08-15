@@ -191,6 +191,10 @@ class Application(QtGui.QGuiApplication):
         self.window.hide()
 
     def resize(self, width, height):
+        """Resize GUI with it's vessel (container window)
+        """
+        # (NOTE) Could not get it resize with container, this is a
+        #   alternative
         self.window.setWidth(width)
         self.window.setHeight(height)
 

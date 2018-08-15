@@ -122,6 +122,7 @@ class Proxy(object):
                 data = json.dumps({"header": "pyblish-qml:server.pulse"})
                 self._flush(data)
 
+                # Send pulse every 15 seconds
                 time.sleep(15.0 - ((time.time() - start_time) % 15.0))
 
         thread = threading.Thread(target=_pulse)
