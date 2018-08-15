@@ -41,7 +41,7 @@ def current_server():
     return _state.get("currentServer")
 
 
-def install(modal):
+def install():
     """Perform first time install
 
     Attributes:
@@ -55,7 +55,7 @@ def install(modal):
         uninstall()
 
     install_callbacks()
-    install_host(modal)
+    install_host()
 
     _state["installed"] = True
 
@@ -77,6 +77,22 @@ def _is_headless():
     )
 
 
+def acquire_host_main_window():
+
+    app = QtWidgets.QApplication.instance()
+
+    # Get top window in host
+    _window = app.activeWindow()
+    while True:
+        parent_window = _window.parent()
+        if parent_window:
+            _window = parent_window
+        else:
+            break
+
+    _state["vesselParent"] = _window
+
+
 def show(parent=None, targets=[], modal=None):
     """Attempt to show GUI
 
@@ -91,18 +107,21 @@ def show(parent=None, targets=[], modal=None):
 
     # Automatically install if not already installed.
     if not _state.get("installed"):
-        install(modal)
+        install()
+        acquire_host_main_window()
 
     # Show existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = ipc.server.Proxy(server)
+        server.modal = modal
 
         try:
+            proxy = _state["currentProxy"]
+            proxy.update(server)
             proxy.show(settings.to_dict())
             return server
 
-        except IOError:
+        except (IOError, KeyError):
             # The running instance has already been closed.
             _state.pop("currentServer")
 
@@ -140,6 +159,7 @@ def show(parent=None, targets=[], modal=None):
 
     # Store reference to server for future calls
     _state["currentServer"] = server
+    _state["currentProxy"] = proxy
 
     print("Success. QML server available as "
           "pyblish_qml.api.current_server()")
@@ -153,12 +173,13 @@ def publish():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = ipc.server.Proxy(server)
 
         try:
+            proxy = _state["currentProxy"]
+            proxy.update(server)
             proxy.publish()
 
-        except IOError:
+        except (IOError, KeyError):
             # The running instance has already been closed.
             _state.pop("currentServer")
 
@@ -167,12 +188,13 @@ def validate():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = ipc.server.Proxy(server)
 
         try:
+            proxy = _state["currentProxy"]
+            proxy.update(server)
             proxy.validate()
 
-        except IOError:
+        except (IOError, KeyError):
             # The running instance has already been closed.
             _state.pop("currentServer")
 
@@ -227,7 +249,7 @@ def register_pyqt5(path):
     _state["pyqt5"] = path
 
 
-def install_host(modal):
+def install_host():
     """Install required components into supported hosts
 
     An unsupported host will still run, but may encounter issues,
@@ -242,7 +264,7 @@ def install_host(modal):
                     _install_hiero,
                     _install_nukestudio):
         try:
-            install(modal)
+            install()
         except ImportError:
             pass
         else:
@@ -264,89 +286,7 @@ def _on_application_quit():
         pass
 
 
-def _connect_host_event(app):
-    """Connect some event from host to QML
-
-    Host will connect following event to QML:
-    QEvent.Show                -> rise QML
-    QEvent.Hide                -> hide QML
-    QEvent.WindowActivate      -> set QML on top
-    QEvent.WindowDeactivate    -> remove QML on top
-    """
-
-    class HostEventFilter(QtWidgets.QWidget):
-
-        eventList = [
-            QtCore.QEvent.Show,
-            QtCore.QEvent.Hide,
-            QtCore.QEvent.WindowActivate,
-            QtCore.QEvent.WindowDeactivate
-        ]
-
-        def getServer(self):
-            server = None
-            try:
-                server = _state["currentServer"]
-            except KeyError:
-                # No server started
-                pass
-            return server
-
-        def eventFilter(self, widget, event):
-            if event.type() in self.eventList:
-                server = self.getServer()
-                if not server:
-                    return False
-                else:
-                    proxy = ipc.server.Proxy(server)
-
-                if event.type() == QtCore.QEvent.Show:
-                    try:
-                        proxy.rise()
-                        return True
-                    except IOError:
-                        # The running instance has already been closed.
-                        _state.pop("currentServer")
-                if event.type() == QtCore.QEvent.Hide:
-                    try:
-                        proxy.hide()
-                        return True
-                    except IOError:
-                        # The running instance has already been closed.
-                        _state.pop("currentServer")
-                if event.type() == QtCore.QEvent.WindowActivate:
-                    try:
-                        proxy.inFocus()
-                        return True
-                    except IOError:
-                        # The running instance has already been closed.
-                        _state.pop("currentServer")
-                if event.type() == QtCore.QEvent.WindowDeactivate:
-                    try:
-                        proxy.outFocus()
-                        return True
-                    except IOError:
-                        # The running instance has already been closed.
-                        _state.pop("currentServer")
-            return False
-
-    # Get top window in host
-    app_top_window = app.activeWindow()
-    while True:
-        parent_window = app_top_window.parent()
-        if parent_window:
-            app_top_window = parent_window
-        else:
-            break
-    # install event filter
-    try:
-        host_event_filter = HostEventFilter(app_top_window)
-        app_top_window.installEventFilter(host_event_filter)
-    except Exception:
-        pass
-
-
-def _install_maya(modal):
+def _install_maya():
     """Helper function to Autodesk Maya support"""
     from maya import utils
 
@@ -355,15 +295,13 @@ def _install_maya(modal):
             func, *args, **kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Maya\n")
-    if not modal:
-        register_dispatch_wrapper(threaded_wrapper)
+    register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
 
     if not _is_headless():
         # mayapy would have a QtGui.QGuiApplication
         app.aboutToQuit.connect(_on_application_quit)
-        _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Maya"
@@ -371,7 +309,7 @@ def _install_maya(modal):
         settings.WindowTitle = "Pyblish (Maya)"
 
 
-def _install_houdini(modal):
+def _install_houdini():
     """Helper function to SideFx Houdini support"""
     import hdefereval
 
@@ -380,12 +318,10 @@ def _install_houdini(modal):
             func, *args, **kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Houdini\n")
-    if not modal:
-        register_dispatch_wrapper(threaded_wrapper)
+    register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
-    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Houdini"
@@ -393,7 +329,7 @@ def _install_houdini(modal):
         settings.WindowTitle = "Pyblish (Houdini)"
 
 
-def _install_nuke(modal):
+def _install_nuke():
     """Helper function to The Foundry Nuke support"""
     import nuke
 
@@ -410,12 +346,10 @@ def _install_nuke(modal):
             func, args, kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Nuke\n")
-    if not modal:
-        register_dispatch_wrapper(threaded_wrapper)
+    register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
-    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Nuke"
@@ -423,7 +357,7 @@ def _install_nuke(modal):
         settings.WindowTitle = "Pyblish (Nuke)"
 
 
-def _install_nukeassist(modal):
+def _install_nukeassist():
     """Helper function to The Foundry NukeAssist support"""
     import nuke
 
@@ -435,12 +369,10 @@ def _install_nukeassist(modal):
             func, args, kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in NukeAssist\n")
-    if not modal:
-        register_dispatch_wrapper(threaded_wrapper)
+    register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
-    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "NukeAssist"
@@ -448,7 +380,7 @@ def _install_nukeassist(modal):
         settings.WindowTitle = "Pyblish (NukeAssist)"
 
 
-def _install_hiero(modal):
+def _install_hiero():
     """Helper function to The Foundry Hiero support"""
     import hiero
     import nuke
@@ -461,12 +393,10 @@ def _install_hiero(modal):
             func, args, kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Hiero\n")
-    if not modal:
-        register_dispatch_wrapper(threaded_wrapper)
+    register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
-    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Hiero"
@@ -474,7 +404,7 @@ def _install_hiero(modal):
         settings.WindowTitle = "Pyblish (Hiero)"
 
 
-def _install_nukestudio(modal):
+def _install_nukestudio():
     """Helper function to The Foundry Hiero support"""
     import nuke
 
@@ -486,12 +416,10 @@ def _install_nukestudio(modal):
             func, args, kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in NukeStudio\n")
-    if not modal:
-        register_dispatch_wrapper(threaded_wrapper)
+    register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
-    _connect_host_event(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "NukeStudio"

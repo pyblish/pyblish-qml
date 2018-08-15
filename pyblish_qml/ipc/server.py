@@ -3,9 +3,13 @@ import sys
 import json
 import threading
 import subprocess
+import time
+import ctypes
+from ctypes import pythonapi as cpyapi
 
 from .. import _state
 from ..vendor import six
+from ..vendor.Qt import QtWidgets, QtCore
 
 CREATE_NO_WINDOW = 0x08000000
 IS_WIN32 = sys.platform == "win32"
@@ -15,11 +19,57 @@ def default_wrapper(func, *args, **kwargs):
     return func(*args, **kwargs)
 
 
+class Vessel(QtWidgets.QDialog):
+    """Container window for pyblish-qml App in child process
+    """
+
+    def __init__(self, proxy):
+        super(Vessel, self).__init__(_state.get("vesselParent"))
+
+        # (NOTE) Although minimizing this vesselized dialog works well on
+        #   Windows 10, but QQuickView window did not hide well on Windows 7.
+        #   Other platform not tested yet, disable it for now.
+        #
+        # Enable maximize for app, minimize disabled
+        self.setWindowFlags(QtCore.Qt.Window |
+                            QtCore.Qt.WindowCloseButtonHint |
+                            QtCore.Qt.WindowMaximizeButtonHint)
+
+        self._winId = winIdFixed(self.winId())
+
+        self.resize(1, 1)
+        # Modal Mode
+        self.setModal(proxy.modal)
+
+        self.proxy = proxy
+
+    def closeEvent(self, event):
+        self.proxy.quit()
+
+    def resizeEvent(self, event):
+        self.proxy._dispatch("resize", args=[self.width(), self.height()])
+
+
+class MockVessel(object):
+    _winId = None
+    show = hide = close = lambda _: None
+
+
 class Proxy(object):
     """Speak to child process"""
 
-    def __init__(self, server):
+    def __init__(self, server, aschild=True):
+
+        self.update(server)
+
+        self.vessel = Vessel(self) if aschild else MockVessel()
+        self._winId = self.vessel._winId
+
+        self._alive()
+
+    def update(self, server):
         self.popen = server.popen
+        self.modal = server.modal
 
     def show(self, settings=None):
         """Show the GUI
@@ -28,28 +78,20 @@ class Proxy(object):
             settings (optional, dict): Client settings
 
         """
-
-        self._dispatch("show", args=[settings or {}])
+        self.vessel.show()
+        self._dispatch("show", args=[dict(winId=self._winId,
+                                          **settings or {})])
 
     def hide(self):
         """Hide the GUI"""
         self._dispatch("hide")
+        self.vessel.hide()
 
     def quit(self):
         """Ask the GUI to quit"""
         self._dispatch("quit")
-
-    def rise(self):
-        """Rise GUI from hidden"""
-        self._dispatch("rise")
-
-    def inFocus(self):
-        """Set GUI on-top flag"""
-        self._dispatch("inFocus")
-
-    def outFocus(self):
-        """Remove GUI on-top flag"""
-        self._dispatch("outFocus")
+        _state.pop("currentProxy")
+        self.vessel.close()
 
     def kill(self):
         """Forcefully destroy the process"""
@@ -60,6 +102,31 @@ class Proxy(object):
 
     def validate(self):
         self._dispatch("validate")
+
+    def _alive(self):
+        """Send pulse to child process
+
+        Child process will run forever if parent process encounter such
+        failure that not able to kill child process.
+
+        This inform child process that server is still running and child
+        process will auto kill itself after server stop sending pulse
+        message.
+
+        """
+
+        def _pulse():
+            start_time = time.time()
+
+            while True:
+                data = json.dumps({"header": "pyblish-qml:server.pulse"})
+                self._flush(data)
+
+                time.sleep(15.0 - ((time.time() - start_time) % 15.0))
+
+        thread = threading.Thread(target=_pulse)
+        thread.daemon = True
+        thread.start()
 
     def _dispatch(self, func, args=None):
         data = json.dumps(
@@ -72,11 +139,18 @@ class Proxy(object):
             }
         )
 
+        self._flush(data)
+
+    def _flush(self, data):
         if six.PY3:
             data = data.encode("ascii")
 
-        self.popen.stdin.write(data + b"\n")
-        self.popen.stdin.flush()
+        try:
+            self.popen.stdin.write(data + b"\n")
+            self.popen.stdin.flush()
+        except IOError:
+            # subprocess closed
+            pass
 
 
 class Server(object):
@@ -258,12 +332,9 @@ class Server(object):
                         sys.stdout.write(line)
 
         if not self.listening:
-            if self.modal:
-                _listen()
-            else:
-                thread = threading.Thread(target=_listen)
-                thread.daemon = True
-                thread.start()
+            thread = threading.Thread(target=_listen)
+            thread.daemon = True
+            thread.start()
 
             self.listening = True
 
@@ -323,3 +394,22 @@ def which(program):
                 return abspath
 
     return None
+
+
+def winIdFixed(winId):
+    # PySide bug: QWidget.winId() returns <PyCObject object at 0x02FD8788>,
+    # there is no easy way to convert it to int.
+    try:
+        return int(winId)
+    except Exception:
+        if sys.version_info[0] == 2:
+            cpyapi.PyCObject_AsVoidPtr.restype = ctypes.c_void_p
+            cpyapi.PyCObject_AsVoidPtr.argtypes = [ctypes.py_object]
+
+            return cpyapi.PyCObject_AsVoidPtr(winId)
+
+        elif sys.version_info[0] == 3:
+            cpyapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+            cpyapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object]
+
+            return cpyapi.PyCapsule_GetPointer(winId, None)

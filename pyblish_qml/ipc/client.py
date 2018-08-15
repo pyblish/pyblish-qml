@@ -1,5 +1,6 @@
 """Speak to parent process"""
 
+import os
 import sys
 import json
 import threading
@@ -24,6 +25,7 @@ class Proxy(object):
         self.cached_discover = list()
 
         self._listen()
+        self._self_destruct()
 
     def stats(self):
         return self._dispatch("stats")
@@ -76,6 +78,12 @@ class Proxy(object):
     def update(self, key, value):
         self._dispatch("update", args=[key, value])
 
+    def _self_destruct(self):
+        """Auto quit exec if parent process failed
+        """
+        self._kill = threading.Timer(30, lambda: os._exit(0))
+        self._kill.start()
+
     def _listen(self):
         """Listen for messages passed from parent
 
@@ -104,6 +112,10 @@ class Proxy(object):
 
                     elif response.get("header") == "pyblish-qml:popen.parent":
                         self.channels["parent"].put(line)
+
+                    elif response.get("header") == "pyblish-qml:server.pulse":
+                        self._kill.cancel()  # reset timer
+                        self._self_destruct()
 
                     else:
                         # The parent has passed on a message that

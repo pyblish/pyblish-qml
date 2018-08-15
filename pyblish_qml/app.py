@@ -67,9 +67,7 @@ class Application(QtGui.QGuiApplication):
     shown = QtCore.pyqtSignal(QtCore.QVariant)
     hidden = QtCore.pyqtSignal()
     quitted = QtCore.pyqtSignal()
-    risen = QtCore.pyqtSignal()
-    inFocused = QtCore.pyqtSignal()
-    outFocused = QtCore.pyqtSignal()
+    resized = QtCore.pyqtSignal(QtCore.QVariant, QtCore.QVariant)
     published = QtCore.pyqtSignal()
     validated = QtCore.pyqtSignal()
 
@@ -100,10 +98,8 @@ class Application(QtGui.QGuiApplication):
 
         self.shown.connect(self.show)
         self.hidden.connect(self.hide)
+        self.resized.connect(self.resize)
         self.quitted.connect(self.quit)
-        self.risen.connect(self.rise)
-        self.inFocused.connect(self.inFocus)
-        self.outFocused.connect(self.outFocus)
         self.published.connect(self.publish)
         self.validated.connect(self.validate)
 
@@ -134,15 +130,21 @@ class Application(QtGui.QGuiApplication):
 
         """
 
-        window = self.window
-
         if client_settings:
+            _winId = client_settings["winId"]
+            if _winId is not None:
+                vessel = QtGui.QWindow.fromWinId(_winId)
+                self.window.setParent(vessel)
+            else:
+                vessel = self.window
+
             # Apply client-side settings
             settings.from_dict(client_settings)
-            window.setWidth(client_settings["WindowSize"][0])
-            window.setHeight(client_settings["WindowSize"][1])
-            window.setTitle(client_settings["WindowTitle"])
-            window.setFramePosition(
+
+            vessel.setWidth(client_settings["WindowSize"][0])
+            vessel.setHeight(client_settings["WindowSize"][1])
+            vessel.setTitle(client_settings["WindowTitle"])
+            vessel.setFramePosition(
                 QtCore.QPoint(
                     client_settings["WindowPosition"][0],
                     client_settings["WindowPosition"][1]
@@ -156,15 +158,8 @@ class Application(QtGui.QGuiApplication):
 
         print("\n".join(message))
 
-        window.requestActivate()
-        window.showNormal()
-
-        if os.name == "nt":
-            # Work-around for window appearing behind
-            # other windows upon being shown once hidden.
-            previous_flags = window.flags()
-            window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
-            window.setFlags(previous_flags)
+        self.window.requestActivate()
+        self.window.showNormal()
 
         # Give statemachine enough time to boot up
         if not any(state in self.controller.states
@@ -195,21 +190,9 @@ class Application(QtGui.QGuiApplication):
 
         self.window.hide()
 
-    def rise(self):
-        """Rise GUI from hidden"""
-        self.window.show()
-
-    def inFocus(self):
-        """Set GUI on-top flag"""
-        if os.name == "nt":
-            previous_flags = self.window.flags()
-            self.window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
-
-    def outFocus(self):
-        """Remove GUI on-top flag"""
-        if os.name == "nt":
-            previous_flags = self.window.flags()
-            self.window.setFlags(previous_flags ^ QtCore.Qt.WindowStaysOnTopHint)
+    def resize(self, width, height):
+        self.window.setWidth(width)
+        self.window.setHeight(height)
 
     def publish(self):
         """Fire up the publish sequence"""
@@ -240,10 +223,8 @@ class Application(QtGui.QGuiApplication):
                 signal = {
                     "show": "shown",
                     "hide": "hidden",
+                    "resize": "resized",
                     "quit": "quitted",
-                    "rise": "risen",
-                    "inFocus": "inFocused",
-                    "outFocus": "outFocused",
                     "publish": "published",
                     "validate": "validated"
                 }.get(payload["name"])
@@ -285,7 +266,7 @@ def main(demo=False, aschild=False, targets=[]):
         service = ipc.service.MockService() if demo else ipc.service.Service()
         server = ipc.server.Server(service, targets=targets)
 
-        proxy = ipc.server.Proxy(server)
+        proxy = ipc.server.Proxy(server, aschild)
         proxy.show(settings.to_dict())
 
         server.listen()
