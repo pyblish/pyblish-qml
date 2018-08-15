@@ -77,22 +77,6 @@ def _is_headless():
     )
 
 
-def acquire_host_main_window():
-
-    app = QtWidgets.QApplication.instance()
-
-    # Get top window in host
-    _window = app.activeWindow()
-    while True:
-        parent_window = _window.parent()
-        if parent_window:
-            _window = parent_window
-        else:
-            break
-
-    _state["vesselParent"] = _window
-
-
 def show(parent=None, targets=[], modal=None):
     """Attempt to show GUI
 
@@ -108,7 +92,6 @@ def show(parent=None, targets=[], modal=None):
     # Automatically install if not already installed.
     if not _state.get("installed"):
         install()
-        acquire_host_main_window()
 
     # Show existing GUI
     if _state.get("currentServer"):
@@ -286,6 +269,20 @@ def _on_application_quit():
         pass
 
 
+def _acquire_host_main_window(app):
+
+    # Get top window in host
+    _window = app.activeWindow()
+    while True:
+        parent_window = _window.parent()
+        if parent_window:
+            _window = parent_window
+        else:
+            break
+
+    _state["vesselParent"] = _window
+
+
 def _install_maya():
     """Helper function to Autodesk Maya support"""
     from maya import utils
@@ -298,6 +295,12 @@ def _install_maya():
     register_dispatch_wrapper(threaded_wrapper)
 
     app = QtWidgets.QApplication.instance()
+
+    # acquire Maya's main window
+    _state["vesselParent"] = {
+        widget.objectName(): widget
+        for widget in QtWidgets.QApplication.topLevelWidgets()
+    }["MayaWindow"]
 
     if not _is_headless():
         # mayapy would have a QtGui.QGuiApplication
@@ -322,6 +325,7 @@ def _install_houdini():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _acquire_host_main_window(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Houdini"
@@ -350,6 +354,7 @@ def _install_nuke():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _acquire_host_main_window(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Nuke"
@@ -373,6 +378,7 @@ def _install_nukeassist():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _acquire_host_main_window(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "NukeAssist"
@@ -397,6 +403,7 @@ def _install_hiero():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _acquire_host_main_window(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Hiero"
@@ -420,6 +427,7 @@ def _install_nukestudio():
 
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
+    _acquire_host_main_window(app)
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "NukeStudio"
