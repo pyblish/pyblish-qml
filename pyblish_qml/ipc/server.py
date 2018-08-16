@@ -323,8 +323,12 @@ class Server(object):
                         if six.PY3:
                             data = data.encode("ascii")
 
-                        self.popen.stdin.write(data + b"\n")
-                        self.popen.stdin.flush()
+                        try:
+                            self.popen.stdin.write(data + b"\n")
+                            self.popen.stdin.flush()
+                        except IOError:
+                            # subprocess closed
+                            pass
 
                     else:
                         # In the off chance that a message
