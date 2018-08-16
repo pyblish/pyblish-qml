@@ -118,6 +118,7 @@ class Application(QtGui.QGuiApplication):
     def deregister_client(self, port):
         self.clients.pop(port)
 
+    @util.SlotSentinel()
     def show(self, client_settings=None):
         """Display GUI
 
