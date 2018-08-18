@@ -51,6 +51,7 @@ class Vessel(QtWidgets.QDialog):
 
 
 class MockVessel(object):
+    """We don't create widget without QApp, we mock one"""
     _winId = None
     show = hide = close = lambda _: None
 
@@ -58,11 +59,11 @@ class MockVessel(object):
 class Proxy(object):
     """Speak to child process"""
 
-    def __init__(self, server, aschild=True):
+    def __init__(self, server, headless=True):
 
         self.update(server)
 
-        self.vessel = Vessel(self) if aschild else MockVessel()
+        self.vessel = MockVessel() if headless else Vessel(self)
         self._winId = self.vessel._winId
 
         self._alive()

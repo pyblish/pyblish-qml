@@ -118,7 +118,9 @@ def show(parent=None, targets=[], modal=None):
             # The running instance has already been closed.
             _state.pop("currentServer")
 
-    if not _is_headless():
+    is_headless = _is_headless()
+
+    if not is_headless:
         # mayapy would have a QtGui.QGuiApplication
         splash = Splash()
         splash.show()
@@ -147,7 +149,7 @@ def show(parent=None, targets=[], modal=None):
         traceback.print_exc()
         return on_shown()
 
-    proxy = ipc.server.Proxy(server)
+    proxy = ipc.server.Proxy(server, headless=is_headless)
     proxy.show(settings.to_dict())
 
     # Store reference to server for future calls
