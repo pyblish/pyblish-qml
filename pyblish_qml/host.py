@@ -293,9 +293,30 @@ def _acquire_host_main_window(app):
     _state["vesselParent"] = _window
 
 
+def _remove_googleapiclient():
+    """Check if the compatibility must be maintained
+
+    The Maya 2018 version tries to import the `http` module from
+    Maya2018\plug-ins\MASH\scripts\googleapiclient\http.py in stead of the
+    module from six.py. This import conflict causes a crash Avalon's publisher.
+    This is due to Autodesk adding paths to the PYTHONPATH environment variable
+    which contain modules instead of only packages.
+    """
+
+    keyword = "googleapiclient"
+
+    # reconstruct python paths
+    python_paths = os.environ["PYTHONPATH"].split(os.pathsep)
+    paths = [path for path in python_paths if keyword not in path]
+    os.environ["PYTHONPATH"] = os.pathsep.join(paths)
+
+
 def _install_maya():
     """Helper function to Autodesk Maya support"""
-    from maya import utils
+    from maya import utils, cmds
+
+    if cmds.about(version=True) == "2018":
+        _remove_googleapiclient()
 
     def threaded_wrapper(func, *args, **kwargs):
         return utils.executeInMainThreadWithResult(
