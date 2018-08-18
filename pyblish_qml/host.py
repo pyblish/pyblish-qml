@@ -329,15 +329,15 @@ def _install_maya():
 
     app = QtWidgets.QApplication.instance()
 
-    # acquire Maya's main window
-    _state["vesselParent"] = {
-        widget.objectName(): widget
-        for widget in QtWidgets.QApplication.topLevelWidgets()
-    }["MayaWindow"]
-
     if not _is_headless():
         # mayapy would have a QtGui.QGuiApplication
         app.aboutToQuit.connect(_on_application_quit)
+
+        # acquire Maya's main window
+        _state["vesselParent"] = {
+            widget.objectName(): widget
+            for widget in QtWidgets.QApplication.topLevelWidgets()
+        }["MayaWindow"]
 
     if settings.ContextLabel == settings.ContextLabelDefault:
         settings.ContextLabel = "Maya"
