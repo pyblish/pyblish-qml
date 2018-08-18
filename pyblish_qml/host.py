@@ -26,7 +26,17 @@ def register_dispatch_wrapper(wrapper):
             signature.keywords is None]):
         raise TypeError("Wrapper signature mismatch")
 
-    _state["dispatchWrapper"] = wrapper
+    def _wrapper(func, *args, **kwargs):
+        """Exception handling"""
+        try:
+            return wrapper(func, *args, **kwargs)
+        except Exception as e:
+            # Kill subprocess
+            _state["currentProxy"].kill()
+            traceback.print_exc()
+            raise e
+
+    _state["dispatchWrapper"] = _wrapper
 
 
 def deregister_dispatch_wrapper():
