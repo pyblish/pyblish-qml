@@ -238,6 +238,10 @@ class Server(object):
             # and that it should expect to speak with the parent
             "--aschild"],
 
+            # Any path other than where the host was launched from
+            # to prevent accidental pickup of e.g. PyQt5 binaries.
+            cwd=os.path.dirname(__file__),
+
             env=environ,
 
             stdin=subprocess.PIPE,
