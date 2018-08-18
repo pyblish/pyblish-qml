@@ -64,7 +64,7 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    shown = QtCore.pyqtSignal(QtCore.QVariant)
+    shown = QtCore.pyqtSignal(QtCore.QVariant, QtCore.QVariant)
     hidden = QtCore.pyqtSignal()
     quitted = QtCore.pyqtSignal()
     resized = QtCore.pyqtSignal(QtCore.QVariant, QtCore.QVariant)
@@ -119,7 +119,7 @@ class Application(QtGui.QGuiApplication):
         self.clients.pop(port)
 
     @util.SlotSentinel()
-    def show(self, client_settings=None):
+    def show(self, client_settings=None, window_id=None):
         """Display GUI
 
         Once the QML interface has been loaded, use this
@@ -131,14 +131,20 @@ class Application(QtGui.QGuiApplication):
 
         """
 
-        if client_settings:
-            _winId = client_settings["winId"]
-            if _winId is not None:
-                vessel = QtGui.QWindow.fromWinId(_winId)
-                self.window.setParent(vessel)
-            else:
-                vessel = self.window
+        if window_id is not None:
+            print("Moving to container window ...")
 
+            vessel = QtGui.QWindow.fromWinId(window_id)
+            if vessel is None:
+                raise RuntimeError("Container window not found, ID: {}\n."
+                                   "This is a bug.".format(window_id))
+
+            self.window.setParent(vessel)
+
+        else:
+            vessel = self.window
+
+        if client_settings:
             # Apply client-side settings
             settings.from_dict(client_settings)
 

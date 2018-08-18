@@ -32,7 +32,7 @@ def register_dispatch_wrapper(wrapper):
             return wrapper(func, *args, **kwargs)
         except Exception as e:
             # Kill subprocess
-            _state["currentProxy"].kill()
+            _state["currentServer"].stop()
             traceback.print_exc()
             raise e
 
@@ -103,22 +103,19 @@ def show(parent=None, targets=[], modal=None):
     if not _state.get("installed"):
         install()
 
+    is_headless = _is_headless()
+
     # Show existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        server.modal = modal
+        proxy = server.proxy or ipc.server.Proxy(server, is_headless)
 
-        try:
-            proxy = _state["currentProxy"]
-            proxy.update(server)
-            proxy.show(settings.to_dict())
+        if proxy.show(settings.to_dict()):
             return server
 
-        except (IOError, KeyError):
+        else:
             # The running instance has already been closed.
             _state.pop("currentServer")
-
-    is_headless = _is_headless()
 
     if not is_headless:
         # mayapy would have a QtGui.QGuiApplication
@@ -154,7 +151,6 @@ def show(parent=None, targets=[], modal=None):
 
     # Store reference to server for future calls
     _state["currentServer"] = server
-    _state["currentProxy"] = proxy
 
     print("Success. QML server available as "
           "pyblish_qml.api.current_server()")
@@ -168,13 +164,9 @@ def publish():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
+        proxy = server.proxy or ipc.server.Proxy(server, _is_headless())
 
-        try:
-            proxy = _state["currentProxy"]
-            proxy.update(server)
-            proxy.publish()
-
-        except (IOError, KeyError):
+        if not proxy.publish():
             # The running instance has already been closed.
             _state.pop("currentServer")
 
@@ -183,13 +175,9 @@ def validate():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
+        proxy = server.proxy or ipc.server.Proxy(server, _is_headless())
 
-        try:
-            proxy = _state["currentProxy"]
-            proxy.update(server)
-            proxy.validate()
-
-        except (IOError, KeyError):
+        if not proxy.validate():
             # The running instance has already been closed.
             _state.pop("currentServer")
 

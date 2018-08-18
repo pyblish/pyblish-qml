@@ -57,20 +57,19 @@ class MockVessel(object):
 
 
 class Proxy(object):
-    """Speak to child process"""
+    """Speak to child process and control the vessel (window container)"""
 
     def __init__(self, server, headless=True):
 
-        self.update(server)
+        self.popen = server.popen
+        self.modal = server.modal
 
         self.vessel = MockVessel() if headless else Vessel(self)
         self._winId = self.vessel._winId
 
-        self._alive()
+        server.proxy = self
 
-    def update(self, server):
-        self.popen = server.popen
-        self.modal = server.modal
+        self._alive()
 
     def show(self, settings=None):
         """Show the GUI
@@ -80,8 +79,7 @@ class Proxy(object):
 
         """
         self.vessel.show()
-        self._dispatch("show", args=[dict(winId=self._winId,
-                                          **settings or {})])
+        return self._dispatch("show", args=[settings or {}, self._winId])
 
     def hide(self):
         """Hide the GUI"""
@@ -91,18 +89,16 @@ class Proxy(object):
     def quit(self):
         """Ask the GUI to quit"""
         self._dispatch("quit")
-        _state.pop("currentProxy")
-        self.vessel.close()
 
     def kill(self):
         """Forcefully destroy the process"""
         self.popen.kill()
 
     def publish(self):
-        self._dispatch("publish")
+        return self._dispatch("publish")
 
     def validate(self):
-        self._dispatch("validate")
+        return self._dispatch("validate")
 
     def _alive(self):
         """Send pulse to child process
@@ -121,10 +117,11 @@ class Proxy(object):
 
             while True:
                 data = json.dumps({"header": "pyblish-qml:server.pulse"})
-                self._flush(data)
+                if not self._flush(data):
+                    break
 
-                # Send pulse every 15 seconds
-                time.sleep(15.0 - ((time.time() - start_time) % 15.0))
+                # Send pulse every 5 seconds
+                time.sleep(5.0 - ((time.time() - start_time) % 5.0))
 
         thread = threading.Thread(target=_pulse)
         thread.daemon = True
@@ -141,7 +138,7 @@ class Proxy(object):
             }
         )
 
-        self._flush(data)
+        return self._flush(data)
 
     def _flush(self, data):
         if six.PY3:
@@ -152,7 +149,9 @@ class Proxy(object):
             self.popen.stdin.flush()
         except IOError:
             # subprocess closed
-            pass
+            self.vessel.close()
+        else:
+            return True
 
 
 class Server(object):
@@ -176,6 +175,8 @@ class Server(object):
         super(Server, self).__init__()
         self.service = service
         self.listening = False
+
+        self.proxy = None
 
         # Store modal state
         self.modal = modal
@@ -333,7 +334,7 @@ class Server(object):
                             self.popen.stdin.flush()
                         except IOError:
                             # subprocess closed
-                            pass
+                            return
 
                     else:
                         # In the off chance that a message
