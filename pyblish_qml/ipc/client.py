@@ -24,8 +24,8 @@ class Proxy(object):
         self.cached_context = list()
         self.cached_discover = list()
 
-        self._listen()
         self._self_destruct()
+        self._listen()
 
     def stats(self):
         return self._dispatch("stats")
