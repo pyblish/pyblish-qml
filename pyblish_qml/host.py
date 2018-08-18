@@ -317,15 +317,15 @@ def _install_maya():
     """Helper function to Autodesk Maya support"""
     from maya import utils, cmds
 
-    if cmds.about(version=True) == "2018":
-        _remove_googleapiclient()
-
     def threaded_wrapper(func, *args, **kwargs):
         return utils.executeInMainThreadWithResult(
             func, *args, **kwargs)
 
     sys.stdout.write("Setting up Pyblish QML in Maya\n")
     register_dispatch_wrapper(threaded_wrapper)
+
+    if cmds.about(version=True) == "2018":
+        _remove_googleapiclient()
 
     app = QtWidgets.QApplication.instance()
 
