@@ -59,12 +59,12 @@ class MockVessel(object):
 class Proxy(object):
     """Speak to child process and control the vessel (window container)"""
 
-    def __init__(self, server, headless=True):
+    def __init__(self, server, foster=False):
 
         self.popen = server.popen
         self.modal = server.modal
 
-        self.vessel = MockVessel() if headless else Vessel(self)
+        self.vessel = Vessel(self) if foster else MockVessel()
         self._winId = self.vessel._winId
 
         server.proxy = self
@@ -89,6 +89,18 @@ class Proxy(object):
     def quit(self):
         """Ask the GUI to quit"""
         self._dispatch("quit")
+
+    def rise(self):
+        """Rise GUI from hidden"""
+        self._dispatch("rise")
+
+    def inFocus(self):
+        """Set GUI on-top flag"""
+        self._dispatch("inFocus")
+
+    def outFocus(self):
+        """Remove GUI on-top flag"""
+        self._dispatch("outFocus")
 
     def kill(self):
         """Forcefully destroy the process"""

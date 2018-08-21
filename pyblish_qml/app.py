@@ -67,9 +67,14 @@ class Application(QtGui.QGuiApplication):
     shown = QtCore.pyqtSignal(QtCore.QVariant, QtCore.QVariant)
     hidden = QtCore.pyqtSignal()
     quitted = QtCore.pyqtSignal()
-    resized = QtCore.pyqtSignal(QtCore.QVariant, QtCore.QVariant)
     published = QtCore.pyqtSignal()
     validated = QtCore.pyqtSignal()
+
+    resized = QtCore.pyqtSignal(QtCore.QVariant, QtCore.QVariant)
+
+    risen = QtCore.pyqtSignal()
+    inFocused = QtCore.pyqtSignal()
+    outFocused = QtCore.pyqtSignal()
 
     def __init__(self, source, targets=[]):
         super(Application, self).__init__(sys.argv)
@@ -89,6 +94,8 @@ class Application(QtGui.QGuiApplication):
         context = engine.rootContext()
         context.setContextProperty("app", controller)
 
+        self.fostering = False
+
         self.window = window
         self.engine = engine
         self.controller = controller
@@ -98,10 +105,15 @@ class Application(QtGui.QGuiApplication):
 
         self.shown.connect(self.show)
         self.hidden.connect(self.hide)
-        self.resized.connect(self.resize)
         self.quitted.connect(self.quit)
         self.published.connect(self.publish)
         self.validated.connect(self.validate)
+
+        self.resized.connect(self.resize)
+
+        self.risen.connect(self.rise)
+        self.inFocused.connect(self.inFocus)
+        self.outFocused.connect(self.outFocus)
 
         window.setSource(QtCore.QUrl.fromLocalFile(source))
 
@@ -131,7 +143,10 @@ class Application(QtGui.QGuiApplication):
 
         """
 
-        if window_id is not None:
+        window = self.window
+        self.fostering = window_id is not None
+
+        if self.fostering:
             print("Moving to container window ...")
 
             vessel = QtGui.QWindow.fromWinId(window_id)
@@ -139,10 +154,10 @@ class Application(QtGui.QGuiApplication):
                 raise RuntimeError("Container window not found, ID: {}\n."
                                    "This is a bug.".format(window_id))
 
-            self.window.setParent(vessel)
+            window.setParent(vessel)
 
         else:
-            vessel = self.window
+            vessel = window
 
         if client_settings:
             # Apply client-side settings
@@ -165,8 +180,15 @@ class Application(QtGui.QGuiApplication):
 
         print("\n".join(message))
 
-        self.window.requestActivate()
-        self.window.showNormal()
+        window.requestActivate()
+        window.showNormal()
+
+        if not self.fostering and os.name == "nt":
+            # Work-around for window appearing behind
+            # other windows upon being shown once hidden.
+            previous_flags = window.flags()
+            window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
+            window.setFlags(previous_flags)
 
         # Give statemachine enough time to boot up
         if not any(state in self.controller.states
@@ -197,13 +219,33 @@ class Application(QtGui.QGuiApplication):
 
         self.window.hide()
 
+    def rise(self):
+        """Rise GUI from hidden"""
+        self.window.show()
+
+    def inFocus(self):
+        """Set GUI on-top flag"""
+        if not self.fostering and os.name == "nt":
+            previous_flags = self.window.flags()
+            self.window.setFlags(previous_flags |
+                                 QtCore.Qt.WindowStaysOnTopHint)
+
+    def outFocus(self):
+        """Remove GUI on-top flag"""
+        if not self.fostering and os.name == "nt":
+            previous_flags = self.window.flags()
+            self.window.setFlags(previous_flags ^
+                                 QtCore.Qt.WindowStaysOnTopHint)
+
     def resize(self, width, height):
         """Resize GUI with it's vessel (container window)
+
+        Only in fostering mode.
+
         """
-        # (NOTE) Could not get it resize with container, this is a
+        # (NOTE) Could not get it auto resize with container, this is a
         #   alternative
-        self.window.setWidth(width)
-        self.window.setHeight(height)
+        self.window.resize(width, height)
 
     def publish(self):
         """Fire up the publish sequence"""
@@ -232,12 +274,19 @@ class Application(QtGui.QGuiApplication):
                 # in a thread. Instead, we emit signals that do the
                 # job for us.
                 signal = {
+
                     "show": "shown",
                     "hide": "hidden",
-                    "resize": "resized",
                     "quit": "quitted",
                     "publish": "published",
-                    "validate": "validated"
+                    "validate": "validated",
+
+                    "resize": "resized",
+
+                    "rise": "risen",
+                    "inFocus": "inFocused",
+                    "outFocus": "outFocused",
+
                 }.get(payload["name"])
 
                 if not signal:
@@ -277,7 +326,7 @@ def main(demo=False, aschild=False, targets=[]):
         service = ipc.service.MockService() if demo else ipc.service.Service()
         server = ipc.server.Server(service, targets=targets)
 
-        proxy = ipc.server.Proxy(server, headless=True)
+        proxy = ipc.server.Proxy(server, foster=False)
         proxy.show(settings.to_dict())
 
         server.listen()
