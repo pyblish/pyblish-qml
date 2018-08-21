@@ -309,14 +309,8 @@ class Server(object):
 
                         func_name = payload["name"]
 
-                        if func_name == "emit":
-                            # Experimental
-                            # Run `emit` in default wrapper seems able to
-                            # completely avoid startup freeze
-                            wrapper = default_wrapper
-                        else:
-                            wrapper = _state.get("dispatchWrapper",
-                                                 default_wrapper)
+                        wrapper = _state.get("dispatchWrapper",
+                                             default_wrapper)
 
                         func = getattr(self.service, func_name)
                         result = wrapper(func, *args)  # block..
