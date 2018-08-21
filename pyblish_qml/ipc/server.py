@@ -59,12 +59,13 @@ class MockVessel(object):
 class Proxy(object):
     """Speak to child process and control the vessel (window container)"""
 
-    def __init__(self, server, foster=False):
+    def __init__(self, server):
 
         self.popen = server.popen
         self.modal = server.modal
+        self.foster = server.foster
 
-        self.vessel = Vessel(self) if foster else MockVessel()
+        self.vessel = Vessel(self) if self.foster else MockVessel()
         self._winId = self.vessel._winId
 
         server.proxy = self
@@ -183,7 +184,8 @@ class Server(object):
                  python=None,
                  pyqt5=None,
                  targets=[],
-                 modal=False):
+                 modal=False,
+                 foster=False):
         super(Server, self).__init__()
         self.service = service
         self.listening = False
@@ -192,6 +194,8 @@ class Server(object):
 
         # Store modal state
         self.modal = modal
+
+        self.foster = foster
 
         # The server may be run within Maya or some other host,
         # in which case we refer to it as running embedded.
@@ -357,9 +361,12 @@ class Server(object):
                         sys.stdout.write(line)
 
         if not self.listening:
-            thread = threading.Thread(target=_listen)
-            thread.daemon = True
-            thread.start()
+            if self.modal and not self.foster:
+                _listen()
+            else:
+                thread = threading.Thread(target=_listen)
+                thread.daemon = True
+                thread.start()
 
             self.listening = True
 

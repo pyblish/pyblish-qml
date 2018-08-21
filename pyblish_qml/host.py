@@ -128,7 +128,7 @@ def show(parent=None, targets=[], modal=None, foster=None):
     # Show existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = server.proxy or ipc.server.Proxy(server, is_headless)
+        proxy = server.proxy or ipc.server.Proxy(server)
 
         if proxy.show(settings.to_dict()):
             return server
@@ -160,13 +160,16 @@ def show(parent=None, targets=[], modal=None, foster=None):
 
     try:
         service = ipc.service.Service()
-        server = ipc.server.Server(service, targets=targets, modal=modal)
+        server = ipc.server.Server(service,
+                                   targets=targets,
+                                   modal=modal,
+                                   foster=foster)
     except Exception:
         # If for some reason, the GUI fails to show.
         traceback.print_exc()
         return on_shown()
 
-    proxy = ipc.server.Proxy(server, foster=foster)
+    proxy = ipc.server.Proxy(server)
     proxy.show(settings.to_dict())
 
     # Store reference to server for future calls
@@ -184,7 +187,7 @@ def publish():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = server.proxy or ipc.server.Proxy(server, _fosterable())
+        proxy = server.proxy or ipc.server.Proxy(server)
 
         if not proxy.publish():
             # The running instance has already been closed.
@@ -195,7 +198,7 @@ def validate():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = server.proxy or ipc.server.Proxy(server, _fosterable())
+        proxy = server.proxy or ipc.server.Proxy(server)
 
         if not proxy.validate():
             # The running instance has already been closed.
