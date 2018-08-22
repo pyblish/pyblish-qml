@@ -81,8 +81,8 @@ class Proxy(object):
     def _self_destruct(self):
         """Auto quit exec if parent process failed
         """
-        # This will give parent process 30 seconds to reset.
-        self._kill = threading.Timer(30, lambda: os._exit(0))
+        # This will give parent process 15 seconds to reset.
+        self._kill = threading.Timer(15, lambda: os._exit(0))
         self._kill.start()
 
     def _listen(self):
