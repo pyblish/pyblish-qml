@@ -33,6 +33,12 @@ class Proxy(object):
     def reset(self):
         return self._dispatch("reset")
 
+    def detach(self):
+        self._dispatch("detach")
+
+    def attach(self):
+        self._dispatch("attach")
+
     def test(self, **vars):
         """Vars can only be passed as a non-keyword argument"""
         return self._dispatch("test", kwargs=vars)

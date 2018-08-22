@@ -19,12 +19,12 @@ def default_wrapper(func, *args, **kwargs):
     return func(*args, **kwargs)
 
 
-class Vessel(QtWidgets.QDialog):
+class FosterVessel(QtWidgets.QDialog):
     """Container window for pyblish-qml App in child process
     """
 
     def __init__(self, proxy):
-        super(Vessel, self).__init__(_state.get("vesselParent"))
+        super(FosterVessel, self).__init__(_state.get("vesselParent"))
 
         # (NOTE) Although minimizing this vesselized dialog works well on
         #   Windows 10, but QQuickView window did not hide well on Windows 7.
@@ -50,7 +50,7 @@ class Vessel(QtWidgets.QDialog):
         self.proxy._dispatch("resize", args=[self.width(), self.height()])
 
 
-class MockVessel(object):
+class MockFosterVessel(object):
     """We don't create widget without QApp, we mock one"""
     _winId = None
     show = hide = close = lambda _: None
@@ -65,7 +65,7 @@ class Proxy(object):
         self.modal = server.modal
         self.foster = server.foster
 
-        self.vessel = Vessel(self) if self.foster else MockVessel()
+        self.vessel = FosterVessel(self) if self.foster else MockFosterVessel()
         self._winId = self.vessel._winId
 
         server.proxy = self
@@ -106,6 +106,12 @@ class Proxy(object):
     def kill(self):
         """Forcefully destroy the process"""
         self.popen.kill()
+
+    def detach(self):
+        self.vessel.hide()
+
+    def attach(self):
+        self.vessel.show()
 
     def publish(self):
         return self._dispatch("publish")
@@ -325,11 +331,18 @@ class Server(object):
 
                         func_name = payload["name"]
 
-                        wrapper = _state.get("dispatchWrapper",
-                                             default_wrapper)
+                        # self.service have no access to proxy object, so
+                        # this `if` statement is needed
+                        if func_name in ("detach", "attach"):
+                            getattr(self.proxy, func_name)()
+                            result = None
 
-                        func = getattr(self.service, func_name)
-                        result = wrapper(func, *args)  # block..
+                        else:
+                            wrapper = _state.get("dispatchWrapper",
+                                                 default_wrapper)
+
+                            func = getattr(self.service, func_name)
+                            result = wrapper(func, *args)  # block..
 
                         # Note(marcus): This is where we wait for the host to
                         # finish. Technically, we could kill the GUI at this
