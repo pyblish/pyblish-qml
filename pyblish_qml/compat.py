@@ -68,7 +68,7 @@ def test_pyqt_availability():
     """Is PyQt5 available?"""
     try:
         __import__("PyQt5")
-    except:
+    except Exception:
         raise Exception("PyQt5 not found")
 
 
@@ -77,7 +77,7 @@ def test_pyblish_availability():
     try:
         __import__("pyblish")
         __import__("pyblish_qml")
-    except:
+    except Exception:
         raise Exception("Pyblish not found")
 
 
@@ -96,7 +96,7 @@ def test_qtconf_correctness():
 
     try:
         binaries_dir = config.get("Paths", "binaries")
-    except:
+    except Exception:
         binaries_dir = prefix_dir
 
     assert binaries_dir == prefix_dir, (
@@ -143,7 +143,7 @@ def test_qt_availability():
         except TypeError:
             raise
 
-        except:
+        except Exception:
             warnings.warn("Qt detected; ensure it matches the "
                           "version used to compile PyQt5")
 

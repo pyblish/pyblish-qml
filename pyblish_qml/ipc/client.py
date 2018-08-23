@@ -1,5 +1,6 @@
 """Speak to parent process"""
 
+import os
 import sys
 import json
 import threading
@@ -23,6 +24,7 @@ class Proxy(object):
         self.cached_context = list()
         self.cached_discover = list()
 
+        self._self_destruct()
         self._listen()
 
     def stats(self):
@@ -30,6 +32,12 @@ class Proxy(object):
 
     def reset(self):
         return self._dispatch("reset")
+
+    def detach(self):
+        self._dispatch("detach")
+
+    def attach(self):
+        self._dispatch("attach")
 
     def test(self, **vars):
         """Vars can only be passed as a non-keyword argument"""
@@ -76,6 +84,13 @@ class Proxy(object):
     def update(self, key, value):
         self._dispatch("update", args=[key, value])
 
+    def _self_destruct(self):
+        """Auto quit exec if parent process failed
+        """
+        # This will give parent process 15 seconds to reset.
+        self._kill = threading.Timer(15, lambda: os._exit(0))
+        self._kill.start()
+
     def _listen(self):
         """Listen for messages passed from parent
 
@@ -104,6 +119,10 @@ class Proxy(object):
 
                     elif response.get("header") == "pyblish-qml:popen.parent":
                         self.channels["parent"].put(line)
+
+                    elif response.get("header") == "pyblish-qml:server.pulse":
+                        self._kill.cancel()  # reset timer
+                        self._self_destruct()
 
                     else:
                         # The parent has passed on a message that

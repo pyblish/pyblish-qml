@@ -1,6 +1,9 @@
 import re
 import time
+import types
+import traceback
 
+from functools import wraps
 from PyQt5 import QtCore
 
 from .vendor import six
@@ -233,3 +236,26 @@ def pyqtConstantProperty(fget):
     return QtCore.pyqtProperty(QtCore.QVariant,
                                fget=fget,
                                constant=True)
+
+
+def SlotSentinel(*args):
+    """Provides exception handling for all slots"""
+
+    # (NOTE) davidlatwe
+    # Thanks to this answer
+    # https://stackoverflow.com/questions/18740884
+
+    if len(args) == 0 or isinstance(args[0], types.FunctionType):
+        args = []
+
+    @QtCore.pyqtSlot(*args)
+    def slotdecorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                func(*args)
+            except Exception:
+                traceback.print_exc()
+        return wrapper
+
+    return slotdecorator

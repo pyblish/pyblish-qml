@@ -4,7 +4,7 @@ import time
 import collections
 
 # Dependencies
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtTest
 import pyblish.logic
 
 # Local libraries
@@ -22,6 +22,9 @@ class Controller(QtCore.QObject):
 
     show = QtCore.pyqtSignal()
     hide = QtCore.pyqtSignal()
+
+    attached = QtCore.pyqtSignal()
+    detached = QtCore.pyqtSignal()
 
     firstRun = QtCore.pyqtSignal()
     publishing = QtCore.pyqtSignal()
@@ -129,6 +132,18 @@ class Controller(QtCore.QObject):
 
     def on_show(self):
         self.host.emit("pyblishQmlShown")
+
+    def detach(self):
+        signal = json.dumps({"payload": {"name": "detach"}})
+        self.host.channels["parent"].put(signal)
+        detached = QtTest.QSignalSpy(self.detached)
+        detached.wait(1000)
+
+    def attach(self):
+        signal = json.dumps({"payload": {"name": "attach"}})
+        self.host.channels["parent"].put(signal)
+        attached = QtTest.QSignalSpy(self.attached)
+        attached.wait(1000)
 
     def dispatch(self, func, *args, **kwargs):
         return getattr(self.host, func)(*args, **kwargs)
@@ -849,8 +864,10 @@ class Controller(QtCore.QObject):
             self.run(*args, callback=on_finished)
 
         def on_finished():
+            self.attach()
             self.host.emit("published", context=None)
 
+        self.detach()
         util.async(get_data, callback=on_data_received)
 
     @QtCore.pyqtSlot()
@@ -891,8 +908,10 @@ class Controller(QtCore.QObject):
             self.run(*args, callback=on_finished)
 
         def on_finished():
+            self.attach()
             self.host.emit("validated", context=None)
 
+        self.detach()
         util.async(get_data, callback=on_data_received)
 
     def run(self, plugins, context, callback=None, callback_args=[]):
