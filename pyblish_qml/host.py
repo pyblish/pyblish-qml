@@ -69,8 +69,6 @@ def install(modal, foster):
     install_callbacks()
     install_host(use_threaded_wrapper)
 
-    install_event_filter()
-
     _state["installed"] = True
 
 
@@ -273,6 +271,7 @@ def install_host(use_threaded_wrapper):
         except ImportError:
             pass
         else:
+            install_event_filter()
             break
 
 
