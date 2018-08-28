@@ -277,7 +277,11 @@ def install_host(use_threaded_wrapper):
 
 def install_event_filter():
 
-    main_window = _state["vesselParent"]
+    main_window = _state.get("vesselParent")
+    if main_window is None:
+        sys.stdout.write("Main window not found, event filter did not "
+                         "installed.\n")
+        return
 
     try:
         host_event_filter = HostEventFilter(main_window)
