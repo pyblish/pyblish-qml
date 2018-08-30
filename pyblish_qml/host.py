@@ -177,6 +177,9 @@ def show(parent=None, targets=[], modal=None, foster=None):
 
     server.listen()
 
+    # Install eventFilter if not exists one
+    install_event_filter()
+
     return server
 
 
@@ -278,16 +281,24 @@ def install_event_filter():
 
     main_window = _state.get("vesselParent")
     if main_window is None:
-        raise Exception("Main window not found, event filter did not "
-                        "install. This is a bug.")
+        print("Main window not found, event filter did not install.")
+        return
 
-    event_filter = _state.get("eventFilter", HostEventFilter(main_window))
+    event_filter = _state.get("eventFilter")
+    if isinstance(event_filter, QtCore.QObject):
+        print("Event filter exists.")
+        return
+    else:
+        event_filter = HostEventFilter(main_window)
+
     try:
         main_window.installEventFilter(event_filter)
-    except Exception:
-        pass
+    except Exception as e:
+        print("An error has occurred during event filter's installation.")
+        print(e)
     else:
         _state["eventFilter"] = event_filter
+        print("Event filter has been installed.")
 
 
 def _on_application_quit():
@@ -415,8 +426,6 @@ def _install_maya(use_threaded_wrapper):
             for widget in QtWidgets.QApplication.topLevelWidgets()
         }["MayaWindow"]
 
-        install_event_filter()
-
     _set_host_label("Maya")
 
 
@@ -430,8 +439,6 @@ def _common_setup(host_name, threaded_wrapper, use_threaded_wrapper):
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
     _acquire_host_main_window(app)
-
-    install_event_filter()
 
     _set_host_label(host_name)
 
