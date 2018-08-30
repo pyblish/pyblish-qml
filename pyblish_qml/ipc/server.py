@@ -119,6 +119,20 @@ class Proxy(object):
     def validate(self):
         return self._dispatch("validate")
 
+    def _remove_event_filter(self):
+        event_filter = _state.get("eventFilter")
+        if isinstance(event_filter, QtCore.QObject):
+
+            # (NOTE) Should remove from the QApp instance which originally
+            #        installed to.
+            #        This will not work:
+            #        `QApplication.instance().removeEventFilter(event_filter)`
+            #
+            event_filter.parent().removeEventFilter(event_filter)
+            del _state["eventFilter"]
+
+            print("The eventFilter of pyblish-qml has been removed.")
+
     def _alive(self):
         """Send pulse to child process
 
@@ -169,6 +183,7 @@ class Proxy(object):
         except IOError:
             # subprocess closed
             self.vessel.close()
+            self._remove_event_filter()
         else:
             return True
 

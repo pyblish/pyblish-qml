@@ -281,11 +281,13 @@ def install_event_filter():
         raise Exception("Main window not found, event filter did not "
                         "install. This is a bug.")
 
+    event_filter = _state.get("eventFilter", HostEventFilter(main_window))
     try:
-        host_event_filter = HostEventFilter(main_window)
-        main_window.installEventFilter(host_event_filter)
+        main_window.installEventFilter(event_filter)
     except Exception:
         pass
+    else:
+        _state["eventFilter"] = event_filter
 
 
 def _on_application_quit():
