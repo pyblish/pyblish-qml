@@ -232,11 +232,11 @@ class Application(QtGui.QGuiApplication):
         via a call to `show()`
 
         """
-        self.vessel.hide()
+        self.window.hide()
 
     def rise(self):
         """Rise GUI from hidden"""
-        self.vessel.show()
+        self.window.show()
 
     def inFocus(self):
         """Set GUI on-top flag"""

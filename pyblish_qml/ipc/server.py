@@ -93,6 +93,7 @@ class Proxy(object):
 
     def rise(self):
         """Rise GUI from hidden"""
+        self.vessel.show()
         self._dispatch("rise")
 
     def inFocus(self):
