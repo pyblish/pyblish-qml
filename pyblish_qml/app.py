@@ -296,6 +296,7 @@ class Application(QtGui.QGuiApplication):
         # Hide src container
         self.host.detach()
         # Stay on top
+        self.window.requestActivate()
         self._popup()
 
         self.controller.detached.emit()
