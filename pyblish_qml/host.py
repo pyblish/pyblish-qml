@@ -69,8 +69,6 @@ def install(modal, foster):
     install_callbacks()
     install_host(use_threaded_wrapper)
 
-    install_event_filter()
-
     _state["installed"] = True
 
 
@@ -278,7 +276,10 @@ def install_host(use_threaded_wrapper):
 
 def install_event_filter():
 
-    main_window = _state["vesselParent"]
+    main_window = _state.get("vesselParent")
+    if main_window is None:
+        raise Exception("Main window not found, event filter did not "
+                        "install. This is a bug.")
 
     try:
         host_event_filter = HostEventFilter(main_window)
@@ -412,6 +413,8 @@ def _install_maya(use_threaded_wrapper):
             for widget in QtWidgets.QApplication.topLevelWidgets()
         }["MayaWindow"]
 
+        install_event_filter()
+
     _set_host_label("Maya")
 
 
@@ -425,6 +428,8 @@ def _common_setup(host_name, threaded_wrapper, use_threaded_wrapper):
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
     _acquire_host_main_window(app)
+
+    install_event_filter()
 
     _set_host_label(host_name)
 
