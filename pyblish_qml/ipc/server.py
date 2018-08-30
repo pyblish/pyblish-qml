@@ -114,6 +114,9 @@ class Proxy(object):
     def attach(self):
         self.vessel.show()
 
+    def popup(self):
+        self.vessel.activateWindow()  # to top
+
     def publish(self):
         return self._dispatch("publish")
 
@@ -349,7 +352,7 @@ class Server(object):
 
                         # self.service have no access to proxy object, so
                         # this `if` statement is needed
-                        if func_name in ("detach", "attach"):
+                        if func_name in ("detach", "attach", "popup"):
                             getattr(self.proxy, func_name)()
                             result = None
 

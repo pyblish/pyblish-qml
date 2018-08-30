@@ -39,6 +39,9 @@ class Proxy(object):
     def attach(self):
         self._dispatch("attach")
 
+    def popup(self):
+        self._dispatch("popup")
+
     def test(self, **vars):
         """Vars can only be passed as a non-keyword argument"""
         return self._dispatch("test", kwargs=vars)

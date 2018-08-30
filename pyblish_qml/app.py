@@ -268,16 +268,6 @@ class Application(QtGui.QGuiApplication):
             window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
             window.setFlags(previous_flags)
 
-    def _set_goemetry(self, source, target):
-        """Set window position and size after parent swap"""
-        target.setFramePosition(source.framePosition())
-
-        window_state = source.windowState()
-        target.setWindowState(window_state)
-
-        if not window_state == QtCore.Qt.WindowMaximized:
-            target.resize(source.size())
-
     def detach(self):
         """Detach QQuickView window from the host
 
@@ -297,14 +287,15 @@ class Application(QtGui.QGuiApplication):
         print("Detach window from foster parent...")
 
         self.vessel = self.native_vessel
-
-        self.host.detach()
-
         self.fostered = False
-        self.vessel.show()
 
-        self.window.setParent(self.vessel)
-        self._set_goemetry(self.foster_vessel, self.vessel)
+        self.window.setParent(self.native_vessel)
+        # Show dst container
+        self.native_vessel.show()
+        self.native_vessel.setGeometry(self.foster_vessel.geometry())
+        # Hide src container
+        self.host.detach()
+        # Stay on top
         self._popup()
 
         self.controller.detached.emit()
@@ -328,14 +319,16 @@ class Application(QtGui.QGuiApplication):
         print("Attach window to foster parent...")
 
         self.vessel = self.foster_vessel
-
-        self.host.attach()
-
-        self.native_vessel.hide()
         self.fostered = True
 
-        self.window.setParent(self.vessel)
-        self._set_goemetry(self.native_vessel, self.vessel)
+        self.window.setParent(self.foster_vessel)
+        # Show dst container
+        self.host.attach()
+        self.foster_vessel.setGeometry(self.native_vessel.geometry())
+        # Hide src container
+        self.native_vessel.hide()
+        # Stay on top
+        self.host.popup()
 
         self.controller.attached.emit()
 
