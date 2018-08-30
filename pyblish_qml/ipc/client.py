@@ -36,8 +36,9 @@ class Proxy(object):
     def detach(self):
         self._dispatch("detach")
 
-    def attach(self):
-        self._dispatch("attach")
+    def attach(self, qRect):
+        geometry = [qRect.x(), qRect.y(), qRect.width(), qRect.height()]
+        self._dispatch("attach", args=geometry)
 
     def popup(self):
         self._dispatch("popup")

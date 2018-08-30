@@ -88,6 +88,8 @@ class Application(QtGui.QGuiApplication):
 
     attached = QtCore.pyqtSignal()
     detached = QtCore.pyqtSignal()
+    host_attached = QtCore.pyqtSignal()
+    host_detached = QtCore.pyqtSignal()
 
     def __init__(self, source, targets=[]):
         super(Application, self).__init__(sys.argv)
@@ -194,6 +196,9 @@ class Application(QtGui.QGuiApplication):
                 )
             )
 
+            if self.fostered:
+                self.native_vessel.setTitle(client_settings["WindowTitle"])
+
         message = list()
         message.append("Settings: ")
         for key, value in settings.to_dict().items():
@@ -291,10 +296,13 @@ class Application(QtGui.QGuiApplication):
 
         self.window.setParent(self.native_vessel)
         # Show dst container
+        self.native_vessel.setOpacity(100)
         self.native_vessel.show()
         self.native_vessel.setGeometry(self.foster_vessel.geometry())
-        # Hide src container
+        # Hide src container (will wait for host)
+        host_detached = QtTest.QSignalSpy(self.host_detached)
         self.host.detach()
+        host_detached.wait(300)
         # Stay on top
         self.window.requestActivate()
         self._popup()
@@ -323,10 +331,12 @@ class Application(QtGui.QGuiApplication):
         self.fostered = True
 
         self.window.setParent(self.foster_vessel)
-        # Show dst container
-        self.host.attach()
-        self.foster_vessel.setGeometry(self.native_vessel.geometry())
+        # Show dst container (will wait for host)
+        host_attached = QtTest.QSignalSpy(self.host_attached)
+        self.host.attach(self.native_vessel.geometry())
+        host_attached.wait(300)
         # Hide src container
+        self.native_vessel.setOpacity(0)  # avoid hide window anim
         self.native_vessel.hide()
         # Stay on top
         self.host.popup()
@@ -375,6 +385,8 @@ class Application(QtGui.QGuiApplication):
 
                     "attach": "attached",
                     "detach": "detached",
+                    "host_attach": "host_attached",
+                    "host_detach": "host_detached",
 
                 }.get(payload["name"])
 

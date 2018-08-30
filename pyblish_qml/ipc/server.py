@@ -109,10 +109,15 @@ class Proxy(object):
         self.popen.kill()
 
     def detach(self):
+        self.vessel.setWindowOpacity(0)  # avoid hide window anim
         self.vessel.hide()
+        self._dispatch("host_detach")
 
-    def attach(self):
+    def attach(self, x, y, w, h):
+        self.vessel.setWindowOpacity(100)
         self.vessel.show()
+        self.vessel.setGeometry(x, y, w, h)
+        self._dispatch("host_attach")
 
     def popup(self):
         self.vessel.activateWindow()  # to top
@@ -135,7 +140,7 @@ class Proxy(object):
             event_filter.parent().removeEventFilter(event_filter)
             del _state["eventFilter"]
 
-            print("The eventFilter of pyblish-qml has been removed.")
+            print("The eventFilter of pyblish-qml has been removed.\n")
 
     def _alive(self):
         """Send pulse to child process
@@ -353,7 +358,7 @@ class Server(object):
                         # self.service have no access to proxy object, so
                         # this `if` statement is needed
                         if func_name in ("detach", "attach", "popup"):
-                            getattr(self.proxy, func_name)()
+                            getattr(self.proxy, func_name)(*args)
                             result = None
 
                         else:
