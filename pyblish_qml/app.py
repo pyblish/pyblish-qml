@@ -23,25 +23,15 @@ ICON_PATH = os.path.join(MODULE_DIR, "icon.ico")
 class Window(QtQuick.QQuickView):
     """Main application window"""
 
-    def __init__(self):
+    def __init__(self, app):
         super(Window, self).__init__(None)
+        self.app = app
 
         self.setTitle(settings.WindowTitle)
         self.setResizeMode(self.SizeRootObjectToView)
 
         self.resize(*settings.WindowSize)
         self.setMinimumSize(QtCore.QSize(430, 300))
-
-
-class NativeVessel(QtGui.QWindow):
-    """Container window"""
-
-    def __init__(self, app):
-        super(NativeVessel, self).__init__(None)
-        self.app = app
-
-    def resizeEvent(self, event):
-        self.app.resize(self.width(), self.height())
 
     def event(self, event):
         """Allow GUI to be closed upon holding Shift"""
@@ -62,6 +52,24 @@ class NativeVessel(QtGui.QWindow):
             else:
                 print("Not ready, hold SHIFT to force an exit")
                 event.ignore()
+
+        return super(Window, self).event(event)
+
+
+class NativeVessel(QtGui.QWindow):
+    """Container window"""
+
+    def __init__(self, app):
+        super(NativeVessel, self).__init__(None)
+        self.app = app
+
+    def resizeEvent(self, event):
+        self.app.resize(self.width(), self.height())
+
+    def event(self, event):
+        # Is required for Foster mode
+        if event.type() == QtCore.QEvent.Close:
+            self.app.window.event(event)
 
         return super(NativeVessel, self).event(event)
 
@@ -98,7 +106,7 @@ class Application(QtGui.QGuiApplication):
 
         native_vessel = NativeVessel(self)
 
-        window = Window()
+        window = Window(self)
         window.statusChanged.connect(self.on_status_changed)
 
         engine = window.engine()
@@ -152,6 +160,10 @@ class Application(QtGui.QGuiApplication):
 
     def deregister_client(self, port):
         self.clients.pop(port)
+
+    def quit(self):
+        self.controller.host.emit("pyblishQmlClose")
+        super(Application, self).quit()
 
     @util.SlotSentinel()
     def show(self, client_settings=None, window_id=None):
