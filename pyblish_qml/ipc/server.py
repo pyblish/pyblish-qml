@@ -85,7 +85,7 @@ class Proxy(object):
     def hide(self):
         """Hide the GUI"""
         self._dispatch("hide")
-        self.vessel.hide()
+        return self.vessel.hide()
 
     def quit(self):
         """Ask the GUI to quit"""
@@ -94,15 +94,15 @@ class Proxy(object):
     def rise(self):
         """Rise GUI from hidden"""
         self.vessel.show()
-        self._dispatch("rise")
+        return self._dispatch("rise")
 
     def inFocus(self):
         """Set GUI on-top flag"""
-        self._dispatch("inFocus")
+        return self._dispatch("inFocus")
 
     def outFocus(self):
         """Remove GUI on-top flag"""
-        self._dispatch("outFocus")
+        return self._dispatch("outFocus")
 
     def kill(self):
         """Forcefully destroy the process"""
@@ -127,20 +127,6 @@ class Proxy(object):
 
     def validate(self):
         return self._dispatch("validate")
-
-    def _remove_event_filter(self):
-        event_filter = _state.get("eventFilter")
-        if isinstance(event_filter, QtCore.QObject):
-
-            # (NOTE) Should remove from the QApp instance which originally
-            #        installed to.
-            #        This will not work:
-            #        `QApplication.instance().removeEventFilter(event_filter)`
-            #
-            event_filter.parent().removeEventFilter(event_filter)
-            del _state["eventFilter"]
-
-            print("The eventFilter of pyblish-qml has been removed.\n")
 
     def _alive(self):
         """Send pulse to child process
@@ -192,7 +178,6 @@ class Proxy(object):
         except IOError:
             # subprocess closed
             self.vessel.close()
-            self._remove_event_filter()
         else:
             return True
 

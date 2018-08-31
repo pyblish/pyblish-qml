@@ -277,6 +277,33 @@ def install_host(use_threaded_wrapper):
             break
 
 
+SIGNALS_TO_REMOVE_EVENT_FILTER = (
+    "pyblishQmlClose",
+    "pyblishQmlCloseForced",
+)
+
+
+def remove_event_filter():
+    event_filter = _state.get("eventFilter")
+    if isinstance(event_filter, QtCore.QObject):
+
+        # (NOTE) Should remove from the QApp instance which originally
+        #        installed to.
+        #        This will not work:
+        #        `QApplication.instance().removeEventFilter(event_filter)`
+        #
+        event_filter.parent().removeEventFilter(event_filter)
+        del _state["eventFilter"]
+
+        for signal in SIGNALS_TO_REMOVE_EVENT_FILTER:
+            try:
+                pyblish.api.deregister_callback(signal, remove_event_filter)
+            except (KeyError, ValueError):
+                pass
+
+        print("The eventFilter of pyblish-qml has been removed.\n")
+
+
 def install_event_filter():
 
     main_window = _state.get("vesselParent")
@@ -298,6 +325,10 @@ def install_event_filter():
         print(e)
     else:
         _state["eventFilter"] = event_filter
+
+        for signal in SIGNALS_TO_REMOVE_EVENT_FILTER:
+            pyblish.api.register_callback(signal, remove_event_filter)
+
         print("Event filter has been installed.")
 
 
@@ -349,14 +380,18 @@ class HostEventFilter(QtWidgets.QWidget):
             # proxy is None, or does not have the function
             return False
 
-        try:
-            func()
-            return True
-        except IOError:
-            # The running instance has already been closed.
-            _state.pop("currentServer")
+        print(func_name)
+        connected = func()
 
-        return False
+        if connected is not True:
+            # The running instance has already been closed.
+            self.parent().removeEventFilter(self)
+            if _state.get("eventFilter") is self:
+                _state.pop("eventFilter")
+
+            print("The eventFilter of pyblish-qml has self removed.\n")
+
+        return True
 
 
 def _acquire_host_main_window(app):
