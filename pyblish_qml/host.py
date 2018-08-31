@@ -305,7 +305,7 @@ def remove_event_filter():
             except (KeyError, ValueError):
                 pass
 
-        print("The eventFilter of pyblish-qml has been removed.\n")
+        print("The eventFilter of pyblish-qml has been removed.")
 
 
 def install_event_filter():
