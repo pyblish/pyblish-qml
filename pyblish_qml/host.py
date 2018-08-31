@@ -64,7 +64,7 @@ def install(modal, foster):
         sys.stdout.write("Already installed, uninstalling..\n")
         uninstall()
 
-    use_threaded_wrapper = foster or not modal
+    use_threaded_wrapper = not modal
 
     install_callbacks()
     install_host(use_threaded_wrapper)
@@ -89,17 +89,21 @@ def _is_headless():
     )
 
 
-def _fosterable(foster=None):
+def _fosterable(foster, modal):
     if foster is None:
         # Get foster mode from environment
         foster = bool(os.environ.get("PYBLISH_QML_FOSTER", False))
 
     if foster:
-        os.environ["PYBLISH_QML_FOSTER"] = "True"
-    else:
-        os.environ["PYBLISH_QML_FOSTER"] = ""
+        if modal or _is_headless():
+            print("Foster disabled due to Modal is on or in headless mode.")
+            return False
 
-    return foster and not _is_headless()
+        print("Foster on.")
+        return True
+
+    else:
+        return False
 
 
 def show(parent=None, targets=[], modal=None, foster=None):
@@ -116,7 +120,7 @@ def show(parent=None, targets=[], modal=None, foster=None):
 
     is_headless = _is_headless()
 
-    foster = _fosterable(foster)
+    foster = _fosterable(foster, modal)
 
     # Automatically install if not already installed.
     if not _state.get("installed"):

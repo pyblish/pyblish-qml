@@ -38,8 +38,6 @@ class FosterVessel(QtWidgets.QDialog):
         self._winId = winIdFixed(self.winId())
 
         self.resize(1, 1)
-        # Modal Mode
-        self.setModal(proxy.modal)
 
         self.proxy = proxy
 
@@ -62,7 +60,6 @@ class Proxy(object):
     def __init__(self, server):
 
         self.popen = server.popen
-        self.modal = server.modal
         self.foster = server.foster
 
         self.vessel = FosterVessel(self) if self.foster else MockFosterVessel()
@@ -383,7 +380,7 @@ class Server(object):
                         sys.stdout.write(line)
 
         if not self.listening:
-            if self.modal and not self.foster:
+            if self.modal:
                 _listen()
             else:
                 thread = threading.Thread(target=_listen)
