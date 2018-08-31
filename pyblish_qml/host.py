@@ -380,7 +380,6 @@ class HostEventFilter(QtWidgets.QWidget):
             # proxy is None, or does not have the function
             return False
 
-        print(func_name)
         connected = func()
 
         if connected is not True:
