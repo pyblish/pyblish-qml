@@ -122,7 +122,7 @@ class Application(QtGui.QGuiApplication):
         self.fostered = False
 
         self.foster_vessel = None
-        self.vessel = self.native_vessel = native_vessel
+        self.native_vessel = native_vessel
 
         self.window = window
         self.engine = engine
@@ -192,25 +192,25 @@ class Application(QtGui.QGuiApplication):
                                    "This is a bug.".format(window_id))
 
             self.window.setParent(foster_vessel)
-
-            self.vessel = self.foster_vessel = foster_vessel
+            self.foster_vessel = foster_vessel
 
         if client_settings:
             # Apply client-side settings
             settings.from_dict(client_settings)
 
-            self.vessel.setWidth(client_settings["WindowSize"][0])
-            self.vessel.setHeight(client_settings["WindowSize"][1])
-            self.vessel.setTitle(client_settings["WindowTitle"])
-            self.vessel.setFramePosition(
-                QtCore.QPoint(
-                    client_settings["WindowPosition"][0],
-                    client_settings["WindowPosition"][1]
-                )
-            )
+            def first_appearance_setup(vessel):
+                vessel.setGeometry(client_settings["WindowPosition"][0],
+                                   client_settings["WindowPosition"][1],
+                                   client_settings["WindowSize"][0],
+                                   client_settings["WindowSize"][1])
+                vessel.setTitle(client_settings["WindowTitle"])
+
+            first_appearance_setup(self.native_vessel)
 
             if self.fostered:
-                self.native_vessel.setTitle(client_settings["WindowTitle"])
+                # Return it back to native vessel for first run
+                self.window.setParent(self.native_vessel)
+                first_appearance_setup(self.foster_vessel)
 
         message = list()
         message.append("Settings: ")
@@ -242,6 +242,14 @@ class Application(QtGui.QGuiApplication):
 
         # Allow time for QML to initialise
         util.schedule(self.controller.reset, 500, channel="main")
+
+        if self.fostered:
+            # Reclaim window after first rest
+            self.window.setParent(self.foster_vessel)
+            self.foster_vessel.show()
+            # Hide src container
+            self.native_vessel.setOpacity(0)  # avoid hide window anim
+            self.native_vessel.hide()
 
     def hide(self):
         """Hide GUI
@@ -304,10 +312,9 @@ class Application(QtGui.QGuiApplication):
 
         print("Detach window from foster parent...")
 
-        self.vessel = self.native_vessel
         self.fostered = False
-
         self.window.setParent(self.native_vessel)
+
         # Show dst container
         self.native_vessel.setOpacity(100)
         self.native_vessel.show()
@@ -340,10 +347,9 @@ class Application(QtGui.QGuiApplication):
 
         print("Attach window to foster parent...")
 
-        self.vessel = self.foster_vessel
         self.fostered = True
-
         self.window.setParent(self.foster_vessel)
+
         # Show dst container (will wait for host)
         host_attached = QtTest.QSignalSpy(self.host_attached)
         self.host.attach(self.native_vessel.geometry())

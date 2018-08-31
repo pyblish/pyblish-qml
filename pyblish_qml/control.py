@@ -770,7 +770,8 @@ class Controller(QtCore.QObject):
 
             self.host.emit("reset", context=None)
 
-            self.attach()
+            if not self.data["firstRun"]:
+                self.attach()
 
             # Hidden sections
             for section in self.data["models"]["item"].sections:
@@ -824,7 +825,8 @@ class Controller(QtCore.QObject):
         def on_reset():
             util.async(self.host.context, callback=on_context)
 
-        self.detach()
+        if not self.data["firstRun"]:
+            self.detach()
         util.async(self.host.reset, callback=on_reset)
 
     @QtCore.pyqtSlot()

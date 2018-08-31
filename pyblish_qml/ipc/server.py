@@ -76,7 +76,6 @@ class Proxy(object):
             settings (optional, dict): Client settings
 
         """
-        self.vessel.show()
         return self._dispatch("show", args=[settings or {}, self._winId])
 
     def hide(self):
