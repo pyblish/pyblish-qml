@@ -343,6 +343,10 @@ class Server(object):
                             getattr(self.proxy, func_name)(*args)
                             result = None
 
+                        elif func_name in ("emit",):
+                            # Avoid main thread hang
+                            result = getattr(self.service, func_name)(*args)
+
                         else:
                             wrapper = _state.get("dispatchWrapper",
                                                  default_wrapper)
