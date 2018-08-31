@@ -175,10 +175,10 @@ def show(parent=None, targets=[], modal=None, foster=None):
     print("Success. QML server available as "
           "pyblish_qml.api.current_server()")
 
-    server.listen()
-
     # Install eventFilter if not exists one
     install_event_filter()
+
+    server.listen()
 
     return server
 
