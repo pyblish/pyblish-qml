@@ -68,8 +68,12 @@ class NativeVessel(QtGui.QWindow):
 
     def event(self, event):
         # Is required for Foster mode
+        # Native vessel will receive closeEvent while foster mode is on
+        # and is the parent of window.
         if event.type() == QtCore.QEvent.Close:
             self.app.window.event(event)
+            if event.isAccepted():
+                self.app.quit()
 
         return super(NativeVessel, self).event(event)
 
@@ -163,6 +167,9 @@ class Application(QtGui.QGuiApplication):
 
     def quit(self):
         if self.fostered:
+            # Foster vessel's closeEvent will trigger "quit" which connected
+            # to here.
+            # Forward the event to window.
             self.window.event(QtCore.QEvent(QtCore.QEvent.Close))
         super(Application, self).quit()
 
