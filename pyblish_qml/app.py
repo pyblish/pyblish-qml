@@ -162,7 +162,8 @@ class Application(QtGui.QGuiApplication):
         self.clients.pop(port)
 
     def quit(self):
-        self.controller.host.emit("pyblishQmlClose")
+        if self.fostered:
+            self.window.event(QtCore.QEvent(QtCore.QEvent.Close))
         super(Application, self).quit()
 
     @util.SlotSentinel()
