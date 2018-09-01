@@ -110,9 +110,9 @@ class Proxy(object):
         self._dispatch("host_detach")
 
     def attach(self, x, y, w, h):
-        self.vessel.setWindowOpacity(100)
         self.vessel.show()
         self.vessel.setGeometry(x, y, w, h)
+        self.vessel.setWindowOpacity(100)
         self._dispatch("host_attach")
 
     def popup(self, alert):

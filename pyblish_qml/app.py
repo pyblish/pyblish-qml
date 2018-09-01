@@ -325,9 +325,9 @@ class Application(QtGui.QGuiApplication):
         self.window.setParent(self.native_vessel)
 
         # Show dst container
-        self.native_vessel.setOpacity(100)
         self.native_vessel.show()
         self.native_vessel.setGeometry(self.foster_vessel.geometry())
+        self.native_vessel.setOpacity(100)
         # Hide src container (will wait for host)
         host_detached = QtTest.QSignalSpy(self.host_detached)
         self.host.detach()
