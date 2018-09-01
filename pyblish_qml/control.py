@@ -770,8 +770,7 @@ class Controller(QtCore.QObject):
 
             self.host.emit("reset", context=None)
 
-            if not self.data["firstRun"]:
-                self.attach()
+            self.attach()
 
             # Hidden sections
             for section in self.data["models"]["item"].sections:

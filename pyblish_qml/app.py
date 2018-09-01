@@ -234,6 +234,9 @@ class Application(QtGui.QGuiApplication):
 
         print("\n".join(message))
 
+        if self.fostered and self.ninja:
+            self.native_vessel.show()
+
         self.window.requestActivate()
         self.window.showNormal()
 
@@ -257,16 +260,6 @@ class Application(QtGui.QGuiApplication):
 
         # Allow time for QML to initialise
         util.schedule(self.controller.reset, 500, channel="main")
-
-        if self.fostered and self.ninja:
-            # Reclaim window after first rest
-            self.window.setParent(self.foster_vessel)
-            self.foster_vessel.show()
-            # Hide src container
-            self.native_vessel.setOpacity(0)  # avoid hide window anim
-            self.native_vessel.hide()
-            # Ensure at front
-            self.window.requestActivate()
 
     def hide(self):
         """Hide GUI
