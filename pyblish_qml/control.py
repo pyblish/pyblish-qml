@@ -139,8 +139,8 @@ class Controller(QtCore.QObject):
         detached = QtTest.QSignalSpy(self.detached)
         detached.wait(1000)
 
-    def attach(self):
-        signal = json.dumps({"payload": {"name": "attach"}})
+    def attach(self, alert=False):
+        signal = json.dumps({"payload": {"name": "attach", "args": [alert]}})
         self.host.channels["parent"].put(signal)
         attached = QtTest.QSignalSpy(self.attached)
         attached.wait(1000)
@@ -869,7 +869,7 @@ class Controller(QtCore.QObject):
             self.run(*args, callback=on_finished)
 
         def on_finished():
-            self.attach()
+            self.attach(True)
             self.host.emit("published", context=None)
 
         self.detach()
@@ -913,7 +913,7 @@ class Controller(QtCore.QObject):
             self.run(*args, callback=on_finished)
 
         def on_finished():
-            self.attach()
+            self.attach(True)
             self.host.emit("validated", context=None)
 
         self.detach()

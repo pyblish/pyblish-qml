@@ -98,7 +98,7 @@ class Application(QtGui.QGuiApplication):
     inFocused = QtCore.pyqtSignal()
     outFocused = QtCore.pyqtSignal()
 
-    attached = QtCore.pyqtSignal()
+    attached = QtCore.pyqtSignal(QtCore.QVariant)
     detached = QtCore.pyqtSignal()
     host_attached = QtCore.pyqtSignal()
     host_detached = QtCore.pyqtSignal()
@@ -257,6 +257,8 @@ class Application(QtGui.QGuiApplication):
             # Hide src container
             self.native_vessel.setOpacity(0)  # avoid hide window anim
             self.native_vessel.hide()
+            # Ensure at front
+            self.window.requestActivate()
 
     def hide(self):
         """Hide GUI
@@ -336,7 +338,7 @@ class Application(QtGui.QGuiApplication):
 
         self.controller.detached.emit()
 
-    def attach(self):
+    def attach(self, alert=False):
         """Attach QQuickView window to the host
 
         In foster mode, inorder to prevent window freeze when the host's
@@ -365,7 +367,7 @@ class Application(QtGui.QGuiApplication):
         self.native_vessel.setOpacity(0)  # avoid hide window anim
         self.native_vessel.hide()
         # Stay on top
-        self.host.popup()
+        self.host.popup(alert)
 
         self.controller.attached.emit()
 

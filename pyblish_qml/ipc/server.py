@@ -115,8 +115,12 @@ class Proxy(object):
         self.vessel.setGeometry(x, y, w, h)
         self._dispatch("host_attach")
 
-    def popup(self):
-        self.vessel.activateWindow()  # to top
+    def popup(self, alert):
+        # No hijack keyboard focus
+        QtWidgets.QApplication.setActiveWindow(self.vessel)
+        # Plus alert
+        if alert:
+            QtWidgets.QApplication.alert(self.vessel.parent(), 0)
 
     def publish(self):
         return self._dispatch("publish")

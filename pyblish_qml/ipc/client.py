@@ -40,8 +40,8 @@ class Proxy(object):
         geometry = [qRect.x(), qRect.y(), qRect.width(), qRect.height()]
         self._dispatch("attach", args=geometry)
 
-    def popup(self):
-        self._dispatch("popup")
+    def popup(self, alert):
+        self._dispatch("popup", args=[alert])
 
     def test(self, **vars):
         """Vars can only be passed as a non-keyword argument"""
