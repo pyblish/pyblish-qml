@@ -106,6 +106,24 @@ def _fosterable(foster, modal):
         return False
 
 
+def _foster_ninja(foster):
+    if not foster:
+        return False
+
+    value = os.environ.get("PYBLISH_QML_FOSTER_NINJA", "").lower()
+    if value in ("true", "yes", "1"):
+        return True
+
+    elif value in ("false", "no", "0"):
+        return False
+
+    else:
+        if QtCore.qVersion()[0] == "5":
+            return True
+        else:
+            return False
+
+
 def show(parent=None, targets=[], modal=None, foster=None):
     """Attempt to show GUI
 
@@ -121,6 +139,7 @@ def show(parent=None, targets=[], modal=None, foster=None):
     is_headless = _is_headless()
 
     foster = _fosterable(foster, modal)
+    ninja = _foster_ninja(foster)
 
     # Automatically install if not already installed.
     if not _state.get("installed"):
@@ -164,7 +183,8 @@ def show(parent=None, targets=[], modal=None, foster=None):
         server = ipc.server.Server(service,
                                    targets=targets,
                                    modal=modal,
-                                   foster=foster)
+                                   foster=foster,
+                                   ninja=ninja)
     except Exception:
         # If for some reason, the GUI fails to show.
         traceback.print_exc()
@@ -388,11 +408,7 @@ class HostEventFilter(QtWidgets.QWidget):
 
         if connected is not True:
             # The running instance has already been closed.
-            self.parent().removeEventFilter(self)
-            if _state.get("eventFilter") is self:
-                _state.pop("eventFilter")
-
-            print("The eventFilter of pyblish-qml has self removed.\n")
+            remove_event_filter()
 
         return True
 

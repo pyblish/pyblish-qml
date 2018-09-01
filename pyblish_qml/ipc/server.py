@@ -15,6 +15,12 @@ CREATE_NO_WINDOW = 0x08000000
 IS_WIN32 = sys.platform == "win32"
 
 
+SIGNALS_TO_CLOSE_VESSEL = (
+    "pyblishQmlClose",
+    "pyblishQmlCloseForced",
+)
+
+
 def default_wrapper(func, *args, **kwargs):
     return func(*args, **kwargs)
 
@@ -40,9 +46,14 @@ class FosterVessel(QtWidgets.QDialog):
         self.resize(1, 1)
 
         self.proxy = proxy
+        self.close_lock = True
 
     def closeEvent(self, event):
-        self.proxy.quit()
+        if self.close_lock:
+            self.proxy.quit()
+            event.ignore()
+        else:
+            event.accept()
 
     def resizeEvent(self, event):
         self.proxy._dispatch("resize", args=[self.width(), self.height()])
@@ -50,7 +61,7 @@ class FosterVessel(QtWidgets.QDialog):
 
 class MockFosterVessel(object):
     """We don't create widget without QApp, we mock one"""
-    _winId = None
+    _winId = close_lock = None
     show = hide = close = lambda _: None
 
 
@@ -58,14 +69,31 @@ class Proxy(object):
     """Speak to child process and control the vessel (window container)"""
 
     def __init__(self, server):
+        import pyblish.api
 
         self.popen = server.popen
         self.foster = server.foster
+        self.ninja = server.ninja
 
         self.vessel = FosterVessel(self) if self.foster else MockFosterVessel()
         self._winId = self.vessel._winId
 
         server.proxy = self
+
+        def close_vessel():
+            self.vessel.close_lock = False
+            self.vessel.close()
+
+            for signal in SIGNALS_TO_CLOSE_VESSEL:
+                try:
+                    pyblish.api.deregister_callback(signal, self.close_vessel)
+                except (KeyError, ValueError):
+                    pass
+
+        self.close_vessel = close_vessel
+
+        for signal in SIGNALS_TO_CLOSE_VESSEL:
+            pyblish.api.register_callback(signal, self.close_vessel)
 
         self._alive()
 
@@ -76,7 +104,11 @@ class Proxy(object):
             settings (optional, dict): Client settings
 
         """
-        return self._dispatch("show", args=[settings or {}, self._winId])
+        if not self.ninja:
+            self.vessel.show()
+        return self._dispatch("show", args=[settings or {},
+                                            self._winId,
+                                            self.ninja])
 
     def hide(self):
         """Hide the GUI"""
@@ -117,7 +149,8 @@ class Proxy(object):
 
     def popup(self, alert):
         # No hijack keyboard focus
-        QtWidgets.QApplication.setActiveWindow(self.vessel)
+        if self.ninja:
+            QtWidgets.QApplication.setActiveWindow(self.vessel)
         # Plus alert
         if alert:
             QtWidgets.QApplication.alert(self.vessel.parent(), 0)
@@ -177,7 +210,7 @@ class Proxy(object):
             self.popen.stdin.flush()
         except IOError:
             # subprocess closed
-            self.vessel.close()
+            self.close_vessel()
         else:
             return True
 
@@ -200,7 +233,8 @@ class Server(object):
                  pyqt5=None,
                  targets=[],
                  modal=False,
-                 foster=False):
+                 foster=False,
+                 ninja=False):
         super(Server, self).__init__()
         self.service = service
         self.listening = False
@@ -211,6 +245,7 @@ class Server(object):
         self.modal = modal
 
         self.foster = foster
+        self.ninja = ninja
 
         # The server may be run within Maya or some other host,
         # in which case we refer to it as running embedded.

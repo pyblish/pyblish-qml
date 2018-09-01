@@ -67,12 +67,13 @@ class NativeVessel(QtGui.QWindow):
         self.app.resize(self.width(), self.height())
 
     def event(self, event):
-        # Is required for Foster mode
+        # Is required when Foster mode is on.
         # Native vessel will receive closeEvent while foster mode is on
         # and is the parent of window.
         if event.type() == QtCore.QEvent.Close:
             self.app.window.event(event)
             if event.isAccepted():
+                # `app.fostered` is False at this moment.
                 self.app.quit()
 
         return super(NativeVessel, self).event(event)
@@ -86,7 +87,7 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    shown = QtCore.pyqtSignal(QtCore.QVariant, QtCore.QVariant)
+    shown = QtCore.pyqtSignal(*(QtCore.QVariant,) * 3)
     hidden = QtCore.pyqtSignal()
     quitted = QtCore.pyqtSignal()
     published = QtCore.pyqtSignal()
@@ -124,6 +125,7 @@ class Application(QtGui.QGuiApplication):
         context.setContextProperty("app", controller)
 
         self.fostered = False
+        self.ninja = False
 
         self.foster_vessel = None
         self.native_vessel = native_vessel
@@ -166,15 +168,19 @@ class Application(QtGui.QGuiApplication):
         self.clients.pop(port)
 
     def quit(self):
+        event = None
         if self.fostered:
             # Foster vessel's closeEvent will trigger "quit" which connected
             # to here.
             # Forward the event to window.
-            self.window.event(QtCore.QEvent(QtCore.QEvent.Close))
-        super(Application, self).quit()
+            event = QtCore.QEvent(QtCore.QEvent.Close)
+            self.window.event(event)
+
+        if event is None or event.isAccepted():
+            super(Application, self).quit()
 
     @util.SlotSentinel()
-    def show(self, client_settings=None, window_id=None):
+    def show(self, client_settings=None, window_id=None, ninja=False):
         """Display GUI
 
         Once the QML interface has been loaded, use this
@@ -200,6 +206,7 @@ class Application(QtGui.QGuiApplication):
 
             self.window.setParent(foster_vessel)
             self.foster_vessel = foster_vessel
+            self.ninja = ninja
 
         if client_settings:
             # Apply client-side settings
@@ -215,8 +222,9 @@ class Application(QtGui.QGuiApplication):
             first_appearance_setup(self.native_vessel)
 
             if self.fostered:
-                # Return it back to native vessel for first run
-                self.window.setParent(self.native_vessel)
+                if self.ninja:
+                    # Return it back to native vessel for first run
+                    self.window.setParent(self.native_vessel)
                 first_appearance_setup(self.foster_vessel)
 
         message = list()
@@ -250,7 +258,7 @@ class Application(QtGui.QGuiApplication):
         # Allow time for QML to initialise
         util.schedule(self.controller.reset, 500, channel="main")
 
-        if self.fostered:
+        if self.fostered and self.ninja:
             # Reclaim window after first rest
             self.window.setParent(self.foster_vessel)
             self.foster_vessel.show()
@@ -315,7 +323,7 @@ class Application(QtGui.QGuiApplication):
         This is the part that detaching from host.
 
         """
-        if self.foster_vessel is None:
+        if not self.ninja:
             self.controller.detached.emit()
             return
 
@@ -350,7 +358,10 @@ class Application(QtGui.QGuiApplication):
         This is the part that attaching back to host.
 
         """
-        if self.foster_vessel is None:
+        if not self.ninja:
+            if self.foster_vessel is not None:
+                # Send alert
+                self.host.popup(alert)
             self.controller.attached.emit()
             return
 
