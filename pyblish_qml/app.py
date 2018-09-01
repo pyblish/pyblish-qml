@@ -283,14 +283,14 @@ class Application(QtGui.QGuiApplication):
 
     def inFocus(self):
         """Set GUI on-top flag"""
-        if not self.fostered and os.name == "nt":
+        if not self.fostered:
             previous_flags = self.window.flags()
             self.window.setFlags(previous_flags |
                                  QtCore.Qt.WindowStaysOnTopHint)
 
     def outFocus(self):
         """Remove GUI on-top flag"""
-        if not self.fostered and os.name == "nt":
+        if not self.fostered:
             previous_flags = self.window.flags()
             self.window.setFlags(previous_flags ^
                                  QtCore.Qt.WindowStaysOnTopHint)
@@ -303,7 +303,7 @@ class Application(QtGui.QGuiApplication):
         self.window.resize(width, height)
 
     def _popup(self):
-        if not self.fostered and os.name == "nt":
+        if not self.fostered:
             window = self.window
             # Work-around for window appearing behind
             # other windows upon being shown once hidden.
