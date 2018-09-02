@@ -104,11 +104,12 @@ class Proxy(object):
             settings (optional, dict): Client settings
 
         """
-        if not self.ninja:
+        if self.ninja:
+            return self._dispatch("show", args=[settings or {},
+                                                self._winId,
+                                                self.ninja])
+        else:
             self.vessel.show()
-        return self._dispatch("show", args=[settings or {},
-                                            self._winId,
-                                            self.ninja])
 
     def hide(self):
         """Hide the GUI"""
@@ -224,6 +225,10 @@ class Server(object):
         service (service.Service): Dispatch requests to this service
         python (str, optional): Absolute path to Python executable
         pyqt5 (str, optional): Absolute path to PyQt5
+        targets (list, optional): Publishing targets, e.g. `ftrack`
+        modal (bool, optional): Block interactions to parent
+        foster (bool, optional): Become a real child of the parent process
+        ninja (bool, optional): ...?
 
     """
 

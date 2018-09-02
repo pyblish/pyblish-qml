@@ -111,17 +111,7 @@ def _foster_ninja(foster):
         return False
 
     value = os.environ.get("PYBLISH_QML_FOSTER_NINJA", "").lower()
-    if value in ("true", "yes", "1"):
-        return True
-
-    elif value in ("false", "no", "0"):
-        return False
-
-    else:
-        if QtCore.qVersion()[0] == "5":
-            return True
-        else:
-            return False
+    return value in ("true", "yes", "1") or QtCore.qVersion()[0] == "5"
 
 
 def show(parent=None, targets=[], modal=None, foster=None):
@@ -129,6 +119,12 @@ def show(parent=None, targets=[], modal=None, foster=None):
 
     Requires install() to have been run first, and
     a live instance of Pyblish QML in the background.
+
+    Arguments:
+        parent (None, optional): Deprecated
+        targets (list, optional): Publishing targets
+        modal (bool, optional): Block interactions to parent
+        foster (bool, optional): Become a real child of the parent process
 
     """
 
