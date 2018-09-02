@@ -23,9 +23,9 @@ ICON_PATH = os.path.join(MODULE_DIR, "icon.ico")
 class Window(QtQuick.QQuickView):
     """Main application window"""
 
-    def __init__(self, app):
+    def __init__(self):
         super(Window, self).__init__(None)
-        self.app = app
+        self.app = QtGui.QGuiApplication.instance()
 
         self.setTitle(settings.WindowTitle)
         self.setResizeMode(self.SizeRootObjectToView)
@@ -59,9 +59,9 @@ class Window(QtQuick.QQuickView):
 class NativeVessel(QtGui.QWindow):
     """Container window"""
 
-    def __init__(self, app):
+    def __init__(self):
         super(NativeVessel, self).__init__(None)
-        self.app = app
+        self.app = QtGui.QGuiApplication.instance()
 
     def resizeEvent(self, event):
         self.app.resize(self.width(), self.height())
@@ -109,9 +109,9 @@ class Application(QtGui.QGuiApplication):
 
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
 
-        native_vessel = NativeVessel(self)
+        native_vessel = NativeVessel()
 
-        window = Window(self)
+        window = Window()
         window.statusChanged.connect(self.on_status_changed)
 
         engine = window.engine()
