@@ -106,12 +106,12 @@ def _fosterable(foster, modal):
         return False
 
 
-def _foster_ninja(foster):
+def _foster_fixed(foster):
     if not foster:
         return False
 
-    value = os.environ.get("PYBLISH_QML_FOSTER_NINJA", "").lower()
-    return value in ("true", "yes", "1") or QtCore.qVersion()[0] == "5"
+    value = os.environ.get("PYBLISH_QML_FOSTER_FIXED", "").lower()
+    return value in ("true", "yes", "1") or QtCore.qVersion()[0] == "4"
 
 
 def show(parent=None, targets=[], modal=None, foster=None):
@@ -135,7 +135,7 @@ def show(parent=None, targets=[], modal=None, foster=None):
     is_headless = _is_headless()
 
     foster = _fosterable(foster, modal)
-    ninja = _foster_ninja(foster)
+    foster_fixed = _foster_fixed(foster)
 
     # Automatically install if not already installed.
     if not _state.get("installed"):
@@ -180,7 +180,7 @@ def show(parent=None, targets=[], modal=None, foster=None):
                                    targets=targets,
                                    modal=modal,
                                    foster=foster,
-                                   ninja=ninja)
+                                   foster_fixed=foster_fixed)
     except Exception:
         # If for some reason, the GUI fails to show.
         traceback.print_exc()

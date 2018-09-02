@@ -125,7 +125,7 @@ class Application(QtGui.QGuiApplication):
         context.setContextProperty("app", controller)
 
         self.fostered = False
-        self.ninja = False
+        self.foster_fixed = False
 
         self.foster_vessel = None
         self.native_vessel = native_vessel
@@ -180,7 +180,7 @@ class Application(QtGui.QGuiApplication):
             super(Application, self).quit()
 
     @util.SlotSentinel()
-    def show(self, client_settings=None, window_id=None, ninja=False):
+    def show(self, client_settings=None, window_id=None, foster_fixed=False):
         """Display GUI
 
         Once the QML interface has been loaded, use this
@@ -206,7 +206,7 @@ class Application(QtGui.QGuiApplication):
 
             self.window.setParent(foster_vessel)
             self.foster_vessel = foster_vessel
-            self.ninja = ninja
+            self.foster_fixed = foster_fixed
 
         if client_settings:
             # Apply client-side settings
@@ -222,7 +222,7 @@ class Application(QtGui.QGuiApplication):
             first_appearance_setup(self.native_vessel)
 
             if self.fostered:
-                if self.ninja:
+                if not self.foster_fixed:
                     # Return it back to native vessel for first run
                     self.window.setParent(self.native_vessel)
                 first_appearance_setup(self.foster_vessel)
@@ -234,7 +234,7 @@ class Application(QtGui.QGuiApplication):
 
         print("\n".join(message))
 
-        if self.fostered and self.ninja:
+        if self.fostered and not self.foster_fixed:
             self.native_vessel.show()
 
         self.window.requestActivate()
@@ -316,7 +316,7 @@ class Application(QtGui.QGuiApplication):
         This is the part that detaching from host.
 
         """
-        if not self.ninja:
+        if self.foster_fixed or self.foster_vessel is None:
             self.controller.detached.emit()
             return
 
@@ -351,11 +351,10 @@ class Application(QtGui.QGuiApplication):
         This is the part that attaching back to host.
 
         """
-        if not self.ninja:
-            if self.foster_vessel is not None:
-                # Send alert
-                self.host.popup(alert)
+        if self.foster_fixed or self.foster_vessel is None:
             self.controller.attached.emit()
+            if self.foster_vessel is not None:
+                self.host.popup(alert)  # Send alert
             return
 
         print("Attach window to foster parent...")

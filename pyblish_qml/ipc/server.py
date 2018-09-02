@@ -73,7 +73,7 @@ class Proxy(object):
 
         self.popen = server.popen
         self.foster = server.foster
-        self.ninja = server.ninja
+        self.foster_fixed = server.foster_fixed
 
         self.vessel = FosterVessel(self) if self.foster else MockFosterVessel()
         self._winId = self.vessel._winId
@@ -104,11 +104,11 @@ class Proxy(object):
             settings (optional, dict): Client settings
 
         """
-        if not self.ninja:
+        if self.foster_fixed:
             self.vessel.show()
         return self._dispatch("show", args=[settings or {},
                                             self._winId,
-                                            self.ninja])
+                                            self.foster_fixed])
 
     def hide(self):
         """Hide the GUI"""
@@ -149,7 +149,7 @@ class Proxy(object):
 
     def popup(self, alert):
         # No hijack keyboard focus
-        if self.ninja:
+        if not self.foster_fixed:
             QtWidgets.QApplication.setActiveWindow(self.vessel)
         # Plus alert
         if alert:
@@ -226,8 +226,8 @@ class Server(object):
         pyqt5 (str, optional): Absolute path to PyQt5
         targets (list, optional): Publishing targets, e.g. `ftrack`
         modal (bool, optional): Block interactions to parent
-        foster (bool, optional): Become a real child of the parent process
-        ninja (bool, optional): ...?
+        foster (bool, optional): GUI become a real child of the parent process
+        foster_fixed (bool, optional): GUI always remain inside the parent
 
     """
 
@@ -238,7 +238,7 @@ class Server(object):
                  targets=[],
                  modal=False,
                  foster=False,
-                 ninja=False):
+                 foster_fixed=False):
         super(Server, self).__init__()
         self.service = service
         self.listening = False
@@ -249,7 +249,7 @@ class Server(object):
         self.modal = modal
 
         self.foster = foster
-        self.ninja = ninja
+        self.foster_fixed = foster_fixed
 
         # The server may be run within Maya or some other host,
         # in which case we refer to it as running embedded.
