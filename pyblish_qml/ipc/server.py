@@ -104,12 +104,11 @@ class Proxy(object):
             settings (optional, dict): Client settings
 
         """
-        if self.ninja:
-            return self._dispatch("show", args=[settings or {},
-                                                self._winId,
-                                                self.ninja])
-        else:
+        if not self.ninja:
             self.vessel.show()
+        return self._dispatch("show", args=[settings or {},
+                                            self._winId,
+                                            self.ninja])
 
     def hide(self):
         """Hide the GUI"""
