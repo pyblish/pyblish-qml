@@ -15,6 +15,12 @@ CREATE_NO_WINDOW = 0x08000000
 IS_WIN32 = sys.platform == "win32"
 
 
+SIGNALS_TO_CLOSE_VESSEL = (
+    "pyblishQmlClose",
+    "pyblishQmlCloseForced",
+)
+
+
 def default_wrapper(func, *args, **kwargs):
     return func(*args, **kwargs)
 
@@ -38,13 +44,16 @@ class FosterVessel(QtWidgets.QDialog):
         self._winId = winIdFixed(self.winId())
 
         self.resize(1, 1)
-        # Modal Mode
-        self.setModal(proxy.modal)
 
         self.proxy = proxy
+        self.close_lock = True
 
     def closeEvent(self, event):
-        self.proxy.quit()
+        if self.close_lock:
+            self.proxy.quit()
+            event.ignore()
+        else:
+            event.accept()
 
     def resizeEvent(self, event):
         self.proxy._dispatch("resize", args=[self.width(), self.height()])
@@ -52,7 +61,7 @@ class FosterVessel(QtWidgets.QDialog):
 
 class MockFosterVessel(object):
     """We don't create widget without QApp, we mock one"""
-    _winId = None
+    _winId = close_lock = None
     show = hide = close = lambda _: None
 
 
@@ -60,15 +69,31 @@ class Proxy(object):
     """Speak to child process and control the vessel (window container)"""
 
     def __init__(self, server):
+        import pyblish.api
 
         self.popen = server.popen
-        self.modal = server.modal
         self.foster = server.foster
+        self.foster_fixed = server.foster_fixed
 
         self.vessel = FosterVessel(self) if self.foster else MockFosterVessel()
         self._winId = self.vessel._winId
 
         server.proxy = self
+
+        def close_vessel():
+            self.vessel.close_lock = False
+            self.vessel.close()
+
+            for signal in SIGNALS_TO_CLOSE_VESSEL:
+                try:
+                    pyblish.api.deregister_callback(signal, self.close_vessel)
+                except (KeyError, ValueError):
+                    pass
+
+        self.close_vessel = close_vessel
+
+        for signal in SIGNALS_TO_CLOSE_VESSEL:
+            pyblish.api.register_callback(signal, self.close_vessel)
 
         self._alive()
 
@@ -79,13 +104,16 @@ class Proxy(object):
             settings (optional, dict): Client settings
 
         """
-        self.vessel.show()
-        return self._dispatch("show", args=[settings or {}, self._winId])
+        if self.foster_fixed:
+            self.vessel.show()
+        return self._dispatch("show", args=[settings or {},
+                                            self._winId,
+                                            self.foster_fixed])
 
     def hide(self):
         """Hide the GUI"""
         self._dispatch("hide")
-        self.vessel.hide()
+        return self.vessel.hide()
 
     def quit(self):
         """Ask the GUI to quit"""
@@ -93,25 +121,39 @@ class Proxy(object):
 
     def rise(self):
         """Rise GUI from hidden"""
-        self._dispatch("rise")
+        self.vessel.show()
+        return self._dispatch("rise")
 
     def inFocus(self):
         """Set GUI on-top flag"""
-        self._dispatch("inFocus")
+        return self._dispatch("inFocus")
 
     def outFocus(self):
         """Remove GUI on-top flag"""
-        self._dispatch("outFocus")
+        return self._dispatch("outFocus")
 
     def kill(self):
         """Forcefully destroy the process"""
         self.popen.kill()
 
     def detach(self):
+        self.vessel.setWindowOpacity(0)  # avoid hide window anim
         self.vessel.hide()
+        self._dispatch("host_detach")
 
-    def attach(self):
+    def attach(self, x, y, w, h):
         self.vessel.show()
+        self.vessel.setGeometry(x, y, w, h)
+        self.vessel.setWindowOpacity(100)
+        self._dispatch("host_attach")
+
+    def popup(self, alert):
+        # No hijack keyboard focus
+        if not self.foster_fixed:
+            QtWidgets.QApplication.setActiveWindow(self.vessel)
+        # Plus alert
+        if alert:
+            QtWidgets.QApplication.alert(self.vessel.parent(), 0)
 
     def publish(self):
         return self._dispatch("publish")
@@ -168,7 +210,7 @@ class Proxy(object):
             self.popen.stdin.flush()
         except IOError:
             # subprocess closed
-            self.vessel.close()
+            self.close_vessel()
         else:
             return True
 
@@ -182,6 +224,10 @@ class Server(object):
         service (service.Service): Dispatch requests to this service
         python (str, optional): Absolute path to Python executable
         pyqt5 (str, optional): Absolute path to PyQt5
+        targets (list, optional): Publishing targets, e.g. `ftrack`
+        modal (bool, optional): Block interactions to parent
+        foster (bool, optional): GUI become a real child of the parent process
+        foster_fixed (bool, optional): GUI always remain inside the parent
 
     """
 
@@ -191,7 +237,8 @@ class Server(object):
                  pyqt5=None,
                  targets=[],
                  modal=False,
-                 foster=False):
+                 foster=False,
+                 foster_fixed=False):
         super(Server, self).__init__()
         self.service = service
         self.listening = False
@@ -202,6 +249,7 @@ class Server(object):
         self.modal = modal
 
         self.foster = foster
+        self.foster_fixed = foster_fixed
 
         # The server may be run within Maya or some other host,
         # in which case we refer to it as running embedded.
@@ -333,9 +381,13 @@ class Server(object):
 
                         # self.service have no access to proxy object, so
                         # this `if` statement is needed
-                        if func_name in ("detach", "attach"):
-                            getattr(self.proxy, func_name)()
+                        if func_name in ("detach", "attach", "popup"):
+                            getattr(self.proxy, func_name)(*args)
                             result = None
+
+                        elif func_name in ("emit",):
+                            # Avoid main thread hang
+                            result = getattr(self.service, func_name)(*args)
 
                         else:
                             wrapper = _state.get("dispatchWrapper",
@@ -374,7 +426,7 @@ class Server(object):
                         sys.stdout.write(line)
 
         if not self.listening:
-            if self.modal and not self.foster:
+            if self.modal:
                 _listen()
             else:
                 thread = threading.Thread(target=_listen)

@@ -64,7 +64,7 @@ def install(modal, foster):
         sys.stdout.write("Already installed, uninstalling..\n")
         uninstall()
 
-    use_threaded_wrapper = foster or not modal
+    use_threaded_wrapper = not modal
 
     install_callbacks()
     install_host(use_threaded_wrapper)
@@ -89,17 +89,29 @@ def _is_headless():
     )
 
 
-def _fosterable(foster=None):
+def _fosterable(foster, modal):
     if foster is None:
         # Get foster mode from environment
         foster = bool(os.environ.get("PYBLISH_QML_FOSTER", False))
 
     if foster:
-        os.environ["PYBLISH_QML_FOSTER"] = "True"
-    else:
-        os.environ["PYBLISH_QML_FOSTER"] = ""
+        if modal or _is_headless():
+            print("Foster disabled due to Modal is on or in headless mode.")
+            return False
 
-    return foster and not _is_headless()
+        print("Foster on.")
+        return True
+
+    else:
+        return False
+
+
+def _foster_fixed(foster):
+    if not foster:
+        return False
+
+    value = os.environ.get("PYBLISH_QML_FOSTER_FIXED", "").lower()
+    return value in ("true", "yes", "1") or QtCore.qVersion()[0] == "4"
 
 
 def show(parent=None, targets=[], modal=None, foster=None):
@@ -107,6 +119,12 @@ def show(parent=None, targets=[], modal=None, foster=None):
 
     Requires install() to have been run first, and
     a live instance of Pyblish QML in the background.
+
+    Arguments:
+        parent (None, optional): Deprecated
+        targets (list, optional): Publishing targets
+        modal (bool, optional): Block interactions to parent
+        foster (bool, optional): Become a real child of the parent process
 
     """
 
@@ -116,7 +134,8 @@ def show(parent=None, targets=[], modal=None, foster=None):
 
     is_headless = _is_headless()
 
-    foster = _fosterable(foster)
+    foster = _fosterable(foster, modal)
+    foster_fixed = _foster_fixed(foster)
 
     # Automatically install if not already installed.
     if not _state.get("installed"):
@@ -160,7 +179,8 @@ def show(parent=None, targets=[], modal=None, foster=None):
         server = ipc.server.Server(service,
                                    targets=targets,
                                    modal=modal,
-                                   foster=foster)
+                                   foster=foster,
+                                   foster_fixed=foster_fixed)
     except Exception:
         # If for some reason, the GUI fails to show.
         traceback.print_exc()
@@ -174,6 +194,9 @@ def show(parent=None, targets=[], modal=None, foster=None):
 
     print("Success. QML server available as "
           "pyblish_qml.api.current_server()")
+
+    # Install eventFilter if not exists one
+    install_event_filter()
 
     server.listen()
 
@@ -274,18 +297,59 @@ def install_host(use_threaded_wrapper):
             break
 
 
+SIGNALS_TO_REMOVE_EVENT_FILTER = (
+    "pyblishQmlClose",
+    "pyblishQmlCloseForced",
+)
+
+
+def remove_event_filter():
+    event_filter = _state.get("eventFilter")
+    if isinstance(event_filter, QtCore.QObject):
+
+        # (NOTE) Should remove from the QApp instance which originally
+        #        installed to.
+        #        This will not work:
+        #        `QApplication.instance().removeEventFilter(event_filter)`
+        #
+        event_filter.parent().removeEventFilter(event_filter)
+        del _state["eventFilter"]
+
+        for signal in SIGNALS_TO_REMOVE_EVENT_FILTER:
+            try:
+                pyblish.api.deregister_callback(signal, remove_event_filter)
+            except (KeyError, ValueError):
+                pass
+
+        print("The eventFilter of pyblish-qml has been removed.")
+
+
 def install_event_filter():
 
     main_window = _state.get("vesselParent")
     if main_window is None:
-        raise Exception("Main window not found, event filter did not "
-                        "install. This is a bug.")
+        print("Main window not found, event filter did not install.")
+        return
+
+    event_filter = _state.get("eventFilter")
+    if isinstance(event_filter, QtCore.QObject):
+        print("Event filter exists.")
+        return
+    else:
+        event_filter = HostEventFilter(main_window)
 
     try:
-        host_event_filter = HostEventFilter(main_window)
-        main_window.installEventFilter(host_event_filter)
-    except Exception:
-        pass
+        main_window.installEventFilter(event_filter)
+    except Exception as e:
+        print("An error has occurred during event filter's installation.")
+        print(e)
+    else:
+        _state["eventFilter"] = event_filter
+
+        for signal in SIGNALS_TO_REMOVE_EVENT_FILTER:
+            pyblish.api.register_callback(signal, remove_event_filter)
+
+        print("Event filter has been installed.")
 
 
 def _on_application_quit():
@@ -336,14 +400,13 @@ class HostEventFilter(QtWidgets.QWidget):
             # proxy is None, or does not have the function
             return False
 
-        try:
-            func()
-            return True
-        except IOError:
-            # The running instance has already been closed.
-            _state.pop("currentServer")
+        connected = func()
 
-        return False
+        if connected is not True:
+            # The running instance has already been closed.
+            remove_event_filter()
+
+        return True
 
 
 def _acquire_host_main_window(app):
@@ -413,8 +476,6 @@ def _install_maya(use_threaded_wrapper):
             for widget in QtWidgets.QApplication.topLevelWidgets()
         }["MayaWindow"]
 
-        install_event_filter()
-
     _set_host_label("Maya")
 
 
@@ -428,8 +489,6 @@ def _common_setup(host_name, threaded_wrapper, use_threaded_wrapper):
     app = QtWidgets.QApplication.instance()
     app.aboutToQuit.connect(_on_application_quit)
     _acquire_host_main_window(app)
-
-    install_event_filter()
 
     _set_host_label(host_name)
 
