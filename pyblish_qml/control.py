@@ -617,6 +617,11 @@ class Controller(QtCore.QObject):
         """Append `data` to result model"""
         self.data["models"]["result"].add_item(data)
 
+    def comment_sync(self, comment):
+        """Update comments to host and notify subscribers"""
+        self.host.update(key="comment", value=comment)
+        self.host.emit("commented", comment=comment)
+
     # Event handlers
 
     def on_commenting(self, comment):
@@ -628,8 +633,7 @@ class Controller(QtCore.QObject):
             self.data["comment"] = comment
 
             # Notify subscribers of the comment
-            self.host.update(key="comment", value=comment)
-            self.host.emit("commented", comment=comment)
+            self.comment_sync(comment)
 
             self.commented.emit()
 
@@ -765,8 +769,7 @@ class Controller(QtCore.QObject):
                 self.data["comment"] = comment
 
             # Notify subscribers of the comment
-            self.host.update(key="comment", value=comment)
-            self.host.emit("commented", comment=comment)
+            self.comment_sync(comment)
 
             if self.data["firstRun"]:
                 self.firstRun.emit()
