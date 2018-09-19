@@ -764,6 +764,10 @@ class Controller(QtCore.QObject):
                 comment = self.host.cached_context.data.get("comment", "")
                 self.data["comment"] = comment
 
+            # Notify subscribers of the comment
+            self.host.update(key="comment", value=comment)
+            self.host.emit("commented", comment=comment)
+
             if self.data["firstRun"]:
                 self.firstRun.emit()
                 self.data["firstRun"] = False
