@@ -112,8 +112,9 @@ class Proxy(object):
 
     def hide(self):
         """Hide the GUI"""
-        self._dispatch("hide")
-        return self.vessel.hide()
+        success = self._dispatch("hide")
+        self.vessel.hide()
+        return success
 
     def quit(self):
         """Ask the GUI to quit"""
@@ -144,7 +145,7 @@ class Proxy(object):
     def attach(self, x, y, w, h):
         self.vessel.show()
         self.vessel.setGeometry(x, y, w, h)
-        self.vessel.setWindowOpacity(100)
+        self.vessel.setWindowOpacity(1)
         self._dispatch("host_attach")
 
     def popup(self, alert):
