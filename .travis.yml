@@ -23,9 +23,9 @@ script:
 deploy:
   provider: pypi
   user: mottosso
+  distributions: "sdist bdist_wheel"
   password:
     secure: NKekJIgRr/kaDXsK6Vz4rj3Uuxk6gK1NsrlAkAqXX8bPSS2oLpp8KVN2SjoCizwdO+sZzry6q0WdbeqnqRwiTTdnotlyVqjbmFNfTCeRdqZKAqYDvfSe44eNWCQgf06zl0lErX9NrJuPnJWyXqutvojdm50b99NzkiO60I+Fr6M=
   on:
     tags: true
-    distributions: sdist bdist_wheel
     repo: pyblish/pyblish-qml
