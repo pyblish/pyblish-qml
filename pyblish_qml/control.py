@@ -379,7 +379,8 @@ class Controller(QtCore.QObject):
             if action["on"] == "notProcessed" and item.processed:
                 actions.remove(action)
 
-        # Discard empty groups
+        # Discard empty categories, separators
+        remaining_actions = list()
         index = 0
         try:
             action = actions[index]
@@ -394,7 +395,7 @@ class Controller(QtCore.QObject):
 
                 isempty = False
 
-                if action["__type__"] == "category":
+                if action["__type__"] in ("category", "separator"):
                     try:
                         next_ = actions[index + 1]
                         if next_["__type__"] != "action":
@@ -402,12 +403,12 @@ class Controller(QtCore.QObject):
                     except IndexError:
                         isempty = True
 
-                    if isempty:
-                        actions.pop(index)
+                if not isempty:
+                    remaining_actions.append(action)
 
                 index += 1
 
-        return actions
+        return remaining_actions
 
     @QtCore.pyqtSlot(str)
     def runPluginAction(self, action):
