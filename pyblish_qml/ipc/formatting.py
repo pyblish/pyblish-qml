@@ -130,6 +130,7 @@ def format_data(data):
         "label",
         "family",
         "families",
+        "category",
         "publish",
         "comment",
 

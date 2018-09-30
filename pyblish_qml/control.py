@@ -482,7 +482,7 @@ class Controller(QtCore.QObject):
         model = self.data["models"]["item"]
 
         for item in model.items:
-            if item.itemType == 'instance' and sectionLabel == item.family:
+            if item.itemType == 'instance' and sectionLabel == item.category:
                 if item.isToggled != checkState:
                     self.__toggle_item(model,
                                        model.items.index(item))
@@ -499,7 +499,7 @@ class Controller(QtCore.QObject):
         model = self.data["models"]["item"]
 
         for item in model.items:
-            if item.itemType == "instance" and sectionLabel == item.family:
+            if item.itemType == "instance" and sectionLabel == item.category:
                 self.__hide_item(model, model.items.index(item), hideState)
 
             if item.itemType == "plugin" and item.verb == sectionLabel:
@@ -654,7 +654,7 @@ class Controller(QtCore.QObject):
         for section in self.data["models"]["item"].sections:
             if section.name == plugin_item.verb:
                 section.isProcessing = True
-            if section.name == instance_item.family:
+            if section.name == instance_item.category:
                 section.isProcessing = True
 
         instance_item.isProcessing = True

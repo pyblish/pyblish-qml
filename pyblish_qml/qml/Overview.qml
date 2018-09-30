@@ -84,7 +84,7 @@ Item {
                 width: Math.floor(parent.width / 2.0)  // To keep checkbox border from collapsing
                 height: parent.height
 
-                section.property: "object.family"
+                section.property: "object.category"
                 section.delegate: SectionItem {
                     text: section
                     object: app.instanceProxy.itemByName(section)
