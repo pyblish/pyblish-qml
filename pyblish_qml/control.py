@@ -320,7 +320,7 @@ class Controller(QtCore.QObject):
             "ordersWithError": set()
         }
 
-        for plug, instance in iterator(plugins, context):
+        for plug, instance in pyblish.logic.Iterator(plugins, context):
 
             state["nextOrder"] = plug.order
 
@@ -605,6 +605,11 @@ class Controller(QtCore.QObject):
                            new_value=new_value,
                            old_value=old_value)
 
+            # Update the plugin's active state so it processes correctly (#218)
+            plugin = next(plugin for plugin in self.host.cached_discover if
+                          plugin.id == item.id)
+            plugin.active = new_value
+
         if item.itemType == 'instance':
             self.host.emit("instanceToggled",
                            instance=item.id,
@@ -731,12 +736,23 @@ class Controller(QtCore.QObject):
         def on_finished(plugins, context):
             # Compute compatibility
             for plugin in self.data["models"]["item"].plugins:
+
                 if plugin.instanceEnabled:
-                    instances = pyblish.logic.instances_by_plugin(context,
-                                                                  plugin)
-                    plugin.compatibleInstances = list(i.id for i in instances)
+                    required = pyblish.logic.instances_by_plugin(context,
+                                                                 plugin)
                 else:
-                    plugin.compatibleInstances = [context.id]
+                    # A ContextPlugin without wildcard is only compatible
+                    # when instance is present with correct family, see issue:
+                    # pyblish-base/#250
+                    # todo: introduce backwards compatibility
+                    has_wildcard = "*" in plugin.families
+                    if has_wildcard:
+                        required = [context]
+                    else:
+                        required = pyblish.logic.instances_by_plugin(context,
+                                                                     plugin)
+
+                plugin.compatibleInstances = [i.id for i in required]
 
             self.data["models"]["item"].reorder(context)
 
@@ -1084,27 +1100,3 @@ class Controller(QtCore.QObject):
 
         # Reset state
         util.async(lambda: next(iterator), callback=on_next)
-
-
-def iterator(plugins, context):
-    """An iterator for plug-in and instance pairs"""
-    test = pyblish.logic.registered_test()
-    state = {
-        "nextOrder": None,
-        "ordersWithError": set()
-    }
-
-    for plugin in plugins:
-        state["nextOrder"] = plugin.order
-
-        message = test(**state)
-        if message:
-            raise StopIteration("Stopped due to %s" % message)
-
-        instances = pyblish.api.instances_by_plugin(context, plugin)
-        if plugin.__instanceEnabled__:
-            for instance in instances:
-                yield plugin, instance
-
-        else:
-            yield plugin, None
