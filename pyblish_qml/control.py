@@ -481,6 +481,13 @@ class Controller(QtCore.QObject):
     def toggleSection(self, checkState, sectionLabel):
         model = self.data["models"]["item"]
 
+        states = set([item.isToggled for item in model.items
+                      if (item.itemType == 'instance' and
+                          sectionLabel == item.family)])
+
+        if len(states) == 1:
+            checkState = not states.pop()
+
         for item in model.items:
             if item.itemType == 'instance' and sectionLabel == item.family:
                 if item.isToggled != checkState:
