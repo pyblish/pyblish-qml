@@ -225,10 +225,8 @@ class ContextProxy(pyblish.api.Context):
         self = cls()
         self._id = context["id"]
         self._data = context["data"]
-
-        instances = list(InstanceProxy.from_json(i)
-                         for i in context["children"])
-        self[:] = sorted(instances, key=lambda i: i._data["family"])
+        self[:] = list(InstanceProxy.from_json(i)
+                       for i in context["children"])
 
         # Attach metadata
         self._data["pyblishClientVersion"] = pyblish.api.version
