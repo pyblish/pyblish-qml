@@ -27,7 +27,12 @@ class Controller(QtCore.QObject):
     detached = QtCore.pyqtSignal()
 
     firstRun = QtCore.pyqtSignal()
-    publishing = QtCore.pyqtSignal()
+
+    collecting = QtCore.pyqtSignal()
+    validating = QtCore.pyqtSignal()
+    extracting = QtCore.pyqtSignal()
+    integrating = QtCore.pyqtSignal()
+
     repairing = QtCore.pyqtSignal()
     stopping = QtCore.pyqtSignal()
     saving = QtCore.pyqtSignal()
@@ -181,7 +186,12 @@ class Controller(QtCore.QObject):
         operation = util.QState("operation", group)
 
         ready = util.QState("ready", operation)
-        publishing = util.QState("publishing", operation)
+
+        collecting = util.QState("collecting", operation)
+        validating = util.QState("validating", operation)
+        extracting = util.QState("extracting", operation)
+        integrating = util.QState("integrating", operation)
+
         finished = util.QState("finished", operation)
         repairing = util.QState("repairing", operation)
         initialising = util.QState("initialising", operation)
@@ -229,16 +239,28 @@ class Controller(QtCore.QObject):
         visible.addTransition(self.hide, hidden)
 
         ready.addTransition(self.acting, acting)
-        ready.addTransition(self.publishing, publishing)
+        ready.addTransition(self.validating, validating)
         ready.addTransition(self.initialising, initialising)
         ready.addTransition(self.repairing, repairing)
         ready.addTransition(self.saving, saving)
         saving.addTransition(self.saved, ready)
-        publishing.addTransition(self.stopping, stopping)
-        publishing.addTransition(self.finished, finished)
+
+        collecting.addTransition(self.initialised, ready)
+        collecting.addTransition(self.stopping, stopping)
+
+        validating.addTransition(self.stopping, stopping)
+        validating.addTransition(self.finished, finished)
+        validating.addTransition(self.extracting, extracting)
+
+        extracting.addTransition(self.stopping, stopping)
+        extracting.addTransition(self.integrating, integrating)
+
+        integrating.addTransition(self.stopping, stopping)
+        integrating.addTransition(self.finished, finished)
+
         finished.addTransition(self.initialising, initialising)
         finished.addTransition(self.acting, acting)
-        initialising.addTransition(self.initialised, ready)
+        initialising.addTransition(self.collecting, collecting)
         stopping.addTransition(self.acted, acted)
         stopping.addTransition(self.finished, finished)
 
@@ -260,7 +282,10 @@ class Controller(QtCore.QObject):
         for state in (hidden,
                       visible,
                       ready,
-                      publishing,
+                      collecting,
+                      validating,
+                      extracting,
+                      integrating,
                       finished,
                       repairing,
                       initialising,
@@ -320,9 +345,19 @@ class Controller(QtCore.QObject):
             "ordersWithError": set()
         }
 
+        signals = {
+            pyblish.api.ValidatorOrder: self.validating,
+            pyblish.api.ExtractorOrder: self.extracting,
+            pyblish.api.IntegratorOrder: self.integrating,
+        }
+
         for plug, instance in iterator(plugins, context):
 
             state["nextOrder"] = plug.order
+
+            for order in list(signals.keys()):
+                if pyblish.lib.inrange(plug.order, order):
+                    signals.pop(order).emit()
 
             if not self.data["state"]["is_running"]:
                 raise StopIteration("Stopped")
@@ -820,6 +855,8 @@ class Controller(QtCore.QObject):
 
                 collectors.append(plugin)
 
+            self.collecting.emit()
+
             self.run(collectors, context,
                      callback=on_run,
                      callback_args=[plugins])
@@ -956,7 +993,6 @@ class Controller(QtCore.QObject):
 
         # Initial set-up
         self.data["state"]["is_running"] = True
-        self.publishing.emit()
 
         # Setup statistics for better debugging.
         # (To be finalised in `on_finished`)
@@ -1023,7 +1059,6 @@ class Controller(QtCore.QObject):
             self.error.emit("Not ready")
             return
 
-        self.publishing.emit()
         self.data["state"]["is_running"] = True
 
         # Setup statistics
