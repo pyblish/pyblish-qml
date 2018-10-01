@@ -517,19 +517,19 @@ class Controller(QtCore.QObject):
         model = self.data["models"]["item"]
 
         states = set([item.isToggled for item in model.items
-                      if (item.itemType == 'instance' and
+                      if (item.itemType == "instance" and
                           sectionLabel == item.family)])
 
         if len(states) == 1:
             checkState = not states.pop()
 
         for item in model.items:
-            if item.itemType == 'instance' and sectionLabel == item.family:
+            if item.itemType == "instance" and sectionLabel == item.family:
                 if item.isToggled != checkState:
                     self.__toggle_item(model,
                                        model.items.index(item))
 
-            if item.itemType == 'plugin' and item.optional:
+            if item.itemType == "plugin" and item.optional:
                 if item.verb == sectionLabel:
                     if item.isToggled != checkState:
                         self.__toggle_item(
