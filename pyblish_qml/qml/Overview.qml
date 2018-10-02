@@ -208,15 +208,7 @@ Item {
 
         visible: overview.state != "initialising"
 
-        mode: {
-            if (startup === true) {
-                // Ensure collecting process is stoppable on first run
-                setMessage("Collecting..")
-                return 1
-            }
-
-            return overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
-        }
+        mode:  overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
 
         width: parent.width
         anchors.bottom: parent.bottom
@@ -238,7 +230,6 @@ Item {
         onFirstRun: {
             app.commentEnabled ? commentBox.up() : null
             commentBox.text = app.comment()
-            footer.startup = false
         }
 
         onStateChanged: {
