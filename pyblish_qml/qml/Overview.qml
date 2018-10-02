@@ -209,14 +209,10 @@ Item {
         visible: overview.state != "initialising"
 
         mode: {
-            if (app.state === "collecting" && startup === true) {
+            if (startup === true) {
                 // Ensure collecting process is stoppable on first run
                 setMessage("Collecting..")
                 return 1
-            }
-            if (overview.state == "") {
-                // Make sure the message get displayed on first run
-                setMessage("Ready")
             }
 
             return overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
