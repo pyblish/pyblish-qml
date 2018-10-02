@@ -259,7 +259,7 @@ class Application(QtGui.QGuiApplication):
         self.controller.show.emit()
 
         # Allow time for QML to initialise
-        util.schedule(self.controller.reset, 500, channel="main")
+        util.schedule(self.controller.reset, 1500, channel="main")
 
     def hide(self):
         """Hide GUI
