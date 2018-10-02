@@ -16,6 +16,8 @@ Item {
 
     property string __lastPlugin
 
+    property bool validated: false
+
     signal instanceEntered(int index)
     signal pluginEntered(int index)
 
@@ -206,7 +208,13 @@ Item {
 
         visible: overview.state != "initialising"
 
-        mode: overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
+        mode: {
+            if (startup == true) {
+                setMessage("Collecting..")
+                return 1
+            }
+            return overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
+        }
 
         width: parent.width
         anchors.bottom: parent.bottom
@@ -228,6 +236,7 @@ Item {
         onFirstRun: {
             app.commentEnabled ? commentBox.up() : null
             commentBox.text = app.comment()
+            footer.startup = false
         }
 
         onStateChanged: {
@@ -241,14 +250,31 @@ Item {
                 setMessage("Initialising..")
             }
 
-            if (state == "publishing") {
+            if (state == "collecting") {
                 overview.state = "publishing"
-                setMessage("Publishing..")
+                setMessage("Collecting..")
+            }
+
+            if (state == "validating") {
+                overview.state = "publishing"
+                setMessage("Validating..")
+                overview.validated = false
+            }
+
+            if (state == "extracting") {
+                overview.state = "publishing"
+                setMessage("Extracting..")
+                overview.validated = true
+            }
+
+            if (state == "integrating") {
+                overview.state = "publishing"
+                setMessage("Integrating..")
             }
 
             if (state == "finished") {
                 overview.state = "finished"
-                setMessage("Finished..")
+                overview.validated ? setMessage("Published") : setMessage("Validated")
             }
 
             if (state == "stopping") {

@@ -10,6 +10,7 @@ View {
     // 0 = Default; 1 = Publishing; 2 = Finished
     property int mode: 0
     property bool paused: false
+    property bool startup: true
 
     signal publish
     signal validate
