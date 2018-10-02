@@ -641,13 +641,13 @@ class Controller(QtCore.QObject):
         new_value = not item.isToggled
         old_value = item.isToggled
 
-        if item.itemType == 'plugin':
+        if item.itemType == "plugin":
             self.host.emit("pluginToggled",
                            plugin=item.id,
                            new_value=new_value,
                            old_value=old_value)
 
-        if item.itemType == 'instance':
+        if item.itemType == "instance":
             self.host.emit("instanceToggled",
                            instance=item.id,
                            new_value=new_value,
