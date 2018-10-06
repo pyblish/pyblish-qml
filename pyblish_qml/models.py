@@ -51,6 +51,7 @@ defaults = {
     "instance": {
         "optional": True,
         "family": None,
+        "category": None,
         "niceName": "default",
         "compatiblePlugins": list(),
     },
@@ -386,8 +387,9 @@ class ItemModel(AbstractModel):
         item["itemType"] = "instance"
         item["isToggled"] = instance["data"].get("publish", True)
         item["hasCompatible"] = True
+        item["category"] = item["category"] or item["family"]
 
-        self.add_section(item["family"])
+        self.add_section(item["category"])
 
         # Visualised in Perspective
         families = [instance["data"]["family"]]
@@ -525,7 +527,8 @@ class ItemModel(AbstractModel):
             for section in self.sections:
                 if item.itemType == "plugin" and section.name == item.verb:
                     section_item = section
-                if item.itemType == "instance" and section.name == item.family:
+                if (item.itemType == "instance" and
+                        section.name == item.category):
                     section_item = section
 
             section_item.hasWarning = (
