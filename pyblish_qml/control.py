@@ -253,6 +253,7 @@ class Controller(QtCore.QObject):
         validating.addTransition(self.extracting, extracting)
 
         extracting.addTransition(self.stopping, stopping)
+        extracting.addTransition(self.finished, finished)
         extracting.addTransition(self.integrating, integrating)
 
         integrating.addTransition(self.stopping, stopping)
