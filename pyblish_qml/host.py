@@ -137,6 +137,14 @@ def show(parent=None, targets=[], modal=None, foster=None):
     foster = _fosterable(foster, modal)
     foster_fixed = _foster_fixed(foster)
 
+    # Check foster options consist with current server
+    if _state.get("currentServer"):
+        server = _state["currentServer"]
+        if server.foster != foster or server.foster_fixed != foster_fixed:
+            server.close_vessel()
+            server.stop()
+            _state.pop("currentServer")
+
     # Automatically install if not already installed.
     if not _state.get("installed"):
         install(modal, foster)
@@ -144,14 +152,18 @@ def show(parent=None, targets=[], modal=None, foster=None):
     # Show existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = server.proxy or ipc.server.Proxy(server)
 
-        if proxy.show(settings.to_dict()):
+        if server.is_alive():
+            proxy = ipc.server.Proxy(server)
+            proxy.show(settings.to_dict())
             return server
 
         else:
             # The running instance has already been closed.
             _state.pop("currentServer")
+
+    # Ensure previous eventFilter removed
+    remove_event_filter()
 
     if not is_headless:
         # mayapy would have a QtGui.QGuiApplication
@@ -207,7 +219,7 @@ def publish():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = server.proxy or ipc.server.Proxy(server)
+        proxy = ipc.server.Proxy(server)
 
         if not proxy.publish():
             # The running instance has already been closed.
@@ -218,7 +230,7 @@ def validate():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = server.proxy or ipc.server.Proxy(server)
+        proxy = ipc.server.Proxy(server)
 
         if not proxy.validate():
             # The running instance has already been closed.
@@ -392,7 +404,7 @@ class HostEventFilter(QtWidgets.QWidget):
             return False
 
         server = _state.get("currentServer")
-        proxy = server.proxy if server else None
+        proxy = ipc.server.Proxy(server) if server else None
 
         try:
             func = getattr(proxy, func_name)

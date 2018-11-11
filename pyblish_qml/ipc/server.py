@@ -29,7 +29,7 @@ class FosterVessel(QtWidgets.QDialog):
     """Container window for pyblish-qml App in child process
     """
 
-    def __init__(self, proxy):
+    def __init__(self, server):
         super(FosterVessel, self).__init__(_state.get("vesselParent"))
 
         # (NOTE) Although minimizing this vesselized dialog works well on
@@ -45,18 +45,24 @@ class FosterVessel(QtWidgets.QDialog):
 
         self.resize(1, 1)
 
-        self.proxy = proxy
+        self.server = server
         self.close_lock = True
 
     def closeEvent(self, event):
-        if self.close_lock:
-            self.proxy.quit()
+        proxy = Proxy(self.server)
+
+        if self.server.foster_fixed and self.close_lock:
+            # Maybe still busy, request application to quit
+            proxy.quit()
             event.ignore()
         else:
+            # Safe to close on server side
+            self.server.stop()
             event.accept()
 
     def resizeEvent(self, event):
-        self.proxy._dispatch("resize", args=[self.width(), self.height()])
+        proxy = Proxy(self.server)
+        proxy._dispatch("resize", args=[self.width(), self.height()])
 
 
 class MockFosterVessel(object):
@@ -69,33 +75,12 @@ class Proxy(object):
     """Speak to child process and control the vessel (window container)"""
 
     def __init__(self, server):
-        import pyblish.api
-
         self.popen = server.popen
         self.foster = server.foster
         self.foster_fixed = server.foster_fixed
 
-        self.vessel = FosterVessel(self) if self.foster else MockFosterVessel()
+        self.vessel = server.vessel
         self._winId = self.vessel._winId
-
-        server.proxy = self
-
-        def close_vessel():
-            self.vessel.close_lock = False
-            self.vessel.close()
-
-            for signal in SIGNALS_TO_CLOSE_VESSEL:
-                try:
-                    pyblish.api.deregister_callback(signal, self.close_vessel)
-                except (KeyError, ValueError):
-                    pass
-
-        self.close_vessel = close_vessel
-
-        for signal in SIGNALS_TO_CLOSE_VESSEL:
-            pyblish.api.register_callback(signal, self.close_vessel)
-
-        self._alive()
 
     def show(self, settings=None):
         """Show the GUI
@@ -162,33 +147,6 @@ class Proxy(object):
     def validate(self):
         return self._dispatch("validate")
 
-    def _alive(self):
-        """Send pulse to child process
-
-        Child process will run forever if parent process encounter such
-        failure that not able to kill child process.
-
-        This inform child process that server is still running and child
-        process will auto kill itself after server stop sending pulse
-        message.
-
-        """
-
-        def _pulse():
-            start_time = time.time()
-
-            while True:
-                data = json.dumps({"header": "pyblish-qml:server.pulse"})
-                if not self._flush(data):
-                    break
-
-                # Send pulse every 5 seconds
-                time.sleep(5.0 - ((time.time() - start_time) % 5.0))
-
-        thread = threading.Thread(target=_pulse)
-        thread.daemon = True
-        thread.start()
-
     def _dispatch(self, func, args=None):
         data = json.dumps(
             {
@@ -200,9 +158,6 @@ class Proxy(object):
             }
         )
 
-        return self._flush(data)
-
-    def _flush(self, data):
         if six.PY3:
             data = data.encode("ascii")
 
@@ -211,7 +166,7 @@ class Proxy(object):
             self.popen.stdin.flush()
         except IOError:
             # subprocess closed
-            self.close_vessel()
+            return
         else:
             return True
 
@@ -244,13 +199,13 @@ class Server(object):
         self.service = service
         self.listening = False
 
-        self.proxy = None
-
         # Store modal state
         self.modal = modal
 
         self.foster = foster
         self.foster_fixed = foster_fixed
+
+        self.vessel = FosterVessel(self) if self.foster else MockFosterVessel()
 
         # The server may be run within Maya or some other host,
         # in which case we refer to it as running embedded.
@@ -340,6 +295,32 @@ class Server(object):
 
         self.popen = subprocess.Popen(**kwargs)
 
+        if self.foster_fixed:
+            # On foster-fixed mode, window will always stay in host, even the
+            # application was busy (not in 'ready' nor 'finsished'), thus we
+            # need these signals to close the window, otherwise we may close
+            # the window while the application was still busy.
+            for signal in SIGNALS_TO_CLOSE_VESSEL:
+                pyblish.api.register_callback(signal, self.close_vessel)
+
+    def close_vessel(self):
+        self.vessel.close_lock = False
+        self.vessel.close()
+
+        if self.foster_fixed:
+            import pyblish.api
+
+            for signal in SIGNALS_TO_CLOSE_VESSEL:
+                try:
+                    pyblish.api.deregister_callback(signal,
+                                                    self.close_vessel)
+                except (KeyError, ValueError):
+                    pass
+
+    def is_alive(self):
+        poll = self.popen.poll()
+        return poll is None
+
     def stop(self):
         try:
             return self.popen.kill()
@@ -383,7 +364,8 @@ class Server(object):
                         # self.service have no access to proxy object, so
                         # this `if` statement is needed
                         if func_name in ("detach", "attach", "popup"):
-                            getattr(self.proxy, func_name)(*args)
+                            proxy = Proxy(self)
+                            getattr(proxy, func_name)(*args)
                             result = None
 
                         elif self.foster and func_name in ("emit",):
@@ -434,7 +416,43 @@ class Server(object):
                 thread.daemon = True
                 thread.start()
 
+            self._start_pulse()
+
             self.listening = True
+
+    def _start_pulse(self):
+        """Send pulse to child process
+
+        Child process will run forever if parent process encounter such
+        failure that not able to kill child process.
+
+        This inform child process that server is still running and child
+        process will auto kill itself after server stop sending pulse
+        message.
+
+        """
+
+        def _pulse():
+            start_time = time.time()
+
+            while True:
+                data = json.dumps({"header": "pyblish-qml:server.pulse"})
+
+                if six.PY3:
+                    data = data.encode("ascii")
+
+                try:
+                    self.popen.stdin.write(data + b"\n")
+                    self.popen.stdin.flush()
+                except IOError:
+                    break
+
+                # Send pulse every 5 seconds
+                time.sleep(5.0 - ((time.time() - start_time) % 5.0))
+
+        thread = threading.Thread(target=_pulse)
+        thread.daemon = True
+        thread.start()
 
 
 def find_python():
