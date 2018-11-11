@@ -386,8 +386,8 @@ class Server(object):
                             getattr(self.proxy, func_name)(*args)
                             result = None
 
-                        elif func_name in ("emit",):
-                            # Avoid main thread hang
+                        elif self.foster and func_name in ("emit",):
+                            # Avoid main thread hang on Foster Mode
                             result = getattr(self.service, func_name)(*args)
 
                         else:
