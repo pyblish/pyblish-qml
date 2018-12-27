@@ -51,7 +51,7 @@ def current_server():
     return _state.get("currentServer")
 
 
-def install(modal, foster):
+def install(modal):
     """Perform first time install
 
     Attributes:
@@ -89,32 +89,7 @@ def _is_headless():
     )
 
 
-def _fosterable(foster, modal):
-    if foster is None:
-        # Get foster mode from environment
-        foster = bool(os.environ.get("PYBLISH_QML_FOSTER", False))
-
-    if foster:
-        if modal or _is_headless():
-            print("Foster disabled due to Modal is on or in headless mode.")
-            return False
-
-        print("Foster on.")
-        return True
-
-    else:
-        return False
-
-
-def _foster_fixed(foster):
-    if not foster:
-        return False
-
-    value = os.environ.get("PYBLISH_QML_FOSTER_FIXED", "").lower()
-    return value in ("true", "yes", "1") or QtCore.qVersion()[0] == "4"
-
-
-def show(parent=None, targets=[], modal=None, foster=None):
+def show(parent=None, targets=[], modal=None):
     """Attempt to show GUI
 
     Requires install() to have been run first, and
@@ -124,7 +99,6 @@ def show(parent=None, targets=[], modal=None, foster=None):
         parent (None, optional): Deprecated
         targets (list, optional): Publishing targets
         modal (bool, optional): Block interactions to parent
-        foster (bool, optional): Become a real child of the parent process
 
     """
 
@@ -132,28 +106,27 @@ def show(parent=None, targets=[], modal=None, foster=None):
     if modal is None:
         modal = bool(os.environ.get("PYBLISH_QML_MODAL", False))
 
-    is_headless = _is_headless()
-
-    foster = _fosterable(foster, modal)
-    foster_fixed = _foster_fixed(foster)
-
     # Automatically install if not already installed.
     if not _state.get("installed"):
-        install(modal, foster)
+        install(modal)
 
     # Show existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = server.proxy or ipc.server.Proxy(server)
+        proxy = ipc.server.Proxy(server)
 
-        if proxy.show(settings.to_dict()):
+        try:
+            proxy.show(settings.to_dict())
             return server
 
-        else:
+        except IOError:
             # The running instance has already been closed.
             _state.pop("currentServer")
 
-    if not is_headless:
+    # Ensure previous eventFilter removed
+    remove_event_filter()
+
+    if not _is_headless():
         # mayapy would have a QtGui.QGuiApplication
         splash = Splash()
         splash.show()
@@ -176,11 +149,7 @@ def show(parent=None, targets=[], modal=None, foster=None):
 
     try:
         service = ipc.service.Service()
-        server = ipc.server.Server(service,
-                                   targets=targets,
-                                   modal=modal,
-                                   foster=foster,
-                                   foster_fixed=foster_fixed)
+        server = ipc.server.Server(service, targets=targets, modal=modal)
     except Exception:
         # If for some reason, the GUI fails to show.
         traceback.print_exc()
@@ -207,9 +176,11 @@ def publish():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = server.proxy or ipc.server.Proxy(server)
+        proxy = ipc.server.Proxy(server)
 
-        if not proxy.publish():
+        try:
+            proxy.publish()
+        except IOError:
             # The running instance has already been closed.
             _state.pop("currentServer")
 
@@ -218,9 +189,11 @@ def validate():
     # get existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
-        proxy = server.proxy or ipc.server.Proxy(server)
+        proxy = ipc.server.Proxy(server)
 
-        if not proxy.validate():
+        try:
+            proxy.validate()
+        except IOError:
             # The running instance has already been closed.
             _state.pop("currentServer")
 
@@ -326,7 +299,7 @@ def remove_event_filter():
 
 def install_event_filter():
 
-    main_window = _state.get("vesselParent")
+    main_window = _state.get("hostMainWindow")
     if main_window is None:
         print("Main window not found, event filter did not install.")
         return
@@ -389,24 +362,23 @@ class HostEventFilter(QtWidgets.QWidget):
         try:
             func_name = self.eventList[event.type()]
         except KeyError:
-            return False
+            pass
+        else:
+            server = _state.get("currentServer")
+            if server is not None:
+                proxy = ipc.server.Proxy(server)
+                func = getattr(proxy, func_name)
 
-        server = _state.get("currentServer")
-        proxy = server.proxy if server else None
+                try:
+                    func()
+                    return True
 
-        try:
-            func = getattr(proxy, func_name)
-        except AttributeError:
-            # proxy is None, or does not have the function
-            return False
+                except IOError:
+                    # The running instance has already been closed.
+                    remove_event_filter()
+                    _state.pop("currentServer")
 
-        connected = func()
-
-        if connected is not True:
-            # The running instance has already been closed.
-            remove_event_filter()
-
-        return True
+        return False
 
 
 def _acquire_host_main_window(app):
@@ -420,7 +392,7 @@ def _acquire_host_main_window(app):
         else:
             break
 
-    _state["vesselParent"] = _window
+    _state["hostMainWindow"] = _window
 
 
 def _set_host_label(host_name):
@@ -471,7 +443,7 @@ def _install_maya(use_threaded_wrapper):
         app.aboutToQuit.connect(_on_application_quit)
 
         # acquire Maya's main window
-        _state["vesselParent"] = {
+        _state["hostMainWindow"] = {
             widget.objectName(): widget
             for widget in QtWidgets.QApplication.topLevelWidgets()
         }["MayaWindow"]

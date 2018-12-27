@@ -4,98 +4,23 @@ import json
 import threading
 import subprocess
 import time
-import ctypes
-from ctypes import pythonapi as cpyapi
 
 from .. import _state
 from ..vendor import six
-from ..vendor.Qt import QtWidgets, QtCore
 
 CREATE_NO_WINDOW = 0x08000000
 IS_WIN32 = sys.platform == "win32"
-
-
-SIGNALS_TO_CLOSE_VESSEL = (
-    "pyblishQmlClose",
-    "pyblishQmlCloseForced",
-)
 
 
 def default_wrapper(func, *args, **kwargs):
     return func(*args, **kwargs)
 
 
-class FosterVessel(QtWidgets.QDialog):
-    """Container window for pyblish-qml App in child process
-    """
-
-    def __init__(self, proxy):
-        super(FosterVessel, self).__init__(_state.get("vesselParent"))
-
-        # (NOTE) Although minimizing this vesselized dialog works well on
-        #   Windows 10, but QQuickView window did not hide well on Windows 7.
-        #   Other platform not tested yet, disable it for now.
-        #
-        # Enable maximize for app, minimize disabled
-        self.setWindowFlags(QtCore.Qt.Window |
-                            QtCore.Qt.WindowCloseButtonHint |
-                            QtCore.Qt.WindowMaximizeButtonHint)
-
-        self._winId = winIdFixed(self.winId())
-
-        self.resize(1, 1)
-
-        self.proxy = proxy
-        self.close_lock = True
-
-    def closeEvent(self, event):
-        if self.close_lock:
-            self.proxy.quit()
-            event.ignore()
-        else:
-            event.accept()
-
-    def resizeEvent(self, event):
-        self.proxy._dispatch("resize", args=[self.width(), self.height()])
-
-
-class MockFosterVessel(object):
-    """We don't create widget without QApp, we mock one"""
-    _winId = close_lock = None
-    show = hide = close = lambda _: None
-
-
 class Proxy(object):
-    """Speak to child process and control the vessel (window container)"""
+    """Speak to child process"""
 
     def __init__(self, server):
-        import pyblish.api
-
         self.popen = server.popen
-        self.foster = server.foster
-        self.foster_fixed = server.foster_fixed
-
-        self.vessel = FosterVessel(self) if self.foster else MockFosterVessel()
-        self._winId = self.vessel._winId
-
-        server.proxy = self
-
-        def close_vessel():
-            self.vessel.close_lock = False
-            self.vessel.close()
-
-            for signal in SIGNALS_TO_CLOSE_VESSEL:
-                try:
-                    pyblish.api.deregister_callback(signal, self.close_vessel)
-                except (KeyError, ValueError):
-                    pass
-
-        self.close_vessel = close_vessel
-
-        for signal in SIGNALS_TO_CLOSE_VESSEL:
-            pyblish.api.register_callback(signal, self.close_vessel)
-
-        self._alive()
 
     def show(self, settings=None):
         """Show the GUI
@@ -104,17 +29,11 @@ class Proxy(object):
             settings (optional, dict): Client settings
 
         """
-        if self.foster_fixed:
-            self.vessel.show()
-        return self._dispatch("show", args=[settings or {},
-                                            self._winId,
-                                            self.foster_fixed])
+        self._dispatch("show", args=[settings or {}])
 
     def hide(self):
         """Hide the GUI"""
-        success = self._dispatch("hide")
-        self.vessel.hide()
-        return success
+        self._dispatch("hide")
 
     def quit(self):
         """Ask the GUI to quit"""
@@ -122,72 +41,25 @@ class Proxy(object):
 
     def rise(self):
         """Rise GUI from hidden"""
-        self.vessel.show()
-        return self._dispatch("rise")
+        self._dispatch("rise")
 
     def inFocus(self):
         """Set GUI on-top flag"""
-        return self._dispatch("inFocus")
+        self._dispatch("inFocus")
 
     def outFocus(self):
         """Remove GUI on-top flag"""
-        return self._dispatch("outFocus")
+        self._dispatch("outFocus")
 
     def kill(self):
         """Forcefully destroy the process"""
         self.popen.kill()
 
-    def detach(self):
-        self.vessel.setWindowOpacity(0)  # avoid hide window anim
-        self.vessel.hide()
-        self._dispatch("host_detach")
-
-    def attach(self, x, y, w, h):
-        self.vessel.show()
-        self.vessel.setGeometry(x, y, w, h)
-        self.vessel.setWindowOpacity(1)
-        self._dispatch("host_attach")
-
-    def popup(self, alert):
-        # No hijack keyboard focus
-        if not self.foster_fixed:
-            QtWidgets.QApplication.setActiveWindow(self.vessel)
-        # Plus alert
-        if alert:
-            QtWidgets.QApplication.alert(self.vessel.parent(), 0)
-
     def publish(self):
-        return self._dispatch("publish")
+        self._dispatch("publish")
 
     def validate(self):
-        return self._dispatch("validate")
-
-    def _alive(self):
-        """Send pulse to child process
-
-        Child process will run forever if parent process encounter such
-        failure that not able to kill child process.
-
-        This inform child process that server is still running and child
-        process will auto kill itself after server stop sending pulse
-        message.
-
-        """
-
-        def _pulse():
-            start_time = time.time()
-
-            while True:
-                data = json.dumps({"header": "pyblish-qml:server.pulse"})
-                if not self._flush(data):
-                    break
-
-                # Send pulse every 5 seconds
-                time.sleep(5.0 - ((time.time() - start_time) % 5.0))
-
-        thread = threading.Thread(target=_pulse)
-        thread.daemon = True
-        thread.start()
+        self._dispatch("validate")
 
     def _dispatch(self, func, args=None):
         data = json.dumps(
@@ -200,20 +72,11 @@ class Proxy(object):
             }
         )
 
-        return self._flush(data)
-
-    def _flush(self, data):
         if six.PY3:
             data = data.encode("ascii")
 
-        try:
-            self.popen.stdin.write(data + b"\n")
-            self.popen.stdin.flush()
-        except IOError:
-            # subprocess closed
-            self.close_vessel()
-        else:
-            return True
+        self.popen.stdin.write(data + b"\n")
+        self.popen.stdin.flush()
 
 
 class Server(object):
@@ -227,8 +90,6 @@ class Server(object):
         pyqt5 (str, optional): Absolute path to PyQt5
         targets (list, optional): Publishing targets, e.g. `ftrack`
         modal (bool, optional): Block interactions to parent
-        foster (bool, optional): GUI become a real child of the parent process
-        foster_fixed (bool, optional): GUI always remain inside the parent
 
     """
 
@@ -237,20 +98,14 @@ class Server(object):
                  python=None,
                  pyqt5=None,
                  targets=[],
-                 modal=False,
-                 foster=False,
-                 foster_fixed=False):
+                 modal=False):
+
         super(Server, self).__init__()
         self.service = service
         self.listening = False
 
-        self.proxy = None
-
         # Store modal state
         self.modal = modal
-
-        self.foster = foster
-        self.foster_fixed = foster_fixed
 
         # The server may be run within Maya or some other host,
         # in which case we refer to it as running embedded.
@@ -380,22 +235,11 @@ class Server(object):
 
                         func_name = payload["name"]
 
-                        # self.service have no access to proxy object, so
-                        # this `if` statement is needed
-                        if func_name in ("detach", "attach", "popup"):
-                            getattr(self.proxy, func_name)(*args)
-                            result = None
+                        wrapper = _state.get("dispatchWrapper",
+                                             default_wrapper)
 
-                        elif func_name in ("emit",):
-                            # Avoid main thread hang
-                            result = getattr(self.service, func_name)(*args)
-
-                        else:
-                            wrapper = _state.get("dispatchWrapper",
-                                                 default_wrapper)
-
-                            func = getattr(self.service, func_name)
-                            result = wrapper(func, *args)  # block..
+                        func = getattr(self.service, func_name)
+                        result = wrapper(func, *args)  # block..
 
                         # Note(marcus): This is where we wait for the host to
                         # finish. Technically, we could kill the GUI at this
@@ -413,12 +257,8 @@ class Server(object):
                         if six.PY3:
                             data = data.encode("ascii")
 
-                        try:
-                            self.popen.stdin.write(data + b"\n")
-                            self.popen.stdin.flush()
-                        except IOError:
-                            # subprocess closed
-                            return
+                        self.popen.stdin.write(data + b"\n")
+                        self.popen.stdin.flush()
 
                     else:
                         # In the off chance that a message
@@ -434,7 +274,43 @@ class Server(object):
                 thread.daemon = True
                 thread.start()
 
+            self._start_pulse()
+
             self.listening = True
+
+    def _start_pulse(self):
+        """Send pulse to child process
+
+        Child process will run forever if parent process encounter such
+        failure that not able to kill child process.
+
+        This inform child process that server is still running and child
+        process will auto kill itself after server stop sending pulse
+        message.
+
+        """
+
+        def _pulse():
+            start_time = time.time()
+
+            while True:
+                data = json.dumps({"header": "pyblish-qml:server.pulse"})
+
+                if six.PY3:
+                    data = data.encode("ascii")
+
+                try:
+                    self.popen.stdin.write(data + b"\n")
+                    self.popen.stdin.flush()
+                except IOError:
+                    break
+
+                # Send pulse every 5 seconds
+                time.sleep(5.0 - ((time.time() - start_time) % 5.0))
+
+        thread = threading.Thread(target=_pulse)
+        thread.daemon = True
+        thread.start()
 
 
 def find_python():
@@ -492,22 +368,3 @@ def which(program):
                 return abspath
 
     return None
-
-
-def winIdFixed(winId):
-    # PySide bug: QWidget.winId() returns <PyCObject object at 0x02FD8788>,
-    # there is no easy way to convert it to int.
-    try:
-        return int(winId)
-    except Exception:
-        if sys.version_info[0] == 2:
-            cpyapi.PyCObject_AsVoidPtr.restype = ctypes.c_void_p
-            cpyapi.PyCObject_AsVoidPtr.argtypes = [ctypes.py_object]
-
-            return cpyapi.PyCObject_AsVoidPtr(winId)
-
-        elif sys.version_info[0] == 3:
-            cpyapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
-            cpyapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object]
-
-            return cpyapi.PyCapsule_GetPointer(winId, None)

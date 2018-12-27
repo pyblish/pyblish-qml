@@ -23,9 +23,9 @@ ICON_PATH = os.path.join(MODULE_DIR, "icon.ico")
 class Window(QtQuick.QQuickView):
     """Main application window"""
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super(Window, self).__init__(None)
-        self.app = QtGui.QGuiApplication.instance()
+        self.app = parent
 
         self.setTitle(settings.WindowTitle)
         self.setResizeMode(self.SizeRootObjectToView)
@@ -56,29 +56,6 @@ class Window(QtQuick.QQuickView):
         return super(Window, self).event(event)
 
 
-class NativeVessel(QtGui.QWindow):
-    """Container window"""
-
-    def __init__(self):
-        super(NativeVessel, self).__init__(None)
-        self.app = QtGui.QGuiApplication.instance()
-
-    def resizeEvent(self, event):
-        self.app.resize(self.width(), self.height())
-
-    def event(self, event):
-        # Is required when Foster mode is on.
-        # Native vessel will receive closeEvent while foster mode is on
-        # and is the parent of window.
-        if event.type() == QtCore.QEvent.Close:
-            self.app.window.event(event)
-            if event.isAccepted():
-                # `app.fostered` is False at this moment.
-                self.app.quit()
-
-        return super(NativeVessel, self).event(event)
-
-
 class Application(QtGui.QGuiApplication):
     """Pyblish QML wrapper around QGuiApplication
 
@@ -87,31 +64,22 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    shown = QtCore.pyqtSignal(*(QtCore.QVariant,) * 3)
+    shown = QtCore.pyqtSignal(QtCore.QVariant)
     hidden = QtCore.pyqtSignal()
     quitted = QtCore.pyqtSignal()
     published = QtCore.pyqtSignal()
     validated = QtCore.pyqtSignal()
 
-    resized = QtCore.pyqtSignal(QtCore.QVariant, QtCore.QVariant)
-
     risen = QtCore.pyqtSignal()
     inFocused = QtCore.pyqtSignal()
     outFocused = QtCore.pyqtSignal()
-
-    attached = QtCore.pyqtSignal(QtCore.QVariant)
-    detached = QtCore.pyqtSignal()
-    host_attached = QtCore.pyqtSignal()
-    host_detached = QtCore.pyqtSignal()
 
     def __init__(self, source, targets=[]):
         super(Application, self).__init__(sys.argv)
 
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
 
-        native_vessel = NativeVessel()
-
-        window = Window()
+        window = Window(self)
         window.statusChanged.connect(self.on_status_changed)
 
         engine = window.engine()
@@ -123,12 +91,6 @@ class Application(QtGui.QGuiApplication):
 
         context = engine.rootContext()
         context.setContextProperty("app", controller)
-
-        self.fostered = False
-        self.foster_fixed = False
-
-        self.foster_vessel = None
-        self.native_vessel = native_vessel
 
         self.window = window
         self.engine = engine
@@ -143,14 +105,9 @@ class Application(QtGui.QGuiApplication):
         self.published.connect(self.publish)
         self.validated.connect(self.validate)
 
-        self.resized.connect(self.resize)
-
         self.risen.connect(self.rise)
         self.inFocused.connect(self.inFocus)
         self.outFocused.connect(self.outFocus)
-
-        self.attached.connect(self.attach)
-        self.detached.connect(self.detach)
 
         window.setSource(QtCore.QUrl.fromLocalFile(source))
 
@@ -167,20 +124,8 @@ class Application(QtGui.QGuiApplication):
     def deregister_client(self, port):
         self.clients.pop(port)
 
-    def quit(self):
-        event = None
-        if self.fostered:
-            # Foster vessel's closeEvent will trigger "quit" which connected
-            # to here.
-            # Forward the event to window.
-            event = QtCore.QEvent(QtCore.QEvent.Close)
-            self.window.event(event)
-
-        if event is None or event.isAccepted():
-            super(Application, self).quit()
-
     @util.SlotSentinel()
-    def show(self, client_settings=None, window_id=None, foster_fixed=False):
+    def show(self, client_settings=None):
         """Display GUI
 
         Once the QML interface has been loaded, use this
@@ -191,41 +136,20 @@ class Application(QtGui.QGuiApplication):
             client_settings (dict, optional): Visual settings, see settings.py
 
         """
-        self.fostered = window_id is not None
-
-        if self.fostered:
-            print("Moving to container window ...")
-
-            # Creates a local representation of a window created by another
-            # process (Maya or other host).
-            foster_vessel = QtGui.QWindow.fromWinId(window_id)
-
-            if foster_vessel is None:
-                raise RuntimeError("Container window not found, ID: {}\n."
-                                   "This is a bug.".format(window_id))
-
-            self.window.setParent(foster_vessel)
-            self.foster_vessel = foster_vessel
-            self.foster_fixed = foster_fixed
+        window = self.window
 
         if client_settings:
             # Apply client-side settings
             settings.from_dict(client_settings)
-
-            def first_appearance_setup(vessel):
-                vessel.setGeometry(client_settings["WindowPosition"][0],
-                                   client_settings["WindowPosition"][1],
-                                   client_settings["WindowSize"][0],
-                                   client_settings["WindowSize"][1])
-                vessel.setTitle(client_settings["WindowTitle"])
-
-            first_appearance_setup(self.native_vessel)
-
-            if self.fostered:
-                if not self.foster_fixed:
-                    # Return it back to native vessel for first run
-                    self.window.setParent(self.native_vessel)
-                first_appearance_setup(self.foster_vessel)
+            window.setWidth(client_settings["WindowSize"][0])
+            window.setHeight(client_settings["WindowSize"][1])
+            window.setTitle(client_settings["WindowTitle"])
+            window.setFramePosition(
+                QtCore.QPoint(
+                    client_settings["WindowPosition"][0],
+                    client_settings["WindowPosition"][1]
+                )
+            )
 
         message = list()
         message.append("Settings: ")
@@ -234,13 +158,14 @@ class Application(QtGui.QGuiApplication):
 
         print("\n".join(message))
 
-        if self.fostered and not self.foster_fixed:
-            self.native_vessel.show()
+        window.requestActivate()
+        window.showNormal()
 
-        self.window.requestActivate()
-        self.window.showNormal()
-
-        self._popup()
+        # Work-around for window appearing behind
+        # other windows upon being shown once hidden.
+        previous_flags = window.flags()
+        window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
+        window.setFlags(previous_flags)
 
         # Give statemachine enough time to boot up
         if not any(state in self.controller.states
@@ -259,7 +184,7 @@ class Application(QtGui.QGuiApplication):
         self.controller.show.emit()
 
         # Allow time for QML to initialise
-        util.schedule(self.controller.reset, 1500, channel="main")
+        util.schedule(self.controller.reset, 500, channel="main")
 
     def hide(self):
         """Hide GUI
@@ -276,103 +201,15 @@ class Application(QtGui.QGuiApplication):
 
     def inFocus(self):
         """Set GUI on-top flag"""
-        if not self.fostered:
-            previous_flags = self.window.flags()
-            self.window.setFlags(previous_flags |
-                                 QtCore.Qt.WindowStaysOnTopHint)
+        previous_flags = self.window.flags()
+        self.window.setFlags(previous_flags |
+                             QtCore.Qt.WindowStaysOnTopHint)
 
     def outFocus(self):
         """Remove GUI on-top flag"""
-        if not self.fostered:
-            previous_flags = self.window.flags()
-            self.window.setFlags(previous_flags ^
-                                 QtCore.Qt.WindowStaysOnTopHint)
-
-    def resize(self, width, height):
-        """Resize GUI with it's vessel (container window)
-        """
-        # (NOTE) Could not get it auto resize with container, this is a
-        #   alternative
-        self.window.resize(width, height)
-
-    def _popup(self):
-        if not self.fostered:
-            window = self.window
-            # Work-around for window appearing behind
-            # other windows upon being shown once hidden.
-            previous_flags = window.flags()
-            window.setFlags(previous_flags | QtCore.Qt.WindowStaysOnTopHint)
-            window.setFlags(previous_flags)
-
-    def detach(self):
-        """Detach QQuickView window from the host
-
-        In foster mode, inorder to prevent window freeze when the host's
-        main thread is busy, will detach the QML window from the container
-        inside the host, and re-parent to the container which spawned by
-        the subprocess. And attach it back to host when the heavy lifting
-        is done.
-
-        This is the part that detaching from host.
-
-        """
-        if self.foster_fixed or self.foster_vessel is None:
-            self.controller.detached.emit()
-            return
-
-        print("Detach window from foster parent...")
-
-        self.fostered = False
-        self.window.setParent(self.native_vessel)
-
-        # Show dst container
-        self.native_vessel.show()
-        self.native_vessel.setGeometry(self.foster_vessel.geometry())
-        self.native_vessel.setOpacity(1)
-        # Hide src container (will wait for host)
-        host_detached = QtTest.QSignalSpy(self.host_detached)
-        self.host.detach()
-        host_detached.wait(300)
-        # Stay on top
-        self.window.requestActivate()
-        self._popup()
-
-        self.controller.detached.emit()
-
-    def attach(self, alert=False):
-        """Attach QQuickView window to the host
-
-        In foster mode, inorder to prevent window freeze when the host's
-        main thread is busy, will detach the QML window from the container
-        inside the host, and re-parent to the container which spawned by
-        the subprocess. And attach it back to host when the heavy lifting
-        is done.
-
-        This is the part that attaching back to host.
-
-        """
-        if self.foster_fixed or self.foster_vessel is None:
-            self.controller.attached.emit()
-            if self.foster_vessel is not None:
-                self.host.popup(alert)  # Send alert
-            return
-
-        print("Attach window to foster parent...")
-
-        self.fostered = True
-        self.window.setParent(self.foster_vessel)
-
-        # Show dst container (will wait for host)
-        host_attached = QtTest.QSignalSpy(self.host_attached)
-        self.host.attach(self.native_vessel.geometry())
-        host_attached.wait(300)
-        # Hide src container
-        self.native_vessel.setOpacity(0)  # avoid hide window anim
-        self.native_vessel.hide()
-        # Stay on top
-        self.host.popup(alert)
-
-        self.controller.attached.emit()
+        previous_flags = self.window.flags()
+        self.window.setFlags(previous_flags ^
+                             QtCore.Qt.WindowStaysOnTopHint)
 
     def publish(self):
         """Fire up the publish sequence"""
@@ -408,16 +245,9 @@ class Application(QtGui.QGuiApplication):
                     "publish": "published",
                     "validate": "validated",
 
-                    "resize": "resized",
-
                     "rise": "risen",
                     "inFocus": "inFocused",
                     "outFocus": "outFocused",
-
-                    "attach": "attached",
-                    "detach": "detached",
-                    "host_attach": "host_attached",
-                    "host_detach": "host_detached",
 
                 }.get(payload["name"])
 
