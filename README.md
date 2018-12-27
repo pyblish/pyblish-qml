@@ -105,7 +105,6 @@ See [pyblish-maya](https://github.com/pyblish/pyblish-maya#usage) for an example
 
 **Additional Environment Variables**
 
-- `PYBLISH_QML_FOSTER=1` Make QML process a real child of parent process, this makes the otherwise external process act like a native window within a host, to appear below inner windows such as the Script Editor in Maya.
 - `PYBLISH_QML_MODAL=1` Block interactions to parent process, useful for headless publishing where you expect a process to remain alive for as long as QML is. Without this, Pyblish is at the mercy of the parent process, e.g. `mayapy` which quits at the first sign of EOF.
 
 <br>
