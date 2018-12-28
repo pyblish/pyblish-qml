@@ -502,6 +502,7 @@ class Controller(QtCore.QObject):
     def toggleSection(self, checkState, sectionLabel):
         model = self.data["models"]["item"]
 
+        # Get all items' current toggle state
         states = set()
         for item in model.items:
             if item.itemType == "instance" and sectionLabel == item.category:
@@ -513,6 +514,8 @@ class Controller(QtCore.QObject):
                     states.add(item.isToggled)
 
         if len(states) == 1:
+            # Use items' states instead of section state if all optional items
+            # are the same state.
             checkState = not states.pop()
 
         for item in model.items:
