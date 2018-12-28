@@ -507,6 +507,7 @@ class Controller(QtCore.QObject):
             if item.itemType == "instance" and sectionLabel == item.category:
                 if item.optional:
                     states.add(item.isToggled)
+
             if item.itemType == "plugin" and sectionLabel == item.verb:
                 if item.optional:
                     states.add(item.isToggled)
@@ -517,13 +518,11 @@ class Controller(QtCore.QObject):
         for item in model.items:
             if item.itemType == "instance" and sectionLabel == item.category:
                 if item.isToggled != checkState and item.optional:
-                    self.__toggle_item(model,
-                                       model.items.index(item))
+                    self.__toggle_item(model, model.items.index(item))
 
             if item.itemType == "plugin" and sectionLabel == item.verb:
                 if item.isToggled != checkState and item.optional:
-                    self.__toggle_item(model,
-                                       model.items.index(item))
+                    self.__toggle_item(model, model.items.index(item))
 
     @QtCore.pyqtSlot(bool, str)
     def hideSection(self, hideState, sectionLabel):
