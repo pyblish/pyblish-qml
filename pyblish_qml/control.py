@@ -4,7 +4,7 @@ import time
 import collections
 
 # Dependencies
-from PyQt5 import QtCore, QtTest
+from PyQt5 import QtCore
 import pyblish.logic
 
 # Local libraries
@@ -22,9 +22,6 @@ class Controller(QtCore.QObject):
 
     show = QtCore.pyqtSignal()
     hide = QtCore.pyqtSignal()
-
-    attached = QtCore.pyqtSignal()
-    detached = QtCore.pyqtSignal()
 
     firstRun = QtCore.pyqtSignal()
 
@@ -137,18 +134,6 @@ class Controller(QtCore.QObject):
 
     def on_show(self):
         self.host.emit("pyblishQmlShown")
-
-    def detach(self):
-        signal = json.dumps({"payload": {"name": "detach"}})
-        self.host.channels["parent"].put(signal)
-        detached = QtTest.QSignalSpy(self.detached)
-        detached.wait(1000)
-
-    def attach(self, alert=False):
-        signal = json.dumps({"payload": {"name": "attach", "args": [alert]}})
-        self.host.channels["parent"].put(signal)
-        attached = QtTest.QSignalSpy(self.attached)
-        attached.wait(1000)
 
     def dispatch(self, func, *args, **kwargs):
         return getattr(self.host, func)(*args, **kwargs)
@@ -821,8 +806,6 @@ class Controller(QtCore.QObject):
 
             self.host.emit("reset", context=None)
 
-            self.attach()
-
             # Hidden sections
             for section in self.data["models"]["item"].sections:
                 if section.name in settings.HiddenSections:
@@ -877,8 +860,6 @@ class Controller(QtCore.QObject):
         def on_reset():
             util.async(self.host.context, callback=on_context)
 
-        if not self.data["firstRun"]:
-            self.detach()
         util.async(self.host.reset, callback=on_reset)
 
     @QtCore.pyqtSlot()
@@ -921,10 +902,8 @@ class Controller(QtCore.QObject):
             self.run(*args, callback=on_finished)
 
         def on_finished():
-            self.attach(True)
             self.host.emit("published", context=None)
 
-        self.detach()
         util.async(get_data, callback=on_data_received)
 
     @QtCore.pyqtSlot()
@@ -965,10 +944,8 @@ class Controller(QtCore.QObject):
             self.run(*args, callback=on_finished)
 
         def on_finished():
-            self.attach(True)
             self.host.emit("validated", context=None)
 
-        self.detach()
         util.async(get_data, callback=on_data_received)
 
     def run(self, plugins, context, callback=None, callback_args=[]):

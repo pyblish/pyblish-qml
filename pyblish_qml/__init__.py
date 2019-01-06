@@ -8,9 +8,12 @@ from .version import (
 def show(parent=None, targets=None, modal=None, foster=None):
     from . import host
 
+    if foster is not None:
+        print("Foster Mode has been deprecated.")
+
     if targets is None:
         targets = []
-    return host.show(parent, targets, modal, foster)
+    return host.show(parent, targets, modal)
 
 
 _state = {}
