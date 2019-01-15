@@ -70,6 +70,7 @@ class Controller(QtCore.QObject):
         self.targets = targets
 
         self.data = {
+            "removed": set(),
             "models": {
                 "item": models.ItemModel(),
                 "result": models.ResultModel(),
@@ -338,6 +339,9 @@ class Controller(QtCore.QObject):
         }
 
         for plug, instance in iterator(plugins, context):
+
+            if instance is not None and instance.id in self.data["removed"]:
+                continue
 
             state["nextOrder"] = plug.order
 
@@ -1002,6 +1006,8 @@ class Controller(QtCore.QObject):
                 context.append(instance)
                 self.data["models"]["item"].add_instance(instance.to_json())
 
+            remove_instance(ctx, instance_items)
+
             util.async(lambda: next(iterator), callback=on_next)
 
         def update_instance(item, data):
@@ -1012,6 +1018,15 @@ class Controller(QtCore.QObject):
             families = [data["family"]]
             families.extend(data.get("families", []))
             item.familiesConcatenated = ", ".join(families)
+
+        def remove_instance(ctx, items):
+            ctx_ids = set([i.id for i in ctx])
+            ctx_ids.add(ctx.id)
+            for _id, item in items.items():
+                if _id not in ctx_ids:
+                    self.data["models"]["item"].instances.remove(item)
+                    self.data["models"]["item"].items.remove(item)
+                    self.data["removed"].add(_id)
 
         def on_finished(message=None):
             """Locally running function"""
