@@ -991,15 +991,27 @@ class Controller(QtCore.QObject):
             util.async(self.host.context, callback=update_context)
 
         def update_context(ctx):
-            instances = [i.id for i in self.data["models"]["item"].instances]
+            instance_items = {item.id: item for item in
+                              self.data["models"]["item"].instances}
             for instance in ctx:
-                if instance.id in instances:
+                if instance.id in instance_items:
+                    item = instance_items[instance.id]
+                    update_instance(item, instance.data)
                     continue
 
                 context.append(instance)
                 self.data["models"]["item"].add_instance(instance.to_json())
 
             util.async(lambda: next(iterator), callback=on_next)
+
+        def update_instance(item, data):
+            """Update model for reflecting changes on instance"""
+            item.isToggled = data.get("publish", True)
+            item.optional = data.get("optional", True)
+
+            families = [data["family"]]
+            families.extend(data.get("families", []))
+            item.familiesConcatenated = ", ".join(families)
 
         def on_finished(message=None):
             """Locally running function"""
