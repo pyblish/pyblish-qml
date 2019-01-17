@@ -502,25 +502,30 @@ class Controller(QtCore.QObject):
     def toggleSection(self, checkState, sectionLabel):
         model = self.data["models"]["item"]
 
-        states = set([item.isToggled for item in model.items
-                      if (item.itemType == "instance" and
-                          sectionLabel == item.category)])
+        # Get all items' current toggle state
+        states = set()
+        for item in model.items:
+            if item.itemType == "instance" and sectionLabel == item.category:
+                if item.optional:
+                    states.add(item.isToggled)
+
+            if item.itemType == "plugin" and sectionLabel == item.verb:
+                if item.optional:
+                    states.add(item.isToggled)
 
         if len(states) == 1:
+            # Use items' states instead of section state if all optional items
+            # are the same state.
             checkState = not states.pop()
 
         for item in model.items:
             if item.itemType == "instance" and sectionLabel == item.category:
-                if item.isToggled != checkState:
-                    self.__toggle_item(model,
-                                       model.items.index(item))
+                if item.isToggled != checkState and item.optional:
+                    self.__toggle_item(model, model.items.index(item))
 
-            if item.itemType == "plugin" and item.optional:
-                if item.verb == sectionLabel:
-                    if item.isToggled != checkState:
-                        self.__toggle_item(
-                            model,
-                            model.items.index(item))
+            if item.itemType == "plugin" and sectionLabel == item.verb:
+                if item.isToggled != checkState and item.optional:
+                    self.__toggle_item(model, model.items.index(item))
 
     @QtCore.pyqtSlot(bool, str)
     def hideSection(self, hideState, sectionLabel):
