@@ -1030,8 +1030,7 @@ class Controller(QtCore.QObject):
             ctx_ids.add(ctx.id)
             for _id, item in items.items():
                 if _id not in ctx_ids:
-                    self.data["models"]["item"].instances.remove(item)
-                    self.data["models"]["item"].items.remove(item)
+                    self.data["models"]["item"].remove_instance(item)
                     self.data["removed"].add(_id)
 
         def on_finished(message=None):

@@ -224,6 +224,13 @@ class AbstractModel(QtCore.QAbstractListModel):
 
         return item
 
+    def remove_item(self, item):
+        """Remove item from model"""
+        index = self.items.index(item)
+        self.beginRemoveRows(QtCore.QModelIndex(), index, index)
+        self.items.remove(item)
+        self.endRemoveRows()
+
     def _dataChanged(self, item):
         """Explicitly emit dataChanged upon item changing"""
         index = self.items.index(item)
@@ -404,6 +411,11 @@ class ItemModel(AbstractModel):
 
         item = self.add_item(item)
         self.instances.append(item)
+
+    def remove_instance(self, item):
+        """Remove `instance` from model"""
+        self.instances.remove(item)
+        self.remove_item(item)
 
     def add_section(self, name):
         """Append `section` to model
