@@ -1011,7 +1011,8 @@ class Controller(QtCore.QObject):
                 context.append(instance)
                 self.data["models"]["item"].add_instance(instance.to_json())
 
-            remove_instance(ctx, instance_items)
+            if len(ctx) < self.data["models"]["item"].instance_count():
+                remove_instance(ctx, instance_items)
 
             util.async(lambda: next(iterator), callback=on_next)
 

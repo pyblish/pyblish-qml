@@ -275,6 +275,12 @@ class ItemModel(AbstractModel):
         self.instances = util.ItemList(key="id")
         self.sections = util.ItemList(key="id")
 
+    def instance_count(self):
+        """Return the number of `instance` in model"""
+        item_count = len(self.instances)
+        # The first item in `self.instances` is `context`
+        return 0 if item_count < 0 else item_count - 1
+
     def reorder(self, context):
         # Reorder instances in support of "cooperative collection"
         self.beginResetModel()
