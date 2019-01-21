@@ -340,7 +340,9 @@ class Controller(QtCore.QObject):
 
         for plug, instance in iterator(plugins, context):
 
-            if instance is not None and instance.id in self.data["removed"]:
+            if (instance is not None and
+                    (instance.id in self.data["removed"] or
+                     not instance.data.get("publish", True))):
                 continue
 
             state["nextOrder"] = plug.order
@@ -997,8 +999,11 @@ class Controller(QtCore.QObject):
         def update_context(ctx):
             instance_items = {item.id: item for item in
                               self.data["models"]["item"].instances}
-            for instance in ctx:
+            for index, instance in enumerate(ctx):
                 if instance.id in instance_items:
+                    # Update instance proxy data
+                    context[index].data.update(instance.data)
+                    # Update instance item model data
                     item = instance_items[instance.id]
                     update_instance(item, instance.data)
                     continue
