@@ -997,8 +997,8 @@ class Controller(QtCore.QObject):
             util.async(self.host.context, callback=update_context)
 
         def update_context(ctx):
-            instance_items = {item.id: item for item in
-                              self.data["models"]["item"].instances}
+            item_model = self.data["models"]["item"]
+            instance_items = {item.id: item for item in item_model.instances}
             for index, instance in enumerate(ctx):
                 if instance.id in instance_items:
                     # Update instance proxy data
@@ -1009,9 +1009,9 @@ class Controller(QtCore.QObject):
                     continue
 
                 context.append(instance)
-                self.data["models"]["item"].add_instance(instance.to_json())
+                item_model.add_instance(instance.to_json())
 
-            if len(ctx) < self.data["models"]["item"].instance_count():
+            if len(ctx) < item_model.instance_count():
                 remove_instance(ctx, instance_items)
 
             util.async(lambda: next(iterator), callback=on_next)
