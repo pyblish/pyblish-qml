@@ -999,10 +999,8 @@ class Controller(QtCore.QObject):
         def update_context(ctx):
             item_model = self.data["models"]["item"]
             instance_items = {item.id: item for item in item_model.instances}
-            for index, instance in enumerate(ctx):
+            for instance in ctx:
                 if instance.id in instance_items:
-                    # Update instance proxy data
-                    context[index].data.update(instance.data)
                     # Update instance item model data
                     item = instance_items[instance.id]
                     update_instance(item, instance.data)
@@ -1024,6 +1022,12 @@ class Controller(QtCore.QObject):
             families = [data["family"]]
             families.extend(data.get("families", []))
             item.familiesConcatenated = ", ".join(families)
+
+            # Update instance proxy data
+            for instance_proxy in context:
+                if instance_proxy.id == item.id:
+                    instance_proxy.data["publish"] = data.get("publish", True)
+                    break
 
         def remove_instance(ctx, items):
             ctx_ids = set([i.id for i in ctx])
