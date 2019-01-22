@@ -519,6 +519,19 @@ class ItemModel(AbstractModel):
             item.duration += result["duration"]
             item.finishedAt = time.time()
 
+            if item.itemType == "instance":
+                # Update instance GUI related data
+                data = (result["instance"] or {}).get("data")
+                if data is not None:
+
+                    item.isToggled = data.get("publish", True)
+                    item.optional = data.get("optional", True)
+                    item.category = data.get("category", data["family"])
+
+                    families = [data["family"]]
+                    families.extend(data.get("families", []))
+                    item.familiesConcatenated = ", ".join(families)
+
             if item.itemType == "plugin" and not item.actionsIconVisible:
 
                 actions = list(item.actions)
