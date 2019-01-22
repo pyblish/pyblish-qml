@@ -1021,6 +1021,7 @@ class Controller(QtCore.QObject):
             # Update instance item model data for GUI
             item.isToggled = data.get("publish", True)
             item.optional = data.get("optional", True)
+            item.category = data.get("category", data["family"])
 
             families = [data["family"]]
             families.extend(data.get("families", []))
