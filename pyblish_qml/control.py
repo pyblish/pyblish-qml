@@ -991,6 +991,8 @@ class Controller(QtCore.QObject):
 
             self.data["models"]["item"].update_with_result(result)
             self.data["models"]["result"].update_with_result(result)
+            # Update proxy instance data which currently being iterated in
+            # the primary iterator
             update_instance_with_result(result)
 
             # Once the main thread has finished updating
@@ -1006,8 +1008,7 @@ class Controller(QtCore.QObject):
             proxy = next((i for i in context if i.id == id), None)
             if proxy is None:
                 return
-            # Update proxy instance data which currently being iterated in
-            # the primary iterator
+
             proxy.data["publish"] = data.get("publish", True)
             proxy.data["family"] = data["family"]
             proxy.data["families"] = data.get("families", [])
@@ -1031,13 +1032,13 @@ class Controller(QtCore.QObject):
             """Remove instance"""
             instance_ids = set([i.id for i in ctx])
             instance_ids.add(ctx.id)
-            for _id, item in items.items():
-                if _id not in instance_ids:
+            for id, item in items.items():
+                if id not in instance_ids:
                     # Remove from model
                     self.data["models"]["item"].remove_instance(item)
                     # Mark as removed, for instance proxies that currently
                     # being iterated in primary iterator
-                    self.data["removed"].add(_id)
+                    self.data["removed"].add(id)
 
         def on_finished(message=None):
             """Locally running function"""
