@@ -1036,11 +1036,15 @@ class Controller(QtCore.QObject):
             proxy.data["families"] = data.get("families", [])
 
         def remove_instance(ctx, items):
-            ctx_ids = set([i.id for i in ctx])
-            ctx_ids.add(ctx.id)
+            """Remove instance"""
+            instance_ids = set([i.id for i in ctx])
+            instance_ids.add(ctx.id)
             for _id, item in items.items():
-                if _id not in ctx_ids:
+                if _id not in instance_ids:
+                    # Remove from model
                     self.data["models"]["item"].remove_instance(item)
+                    # Mark as removed, for instance proxies that currently
+                    # being iterated in primary iterator
                     self.data["removed"].add(_id)
 
         def on_finished(message=None):
