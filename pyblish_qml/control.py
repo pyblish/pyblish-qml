@@ -1000,10 +1000,11 @@ class Controller(QtCore.QObject):
             item_model = self.data["models"]["item"]
             instance_items = {item.id: item for item in item_model.instances}
             for instance in ctx:
-                if instance.id in instance_items:
-                    # Update instance item model data
-                    item = instance_items[instance.id]
-                    update_instance(item, instance.data)
+                _id = instance.id
+                if _id in instance_items:
+                    item = instance_items[_id]
+                    proxy = next((i for i in context if i.id == _id), None)
+                    update_instance(item, proxy, instance.data)
                     continue
 
                 context.append(instance)
@@ -1014,8 +1015,10 @@ class Controller(QtCore.QObject):
 
             util.async(lambda: next(iterator), callback=on_next)
 
-        def update_instance(item, data):
-            """Update model for reflecting changes on instance"""
+        def update_instance(item, proxy, data):
+            """Update model and proxy for reflecting changes on instance"""
+
+            # Update instance item model data for GUI
             item.isToggled = data.get("publish", True)
             item.optional = data.get("optional", True)
 
@@ -1023,11 +1026,13 @@ class Controller(QtCore.QObject):
             families.extend(data.get("families", []))
             item.familiesConcatenated = ", ".join(families)
 
-            # Update instance proxy data
-            for instance_proxy in context:
-                if instance_proxy.id == item.id:
-                    instance_proxy.data["publish"] = data.get("publish", True)
-                    break
+            if proxy is None:
+                return
+            # Update proxy instance data which currently being iterated in
+            # the primary iterator
+            proxy.data["publish"] = data.get("publish", True)
+            proxy.data["family"] = data["family"]
+            proxy.data["families"] = data.get("families", [])
 
         def remove_instance(ctx, items):
             ctx_ids = set([i.id for i in ctx])
