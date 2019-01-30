@@ -267,14 +267,14 @@ class Server(object):
                         sys.stdout.write(line)
 
         if not self.listening:
+            self._start_pulse()
+
             if self.modal:
                 _listen()
             else:
                 thread = threading.Thread(target=_listen)
                 thread.daemon = True
                 thread.start()
-
-            self._start_pulse()
 
             self.listening = True
 
