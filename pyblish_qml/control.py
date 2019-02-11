@@ -481,7 +481,7 @@ class Controller(QtCore.QObject):
             self.info.emit("Success" if result["success"] else "Failed")
             util.echo("Finished with states.. %s" % self.states)
 
-        util.async(run, callback=on_finished)
+        util.defer(run, callback=on_finished)
 
     @QtCore.pyqtSlot(int)
     def toggleInstance(self, index):
@@ -819,7 +819,7 @@ class Controller(QtCore.QObject):
         def on_run(plugins):
             """Fetch instances in their current state, right after reset"""
 
-            util.async(self.host.context,
+            util.defer(self.host.context,
                        callback=lambda context: on_finished(plugins, context))
 
         def on_discover(plugins, context):
@@ -857,15 +857,15 @@ class Controller(QtCore.QObject):
             self.data["models"]["item"].add_context(context.to_json())
             self.data["models"]["result"].add_context(context.to_json())
 
-            util.async(
+            util.defer(
                 self.host.discover,
                 callback=lambda plugins: on_discover(plugins, context)
             )
 
         def on_reset():
-            util.async(self.host.context, callback=on_context)
+            util.defer(self.host.context, callback=on_context)
 
-        util.async(self.host.reset, callback=on_reset)
+        util.defer(self.host.reset, callback=on_reset)
 
     @QtCore.pyqtSlot()
     def publish(self):
@@ -881,7 +881,7 @@ class Controller(QtCore.QObject):
 
             # Communicate with host to retrieve current plugins and instances
             # This can potentially take a very long time; it is run
-            # asynchonously and initiates processing once complete.
+            # asynchronously and initiates processing once complete.
             host_plugins = dict((p.id, p) for p in self.host.cached_discover)
             host_context = dict((i.id, i) for i in self.host.cached_context)
 
@@ -909,7 +909,7 @@ class Controller(QtCore.QObject):
         def on_finished():
             self.host.emit("published", context=None)
 
-        util.async(get_data, callback=on_data_received)
+        util.defer(get_data, callback=on_data_received)
 
     @QtCore.pyqtSlot()
     def validate(self):
@@ -925,7 +925,7 @@ class Controller(QtCore.QObject):
 
             # Communicate with host to retrieve current plugins and instances
             # This can potentially take a very long time; it is run
-            # asynchonously and initiates processing once complete.
+            # asynchronously and initiates processing once complete.
             host_plugins = dict((p.id, p) for p in self.host.cached_discover)
             host_context = dict((i.id, i) for i in self.host.cached_context)
 
@@ -951,7 +951,7 @@ class Controller(QtCore.QObject):
         def on_finished():
             self.host.emit("validated", context=None)
 
-        util.async(get_data, callback=on_data_received)
+        util.defer(get_data, callback=on_data_received)
 
     def run(self, plugins, context, callback=None, callback_args=[]):
         """Commence asynchronous tasks
@@ -993,7 +993,7 @@ class Controller(QtCore.QObject):
 
             # Once the main thread has finished updating
             # the GUI, we can proceed handling of next task.
-            util.async(self.host.context, callback=update_context)
+            util.defer(self.host.context, callback=update_context)
 
         def update_context(ctx):
             instances = [i.id for i in self.data["models"]["item"].instances]
@@ -1004,7 +1004,7 @@ class Controller(QtCore.QObject):
                 context.append(instance)
                 self.data["models"]["item"].add_instance(instance.to_json())
 
-            util.async(lambda: next(iterator), callback=on_next)
+            util.defer(lambda: next(iterator), callback=on_next)
 
         def on_finished(message=None):
             """Locally running function"""
@@ -1028,7 +1028,7 @@ class Controller(QtCore.QObject):
         # Once the thread finishes execution, it signals
         # the `callback`.
         iterator = self.iterator(plugins, context)
-        util.async(lambda: next(iterator), callback=on_next)
+        util.defer(lambda: next(iterator), callback=on_next)
 
     @QtCore.pyqtSlot(int)
     def repairPlugin(self, index):
@@ -1095,7 +1095,7 @@ class Controller(QtCore.QObject):
             self.data["models"]["result"].update_with_result(result)
 
             # Run next again
-            util.async(lambda: next(iterator), callback=on_next)
+            util.defer(lambda: next(iterator), callback=on_next)
 
         def on_finished():
             self.data["state"]["is_running"] = False
@@ -1108,7 +1108,7 @@ class Controller(QtCore.QObject):
                       % abs(stats["requestCount"]))
 
         # Reset state
-        util.async(lambda: next(iterator), callback=on_next)
+        util.defer(lambda: next(iterator), callback=on_next)
 
 
 def iterator(plugins, context):
