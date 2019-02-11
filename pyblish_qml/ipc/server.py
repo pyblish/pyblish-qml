@@ -98,7 +98,8 @@ class Server(object):
                  python=None,
                  pyqt5=None,
                  targets=[],
-                 modal=False):
+                 modal=False,
+                 environ=None):
 
         super(Server, self).__init__()
         self.service = service
@@ -119,18 +120,17 @@ class Server(object):
 
         # Maintain the absolute minimum of environment variables,
         # to avoid issues on invalid types.
-        if IS_WIN32:
-            environ = {
-                key: os.getenv(key)
-                for key in ("USERNAME",
-                            "SYSTEMROOT",
-                            "PYTHONPATH",
-                            "PATH")
-                if os.getenv(key)
-            }
-        else:
-            # OSX and Linux users are left to fend for themselves.
-            environ = os.environ.copy()
+        environ = {
+            key: os.getenv(key)
+            for key in ("USERNAME",
+                        "SYSTEMROOT",
+                        "PYTHONPATH",
+                        "PATH",
+
+                        # Linux
+                        "DISPLAY")
+            if os.getenv(key)
+        }
 
         # Append PyQt5 to existing PYTHONPATH, if available
         environ["PYTHONPATH"] = os.pathsep.join(
