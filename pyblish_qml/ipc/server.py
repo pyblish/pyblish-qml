@@ -353,7 +353,9 @@ def find_pyqt5(python):
                 python, "-c",
                 "import PyQt5, sys;"
                 "sys.stdout.write(PyQt5.__file__)"
-            ])
+
+                # Normally, the output is bytes.
+            ], universal_newlines=True)
 
             pyqt5 = os.path.dirname(path)
 
