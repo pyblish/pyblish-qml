@@ -357,7 +357,7 @@ def find_pyqt5(python):
                 # Normally, the output is bytes.
             ], universal_newlines=True)
 
-            pyqt5 = os.path.dirname(path)
+            pyqt5 = os.path.dirname(os.path.dirname(path))
 
         except subprocess.CalledProcessError:
             pass
