@@ -7,6 +7,7 @@ import traceback
 import pyblish.api
 
 from . import ipc, settings, _state
+from .vendor.six.moves import queue
 
 MODULE_DIR = os.path.dirname(__file__)
 SPLASH_PATH = os.path.join(MODULE_DIR, "splash.png")
@@ -222,7 +223,8 @@ def install_host(use_threaded_wrapper):
                     _install_nuke,
                     _install_nukeassist,
                     _install_hiero,
-                    _install_nukestudio):
+                    _install_nukestudio,
+                    _install_blender):
         try:
             install(use_threaded_wrapper)
         except ImportError:
@@ -486,6 +488,18 @@ def _remove_googleapiclient():
     os.environ["PYTHONPATH"] = os.pathsep.join(paths)
 
 
+def _common_setup(host_name, threaded_wrapper, use_threaded_wrapper):
+    sys.stdout.write("Setting up Pyblish QML in {}\n".format(host_name))
+
+    if use_threaded_wrapper:
+        register_dispatch_wrapper(threaded_wrapper)
+
+    host.uninstall()
+    host.install(host_name)
+
+    _set_host_label(host_name)
+
+
 def _install_maya(use_threaded_wrapper):
     """Helper function to Autodesk Maya support"""
     from maya import utils, cmds
@@ -500,18 +514,6 @@ def _install_maya(use_threaded_wrapper):
         _remove_googleapiclient()
 
     _common_setup("Maya", threaded_wrapper, use_threaded_wrapper)
-
-
-def _common_setup(host_name, threaded_wrapper, use_threaded_wrapper):
-    sys.stdout.write("Setting up Pyblish QML in {}\n".format(host_name))
-
-    if use_threaded_wrapper:
-        register_dispatch_wrapper(threaded_wrapper)
-
-    host.uninstall()
-    host.install(host_name)
-
-    _set_host_label(host_name)
 
 
 def _install_houdini(use_threaded_wrapper):
@@ -585,6 +587,83 @@ def _install_nukestudio(use_threaded_wrapper):
             func, args, kwargs)
 
     _common_setup("NukeStudio", threaded_wrapper, use_threaded_wrapper)
+
+
+def _install_blender(use_threaded_wrapper):
+    """Blender is a special snowflake
+
+    It doesn't have a mechanism with which to call commands from a thread
+    other than the main thread. So what's happening below is we run a polling
+    command every 10 milliseconds to see whether QML has any tasks for us.
+    If it does, then Blender runs this command (blocking while it does it),
+    and passes the result back to QML when ready.
+
+    The consequence of this is that we're polling even though nothing is
+    expected to arrive. The cost of polling is expected to be neglible,
+    but it's worth keeping in mind and ideally optimise away. E.g. only
+    poll when the QML window is actually open.
+
+    """
+
+    import bpy
+
+    qml_to_blender = queue.Queue()
+    blender_to_qml = queue.Queue()
+
+    def threaded_wrapper(func, *args, **kwargs):
+        qml_to_blender.put((func, args, kwargs))
+        return blender_to_qml.get()
+
+    class PyblishQMLOperator(bpy.types.Operator):
+        """Operator which runs its self from a timer"""
+        bl_idname = "wm.pyblish_qml_timer"
+        bl_label = "Pyblish QML Timer Operator"
+
+        _timer = None
+
+        def modal(self, context, event):
+            if event.type == 'TIMER':
+                try:
+                    func, args, kwargs = qml_to_blender.get_nowait()
+
+                except queue.Empty:
+                    pass
+
+                else:
+                    result = func(*args, **kwargs)
+                    blender_to_qml.put(result)
+
+            return {'PASS_THROUGH'}
+
+        def execute(self, context):
+            wm = context.window_manager
+
+            # Check the queue ever 10 ms
+            # The cost of checking the queue is neglible, but it
+            # does mean having Python execute a command all the time,
+            # even as the artist is working normally and is nowhere
+            # near publishing anything.
+            self._timer = wm.event_timer_add(0.01, context.window)
+
+            wm.modal_handler_add(self)
+            return {'RUNNING_MODAL'}
+
+        def cancel(self, context):
+            wm = context.window_manager
+            wm.event_timer_remove(self._timer)
+
+    log.info("Registering Blender + Pyblish operator")
+    bpy.utils.register_class(PyblishQMLOperator)
+
+    # Start the timer
+    bpy.ops.wm.pyblish_qml_timer()
+
+    # Expose externally, for debugging. It enables you to
+    # pause the timer, and add/remove commands by hand.
+    _state["QmlToBlenderQueue"] = qml_to_blender
+    _state["BlenderToQmlQueue"] = blender_to_qml
+
+    _common_setup("Blender", threaded_wrapper, use_threaded_wrapper)
 
 
 # Support both Qt and non-Qt host
