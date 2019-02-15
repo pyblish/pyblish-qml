@@ -343,6 +343,25 @@ def find_pyqt5(python):
         os.getenv("PYBLISH_QML_PYQT5")
     )
 
+    # If not registered, ask Python for it explicitly
+    # This avoids having to expose PyQt5 on PYTHONPATH
+    # where it may otherwise get picked up by bystanders
+    # such as Python 2.
+    if not pyqt5:
+        try:
+            path = subprocess.check_output([
+                python, "-c",
+                "import PyQt5, sys;"
+                "sys.stdout.write(PyQt5.__file__)"
+
+                # Normally, the output is bytes.
+            ], universal_newlines=True)
+
+            pyqt5 = os.path.dirname(path)
+
+        except subprocess.CalledProcessError:
+            pass
+
     return pyqt5
 
 
