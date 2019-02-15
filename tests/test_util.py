@@ -11,8 +11,8 @@ from nose.tools import (
 )
 
 
-def test_async():
-    """util.async works as expected"""
+def test_defer():
+    """util.defer works as expected"""
 
     app = QtCore.QCoreApplication(sys.argv)
 
@@ -26,7 +26,7 @@ def test_async():
         mutable["result"] = result
         app.quit()
 
-    qthread = util.async(expensive_function,
+    qthread = util.defer(expensive_function,
                          callback=on_expensive_function)
 
     app.exec_()

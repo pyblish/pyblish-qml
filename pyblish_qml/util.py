@@ -9,7 +9,7 @@ from PyQt5 import QtCore
 from .vendor import six
 
 _timers = {}
-_async_threads = []
+_defer_threads = []
 _data = {
     "dispatch_wrapper": None
 }
@@ -118,7 +118,7 @@ def chain(*operations):
     return result
 
 
-def async(target, args=None, kwargs=None, callback=None):
+def defer(target, args=None, kwargs=None, callback=None):
     """Perform operation in thread with callback
 
     Instances are cached until finished, at which point
@@ -137,19 +137,19 @@ def async(target, args=None, kwargs=None, callback=None):
 
     """
 
-    obj = _Async(target, args, kwargs, callback)
-    obj.finished.connect(lambda: _async_cleanup(obj))
+    obj = _defer(target, args, kwargs, callback)
+    obj.finished.connect(lambda: _defer_cleanup(obj))
     obj.start()
-    _async_threads.append(obj)
+    _defer_threads.append(obj)
     return obj
 
 
-class _Async(QtCore.QThread):
+class _defer(QtCore.QThread):
 
     done = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
 
     def __init__(self, target, args=None, kwargs=None, callback=None):
-        super(_Async, self).__init__()
+        super(_defer, self).__init__()
 
         self.args = args or list()
         self.kwargs = kwargs or dict()
@@ -169,8 +169,8 @@ class _Async(QtCore.QThread):
             self.done.emit(result)
 
 
-def _async_cleanup(obj):
-    _async_threads.remove(obj)
+def _defer_cleanup(obj):
+    _defer_threads.remove(obj)
 
 
 def schedule(func, time, channel="default"):

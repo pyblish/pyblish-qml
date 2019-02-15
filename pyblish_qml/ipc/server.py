@@ -98,7 +98,8 @@ class Server(object):
                  python=None,
                  pyqt5=None,
                  targets=[],
-                 modal=False):
+                 modal=False,
+                 environ=None):
 
         super(Server, self).__init__()
         self.service = service
@@ -119,18 +120,17 @@ class Server(object):
 
         # Maintain the absolute minimum of environment variables,
         # to avoid issues on invalid types.
-        if IS_WIN32:
-            environ = {
-                key: os.getenv(key)
-                for key in ("USERNAME",
-                            "SYSTEMROOT",
-                            "PYTHONPATH",
-                            "PATH")
-                if os.getenv(key)
-            }
-        else:
-            # OSX and Linux users are left to fend for themselves.
-            environ = os.environ.copy()
+        environ = {
+            key: os.getenv(key)
+            for key in ("USERNAME",
+                        "SYSTEMROOT",
+                        "PYTHONPATH",
+                        "PATH",
+
+                        # Linux
+                        "DISPLAY")
+            if os.getenv(key)
+        }
 
         # Append PyQt5 to existing PYTHONPATH, if available
         environ["PYTHONPATH"] = os.pathsep.join(
@@ -267,14 +267,14 @@ class Server(object):
                         sys.stdout.write(line)
 
         if not self.listening:
+            self._start_pulse()
+
             if self.modal:
                 _listen()
             else:
                 thread = threading.Thread(target=_listen)
                 thread.daemon = True
                 thread.start()
-
-            self._start_pulse()
 
             self.listening = True
 
@@ -342,6 +342,25 @@ def find_pyqt5(python):
         _state.get("pyqt5") or
         os.getenv("PYBLISH_QML_PYQT5")
     )
+
+    # If not registered, ask Python for it explicitly
+    # This avoids having to expose PyQt5 on PYTHONPATH
+    # where it may otherwise get picked up by bystanders
+    # such as Python 2.
+    if not pyqt5:
+        try:
+            path = subprocess.check_output([
+                python, "-c",
+                "import PyQt5, sys;"
+                "sys.stdout.write(PyQt5.__file__)"
+
+                # Normally, the output is bytes.
+            ], universal_newlines=True)
+
+            pyqt5 = os.path.dirname(path)
+
+        except subprocess.CalledProcessError:
+            pass
 
     return pyqt5
 
