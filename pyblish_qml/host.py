@@ -268,7 +268,7 @@ class QtHost(Host):
         }
 
         class EventFilter(QtCore.QObject):
-            def eventFilter(self, widget, event):
+            def eventFilter(this, widget, event):
                 try:
                     func_name = {
                         QtCore.QEvent.Show: "rise",
