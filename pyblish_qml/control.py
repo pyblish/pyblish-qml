@@ -991,33 +991,20 @@ class Controller(QtCore.QObject):
 
             self.data["models"]["item"].update_with_result(result)
             self.data["models"]["result"].update_with_result(result)
-            # Update proxy instance data which currently being iterated in
-            # the primary iterator
-            update_instance_with_result(result)
 
             # Once the main thread has finished updating
             # the GUI, we can proceed handling of next task.
             util.async(self.host.context, callback=update_context)
 
-        def update_instance_with_result(result):
-            id = (result["instance"] or {}).get("id")
-            data = (result["instance"] or {}).get("data")
-            if id is None or data is None:
-                return
-
-            proxy = next((i for i in context if i.id == id), None)
-            if proxy is None:
-                return
-
-            proxy.data["publish"] = data.get("publish", True)
-            proxy.data["family"] = data["family"]
-            proxy.data["families"] = data.get("families", [])
-
         def update_context(ctx):
             item_model = self.data["models"]["item"]
             instance_items = {item.id: item for item in item_model.instances}
             for instance in ctx:
-                if instance.id in instance_items:
+                id = instance.id
+                item = instance_items.get(id)
+                if item is not None:
+                    proxy = next((i for i in context if i.id == id), None)
+                    update_instance(item, proxy, instance.data)
                     continue
 
                 context.append(instance)
@@ -1027,6 +1014,26 @@ class Controller(QtCore.QObject):
                 remove_instance(ctx, instance_items)
 
             util.async(lambda: next(iterator), callback=on_next)
+
+        def update_instance(item, proxy, data):
+            """Update model and proxy for reflecting changes on instance"""
+
+            # Update instance item model data for GUI
+            item.isToggled = data.get("publish", True)
+            item.optional = data.get("optional", True)
+            item.category = data.get("category", data["family"])
+
+            families = [data["family"]]
+            families.extend(data.get("families", []))
+            item.familiesConcatenated = ", ".join(families)
+
+            if proxy is None:
+                return
+            # Update proxy instance data which currently being iterated in
+            # the primary iterator
+            proxy.data["publish"] = data.get("publish", True)
+            proxy.data["family"] = data["family"]
+            proxy.data["families"] = data.get("families", [])
 
         def remove_instance(ctx, items):
             """Remove instance"""
