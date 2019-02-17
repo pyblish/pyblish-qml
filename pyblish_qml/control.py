@@ -70,7 +70,6 @@ class Controller(QtCore.QObject):
         self.targets = targets
 
         self.data = {
-            "removed": set(),
             "models": {
                 "item": models.ItemModel(),
                 "result": models.ResultModel(),
@@ -340,9 +339,7 @@ class Controller(QtCore.QObject):
 
         for plug, instance in iterator(plugins, context):
 
-            if (instance is not None and
-                    (instance.id in self.data["removed"] or
-                     not instance.data.get("publish", True))):
+            if instance is not None and not instance.data.get("publish", True):
                 continue
 
             state["nextOrder"] = plug.order
@@ -1042,15 +1039,15 @@ class Controller(QtCore.QObject):
 
         def remove_instance(ctx, items):
             """Remove instance"""
-            instance_ids = set([i.id for i in ctx])
+            instances = {i.id: i for i in context}
+            instance_ids = set(i.id for i in ctx)
             instance_ids.add(ctx.id)
             for id, item in items.items():
                 if id not in instance_ids:
                     # Remove from model
                     self.data["models"]["item"].remove_instance(item)
-                    # Mark as removed, for instance proxies that currently
-                    # being iterated in primary iterator
-                    self.data["removed"].add(id)
+                    # Remove instance from list
+                    context.remove(instances[id])
 
         def on_finished(message=None):
             """Locally running function"""
