@@ -75,7 +75,7 @@ def uninstall():
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
-def show(parent=None, targets=[], modal=None):
+def show(parent=None, targets=[], modal=None, comment=None, auto_publish_at_first_run=False):
     """Attempt to show GUI
 
     Requires install() to have been run first, and
@@ -95,13 +95,17 @@ def show(parent=None, targets=[], modal=None):
     # Automatically install if not already installed.
     install(modal)
 
+    show_settings = settings.to_dict()
+    show_settings['comment'] = comment
+    show_settings['autoPublishAtFirstRun'] = auto_publish_at_first_run
+
     # Show existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
         proxy = ipc.server.Proxy(server)
 
         try:
-            proxy.show(settings.to_dict())
+            proxy.show(show_settings)
             return server
 
         except IOError:
@@ -120,7 +124,7 @@ def show(parent=None, targets=[], modal=None):
         return host.desplash()
 
     proxy = ipc.server.Proxy(server)
-    proxy.show(settings.to_dict())
+    proxy.show(show_settings)
 
     # Store reference to server for future calls
     _state["currentServer"] = server
@@ -154,6 +158,32 @@ def validate():
 
         try:
             proxy.validate()
+        except IOError:
+            # The running instance has already been closed.
+            _state.pop("currentServer")
+
+            
+def hide():
+    # get existing GUI
+    if _state.get("currentServer"):
+        server = _state["currentServer"]
+        proxy = ipc.server.Proxy(server)
+
+        try:
+            proxy.hide()
+        except IOError:
+            # The running instance has already been closed.
+            _state.pop("currentServer")
+
+
+def quit():
+    # get existing GUI
+    if _state.get("currentServer"):
+        server = _state["currentServer"]
+        proxy = ipc.server.Proxy(server)
+
+        try:
+            proxy.quit()
         except IOError:
             # The running instance has already been closed.
             _state.pop("currentServer")

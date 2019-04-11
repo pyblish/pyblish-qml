@@ -805,7 +805,8 @@ class Controller(QtCore.QObject):
             # Notify subscribers of the comment
             self.comment_sync(comment)
 
-            if self.data["firstRun"]:
+            first_run = self.data["firstRun"]
+            if first_run:
                 self.firstRun.emit()
                 self.data["firstRun"] = False
 
@@ -815,6 +816,10 @@ class Controller(QtCore.QObject):
             for section in self.data["models"]["item"].sections:
                 if section.name in settings.HiddenSections:
                     self.hideSection(True, section.name)
+
+            if first_run and self.data.get('autoPublishAtFirstRun'):
+                print("Starting auto-publish at first run..")
+                util.schedule(self.publish, 1)
 
         def on_run(plugins):
             """Fetch instances in their current state, right after reset"""

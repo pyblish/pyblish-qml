@@ -181,6 +181,10 @@ class Application(QtGui.QGuiApplication):
 
             util.timer_end("ready", "Awaited statemachine for %.2f ms")
 
+        if client_settings:
+            self.controller.data['comment'] = client_settings['comment'] if client_settings.get('comment') else ''
+            self.controller.data['autoPublishAtFirstRun'] = client_settings.get('autoPublishAtFirstRun', False)
+
         self.controller.show.emit()
 
         # Allow time for QML to initialise
