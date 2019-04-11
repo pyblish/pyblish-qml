@@ -154,8 +154,10 @@ class Proxy(object):
         # Both scenarios are bugs.
         assert self.channels["response"].empty(), (
             "There were pending messages in the response channel")
-
-        sys.stdout.write("\n" + data + "\n")
+        
+        sys.stdout.write("\n")
+        sys.stdout.write(data)
+        sys.stdout.write("\n")
         sys.stdout.flush()
 
         try:
