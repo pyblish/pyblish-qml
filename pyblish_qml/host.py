@@ -75,7 +75,7 @@ def uninstall():
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
-def show(parent=None, targets=[], modal=None, comment=None, auto_publish_at_first_run=False):
+def show(parent=None, targets=[], modal=None, auto_publish=False, auto_validate=False):
     """Attempt to show GUI
 
     Requires install() to have been run first, and
@@ -96,8 +96,8 @@ def show(parent=None, targets=[], modal=None, comment=None, auto_publish_at_firs
     install(modal)
 
     show_settings = settings.to_dict()
-    show_settings['comment'] = comment
-    show_settings['autoPublishAtFirstRun'] = auto_publish_at_first_run
+    show_settings['autoPublish'] = auto_publish
+    show_settings['autoValidate'] = auto_validate
 
     # Show existing GUI
     if _state.get("currentServer"):

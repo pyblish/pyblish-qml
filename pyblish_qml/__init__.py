@@ -5,7 +5,7 @@ from .version import (
 )
 
 
-def show(parent=None, targets=None, modal=None, foster=None, comment=None, auto_publish_at_first_run=False):
+def show(parent=None, targets=None, modal=None, foster=None, auto_publish=False, auto_validate=False):
     from . import host
 
     if foster is not None:
@@ -13,7 +13,7 @@ def show(parent=None, targets=None, modal=None, foster=None, comment=None, auto_
 
     if targets is None:
         targets = []
-    return host.show(parent, targets, modal, comment, auto_publish_at_first_run)
+    return host.show(parent, targets, modal, auto_publish, auto_validate)
 
 
 _state = {}

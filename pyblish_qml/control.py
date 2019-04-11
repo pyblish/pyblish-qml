@@ -817,9 +817,14 @@ class Controller(QtCore.QObject):
                 if section.name in settings.HiddenSections:
                     self.hideSection(True, section.name)
 
-            if first_run and self.data.get('autoPublishAtFirstRun'):
-                print("Starting auto-publish at first run..")
-                util.schedule(self.publish, 1)
+            # Run selected procedure on first run
+            if first_run:
+                if self.data.get('autoPublish'):
+                    print("Starting auto-publish at first run..")
+                    util.schedule(self.publish, 1)
+                elif self.data.get('autoValidate'):
+                    print("Starting auto-validate at first run..")
+                    util.schedule(self.validate, 1)
 
         def on_run(plugins):
             """Fetch instances in their current state, right after reset"""

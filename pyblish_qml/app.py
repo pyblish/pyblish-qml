@@ -182,8 +182,8 @@ class Application(QtGui.QGuiApplication):
             util.timer_end("ready", "Awaited statemachine for %.2f ms")
 
         if client_settings:
-            self.controller.data['comment'] = client_settings['comment'] if client_settings.get('comment') else ''
-            self.controller.data['autoPublishAtFirstRun'] = client_settings.get('autoPublishAtFirstRun', False)
+            self.controller.data['autoValidate'] = client_settings.get('autoValidate', False)
+            self.controller.data['autoPublish'] = client_settings.get('autoPublish', False)
 
         self.controller.show.emit()
 
