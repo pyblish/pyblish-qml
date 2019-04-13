@@ -1,4 +1,17 @@
-"""Speak to parent process"""
+"""Speak to parent process
+
+ _____________          ___________
+|             |        |           |
+| pyblish-qml |        | e.g. Maya |
+|             |        |           |
+|      stdout o-------->           |
+|             |        |           |
+|       stdin <--------o           |
+|             |        |           |
+|             |        |           |
+|_____________|        |___________|
+
+"""
 
 import os
 import sys
