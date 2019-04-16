@@ -93,8 +93,7 @@ def show(parent=None, targets=[], modal=None):
         modal = bool(os.environ.get("PYBLISH_QML_MODAL", False))
 
     # Automatically install if not already installed.
-    if not _state.get("installed"):
-        install(modal)
+    install(modal)
 
     # Show existing GUI
     if _state.get("currentServer"):

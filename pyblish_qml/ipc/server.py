@@ -1,3 +1,19 @@
+"""Speak to parent process
+
+ _______________          _____________
+|               |        |             |
+|   e.g. Maya   |        | pyblish-qml |
+|               |        |             |
+|   Popen.stdin o-------->             |
+|               |        |             |
+|  Popen.stdout <--------o             |
+|               |        |             |
+|               |        |             |
+|               |        |             |
+|_______________|        |_____________|
+
+"""
+
 import os
 import sys
 import json
