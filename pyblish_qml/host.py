@@ -3,6 +3,7 @@ import sys
 import inspect
 import logging
 import traceback
+from functools import wraps
 
 import pyblish.api
 
@@ -137,56 +138,39 @@ def show(parent=None, targets=[], modal=None, auto_publish=False, auto_validate=
     return server
 
 
-def publish():
-    # get existing GUI
-    if _state.get("currentServer"):
-        server = _state["currentServer"]
-        proxy = ipc.server.Proxy(server)
-
-        try:
-            proxy.publish()
-        except IOError:
-            # The running instance has already been closed.
-            _state.pop("currentServer")
-
-
-def validate():
-    # get existing GUI
-    if _state.get("currentServer"):
-        server = _state["currentServer"]
-        proxy = ipc.server.Proxy(server)
-
-        try:
-            proxy.validate()
-        except IOError:
-            # The running instance has already been closed.
-            _state.pop("currentServer")
-
-            
-def hide():
-    # get existing GUI
-    if _state.get("currentServer"):
-        server = _state["currentServer"]
-        proxy = ipc.server.Proxy(server)
-
-        try:
-            proxy.hide()
-        except IOError:
-            # The running instance has already been closed.
-            _state.pop("currentServer")
+def proxy_call(func):
+    @wraps(func)
+    def proxy_call_wrapper(*args, **kwargs):
+        # get existing GUI
+        if _state.get("currentServer"):
+            server = _state["currentServer"]
+            proxy = Proxy(server)
+            try:
+                return func(proxy, *args, **kwargs)
+            except IOError:
+                # The running instance has already been closed.
+                _state.pop("currentServer")
+    return proxy_call_wrapper
 
 
-def quit():
-    # get existing GUI
-    if _state.get("currentServer"):
-        server = _state["currentServer"]
-        proxy = ipc.server.Proxy(server)
+@proxy_call
+def publish(proxy):
+    proxy.publish()
 
-        try:
-            proxy.quit()
-        except IOError:
-            # The running instance has already been closed.
-            _state.pop("currentServer")
+
+@proxy_call
+def validate(proxy):
+    proxy.validate()
+
+
+@proxy_call 
+def hide(proxy):
+    proxy.hide()
+
+
+@proxy_call
+def quit(proxy):
+    proxy.quit()
 
 
 def install_callbacks():
