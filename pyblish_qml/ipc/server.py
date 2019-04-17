@@ -233,6 +233,11 @@ class Server(object):
         def _listen():
             """This runs in a thread"""
             HEADER = "pyblish-qml:popen.request"
+            
+            # To ensure successful IPC message parsing, the message got a delimiter newline in front
+            # of it. To differentiate between real newlines and message preambles we need to buffer
+            # them until the next part arrives.
+            last_msg_newline = False
 
             for line in iter(self.popen.stdout.readline, b""):
 
@@ -241,12 +246,23 @@ class Server(object):
 
                 try:
                     response = json.loads(line)
-
                 except Exception:
-                    # This must be a regular message.
-                    sys.stdout.write(line)
+                    if last_msg_newline:
+                        # last newline message was a real newline
+                        sys.stdout.write("\n")
+                        last_msg_newline = False
+
+                    if line == "\n":
+                        # buffer and print newlines only if they are not preambles of messages
+                        last_msg_newline = True
+                    else:
+                        # This must be a regular message.
+                        sys.stdout.write(line)
 
                 else:
+                    # last newline was the preamble for a real message
+                    last_msg_newline = False
+
                     if (hasattr(response, "get") and
                             response.get("header") == HEADER):
 
