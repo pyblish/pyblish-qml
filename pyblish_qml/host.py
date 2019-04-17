@@ -3,6 +3,7 @@ import sys
 import inspect
 import logging
 import traceback
+from functools import wraps
 
 import pyblish.api
 
@@ -75,7 +76,7 @@ def uninstall():
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
-def show(parent=None, targets=[], modal=None):
+def show(parent=None, targets=[], modal=None, auto_publish=False, auto_validate=False):
     """Attempt to show GUI
 
     Requires install() to have been run first, and
@@ -95,13 +96,17 @@ def show(parent=None, targets=[], modal=None):
     # Automatically install if not already installed.
     install(modal)
 
+    show_settings = settings.to_dict()
+    show_settings['autoPublish'] = auto_publish
+    show_settings['autoValidate'] = auto_validate
+
     # Show existing GUI
     if _state.get("currentServer"):
         server = _state["currentServer"]
         proxy = ipc.server.Proxy(server)
 
         try:
-            proxy.show(settings.to_dict())
+            proxy.show(show_settings)
             return server
 
         except IOError:
@@ -120,7 +125,7 @@ def show(parent=None, targets=[], modal=None):
         return host.desplash()
 
     proxy = ipc.server.Proxy(server)
-    proxy.show(settings.to_dict())
+    proxy.show(show_settings)
 
     # Store reference to server for future calls
     _state["currentServer"] = server
@@ -133,30 +138,39 @@ def show(parent=None, targets=[], modal=None):
     return server
 
 
-def publish():
-    # get existing GUI
-    if _state.get("currentServer"):
-        server = _state["currentServer"]
-        proxy = ipc.server.Proxy(server)
+def proxy_call(func):
+    @wraps(func)
+    def proxy_call_wrapper(*args, **kwargs):
+        # get existing GUI
+        if _state.get("currentServer"):
+            server = _state["currentServer"]
+            proxy = Proxy(server)
+            try:
+                return func(proxy, *args, **kwargs)
+            except IOError:
+                # The running instance has already been closed.
+                _state.pop("currentServer")
+    return proxy_call_wrapper
 
-        try:
-            proxy.publish()
-        except IOError:
-            # The running instance has already been closed.
-            _state.pop("currentServer")
+
+@proxy_call
+def publish(proxy):
+    proxy.publish()
 
 
-def validate():
-    # get existing GUI
-    if _state.get("currentServer"):
-        server = _state["currentServer"]
-        proxy = ipc.server.Proxy(server)
+@proxy_call
+def validate(proxy):
+    proxy.validate()
 
-        try:
-            proxy.validate()
-        except IOError:
-            # The running instance has already been closed.
-            _state.pop("currentServer")
+
+@proxy_call 
+def hide(proxy):
+    proxy.hide()
+
+
+@proxy_call
+def quit(proxy):
+    proxy.quit()
 
 
 def install_callbacks():
