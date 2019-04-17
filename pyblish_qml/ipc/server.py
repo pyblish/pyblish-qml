@@ -1,3 +1,19 @@
+"""Speak to parent process
+
+ _______________          _____________
+|               |        |             |
+|   e.g. Maya   |        | pyblish-qml |
+|               |        |             |
+|   Popen.stdin o-------->             |
+|               |        |             |
+|  Popen.stdout <--------o             |
+|               |        |             |
+|               |        |             |
+|               |        |             |
+|_______________|        |_____________|
+
+"""
+
 import os
 import sys
 import json
@@ -216,6 +232,8 @@ class Server(object):
 
         def _listen():
             """This runs in a thread"""
+            HEADER = "pyblish-qml:popen.request"
+
             for line in iter(self.popen.stdout.readline, b""):
 
                 if six.PY3:
@@ -229,7 +247,9 @@ class Server(object):
                     sys.stdout.write(line)
 
                 else:
-                    if response.get("header") == "pyblish-qml:popen.request":
+                    if (hasattr(response, "get") and
+                            response.get("header") == HEADER):
+
                         payload = response["payload"]
                         args = payload["args"]
 

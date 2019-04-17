@@ -339,6 +339,9 @@ class Controller(QtCore.QObject):
 
         for plug, instance in iterator(plugins, context):
 
+            if instance is not None and not instance.data.get("publish", True):
+                continue
+
             state["nextOrder"] = plug.order
 
             for order in list(signals.keys()):
@@ -1006,15 +1009,55 @@ class Controller(QtCore.QObject):
             util.defer(self.host.context, callback=update_context)
 
         def update_context(ctx):
-            instances = [i.id for i in self.data["models"]["item"].instances]
+            item_model = self.data["models"]["item"]
+            instance_items = {item.id: item for item in item_model.instances}
             for instance in ctx:
-                if instance.id in instances:
+                id = instance.id
+                item = instance_items.get(id)
+                if item is not None:
+                    proxy = next((i for i in context if i.id == id), None)
+                    update_instance(item, proxy, instance.data)
                     continue
 
                 context.append(instance)
-                self.data["models"]["item"].add_instance(instance.to_json())
+                item_model.add_instance(instance.to_json())
+
+            if len(ctx) < item_model.instance_count():
+                remove_instance(ctx, instance_items)
 
             util.defer(lambda: next(iterator), callback=on_next)
+
+        def update_instance(item, proxy, data):
+            """Update model and proxy for reflecting changes on instance"""
+
+            # Update instance item model data for GUI
+            item.isToggled = data.get("publish", True)
+            item.optional = data.get("optional", True)
+            item.category = data.get("category", data["family"])
+
+            families = [data["family"]]
+            families.extend(data.get("families", []))
+            item.familiesConcatenated = ", ".join(families)
+
+            if proxy is None:
+                return
+            # Update proxy instance data which currently being iterated in
+            # the primary iterator
+            proxy.data["publish"] = data.get("publish", True)
+            proxy.data["family"] = data["family"]
+            proxy.data["families"] = data.get("families", [])
+
+        def remove_instance(ctx, items):
+            """Remove instance"""
+            instances = {i.id: i for i in context}
+            instance_ids = set(i.id for i in ctx)
+            instance_ids.add(ctx.id)
+            for id, item in items.items():
+                if id not in instance_ids:
+                    # Remove from model
+                    self.data["models"]["item"].remove_instance(item)
+                    # Remove instance from list
+                    context.remove(instances[id])
 
         def on_finished(message=None):
             """Locally running function"""

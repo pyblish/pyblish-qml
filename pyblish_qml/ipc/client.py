@@ -1,4 +1,17 @@
-"""Speak to parent process"""
+"""Speak to parent process
+
+ _____________          ___________
+|             |        |           |
+| pyblish-qml |        | e.g. Maya |
+|             |        |           |
+|      stdout o-------->           |
+|             |        |           |
+|       stdin <--------o           |
+|             |        |           |
+|             |        |           |
+|_____________|        |___________|
+
+"""
 
 import os
 import sys
@@ -154,11 +167,8 @@ class Proxy(object):
         # Both scenarios are bugs.
         assert self.channels["response"].empty(), (
             "There were pending messages in the response channel")
-        
-        # To ensure successful IPC message parsing, the message and the
-        # surrounding delimiters must be passed to the stream object at once.
-        # See https://github.com/pyblish/pyblish-qml/pull/325 for more info.
-        sys.stdout.write("\n" + data + "\n")
+
+        sys.stdout.write(data + "\n")
         sys.stdout.flush()
 
         try:
