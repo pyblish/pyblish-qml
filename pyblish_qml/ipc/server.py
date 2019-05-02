@@ -260,8 +260,6 @@ class Server(object):
                         sys.stdout.write(line)
 
                 else:
-                    # last newline was the preamble for a real message
-                    last_msg_newline = False
 
                     if (hasattr(response, "get") and
                             response.get("header") == HEADER):
@@ -300,7 +298,13 @@ class Server(object):
                         # In the off chance that a message
                         # was successfully decoded as JSON,
                         # but *wasn't* a request, just print it.
+                        if last_msg_newline:
+                            # last newline message was a real newline
+                            sys.stdout.write("\n")
                         sys.stdout.write(line)
+
+                    # Last newline has been handled at this point.
+                    last_msg_newline = False
 
         if not self.listening:
             self._start_pulse()
