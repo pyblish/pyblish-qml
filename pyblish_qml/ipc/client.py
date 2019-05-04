@@ -168,7 +168,10 @@ class Proxy(object):
         assert self.channels["response"].empty(), (
             "There were pending messages in the response channel")
 
-        sys.stdout.write(data + "\n")
+        # To ensure successful IPC message parsing, the message and the
+        # surrounding delimiters must be passed to the stream object at once.
+        # See https://github.com/pyblish/pyblish-qml/pull/325 for more info.
+        sys.stdout.write("\n" + data + "\n")
         sys.stdout.flush()
 
         try:
