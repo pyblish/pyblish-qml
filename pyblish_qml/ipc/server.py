@@ -401,7 +401,7 @@ def find_pyqt5(python):
 
             pyqt5 = os.path.dirname(os.path.dirname(path))
 
-        except (subprocess.CalledProcessError, WindowsError):
+        except subprocess.CalledProcessError:
             pass
 
     return pyqt5
