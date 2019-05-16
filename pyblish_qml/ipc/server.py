@@ -129,9 +129,9 @@ class Server(object):
         is_embedded = os.path.split(sys.executable)[-1].lower() != "python.exe"
 
         python = python or find_python()
-        pyqt5 = pyqt5 or find_pyqt5(python)
-
         print("Using Python @ '%s'" % python)
+
+        pyqt5 = pyqt5 or find_pyqt5(python)
         print("Using PyQt5 @ '%s'" % pyqt5)
 
         # Maintain the absolute minimum of environment variables,
