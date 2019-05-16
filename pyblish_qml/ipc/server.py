@@ -399,7 +399,7 @@ def find_pyqt5(python):
 
             pyqt5 = os.path.dirname(os.path.dirname(path))
 
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, WindowsError):
             pass
 
     return pyqt5
