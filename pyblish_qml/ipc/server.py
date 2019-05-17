@@ -397,7 +397,7 @@ def find_pyqt5(python):
                 "sys.stdout.write(PyQt5.__file__)"
 
                 # Normally, the output is bytes.
-            ], universal_newlines=True)
+            ], universal_newlines=True, stdin=subprocess.PIPE)
 
             pyqt5 = os.path.dirname(os.path.dirname(path))
 
