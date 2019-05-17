@@ -391,13 +391,16 @@ def find_pyqt5(python):
     # such as Python 2.
     if not pyqt5:
         try:
-            path = subprocess.check_output([
-                python, "-c",
-                "import PyQt5, sys;"
-                "sys.stdout.write(PyQt5.__file__)"
-
-                # Normally, the output is bytes.
-            ], universal_newlines=True, stdin=subprocess.PIPE)
+            path = subprocess.check_output(
+                [
+                    python, "-c",
+                    "import PyQt5, sys;"
+                    "sys.stdout.write(PyQt5.__file__)"
+                ],
+                universal_newlines=True,  # Normally, the output is bytes.
+                stdin=subprocess.PIPE,
+                env={"SYSTEMROOT": os.getenv("SYSTEMROOT"), "PATH": ""},
+                creationflags=CREATE_NO_WINDOW)
 
             pyqt5 = os.path.dirname(os.path.dirname(path))
 
