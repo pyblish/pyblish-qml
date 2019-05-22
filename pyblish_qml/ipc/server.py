@@ -399,7 +399,6 @@ def find_pyqt5(python):
                 ],
                 universal_newlines=True,  # Normally, the output is bytes.
                 stdin=subprocess.PIPE,
-                env={"SYSTEMROOT": os.getenv("SYSTEMROOT"), "PATH": ""},
                 creationflags=CREATE_NO_WINDOW)
 
             pyqt5 = os.path.dirname(os.path.dirname(path))
