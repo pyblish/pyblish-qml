@@ -129,9 +129,9 @@ class Server(object):
         is_embedded = os.path.split(sys.executable)[-1].lower() != "python.exe"
 
         python = python or find_python()
-        pyqt5 = pyqt5 or find_pyqt5(python)
-
         print("Using Python @ '%s'" % python)
+
+        pyqt5 = pyqt5 or find_pyqt5(python)
         print("Using PyQt5 @ '%s'" % pyqt5)
 
         # Maintain the absolute minimum of environment variables,
@@ -233,10 +233,11 @@ class Server(object):
         def _listen():
             """This runs in a thread"""
             HEADER = "pyblish-qml:popen.request"
-            
-            # To ensure successful IPC message parsing, the message got a delimiter newline in front
-            # of it. To differentiate between real newlines and message preambles we need to buffer
-            # them until the next part arrives.
+
+            # To ensure successful IPC message parsing, the message got a
+            # delimiter newline in front of it. To differentiate between
+            # real newlines and message preambles we need to buffer them
+            # until the next part arrives.
             last_msg_newline = False
 
             for line in iter(self.popen.stdout.readline, b""):
@@ -253,7 +254,8 @@ class Server(object):
                         last_msg_newline = False
 
                     if line == "\n":
-                        # buffer and print newlines only if they are not preambles of messages
+                        # buffer and print newlines only if they are not
+                        # preambles of messages
                         last_msg_newline = True
                     else:
                         # This must be a regular message.
@@ -382,25 +384,6 @@ def find_pyqt5(python):
         _state.get("pyqt5") or
         os.getenv("PYBLISH_QML_PYQT5")
     )
-
-    # If not registered, ask Python for it explicitly
-    # This avoids having to expose PyQt5 on PYTHONPATH
-    # where it may otherwise get picked up by bystanders
-    # such as Python 2.
-    if not pyqt5:
-        try:
-            path = subprocess.check_output([
-                python, "-c",
-                "import PyQt5, sys;"
-                "sys.stdout.write(PyQt5.__file__)"
-
-                # Normally, the output is bytes.
-            ], universal_newlines=True)
-
-            pyqt5 = os.path.dirname(os.path.dirname(path))
-
-        except subprocess.CalledProcessError:
-            pass
 
     return pyqt5
 
