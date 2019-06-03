@@ -259,7 +259,9 @@ class Server(object):
                         last_msg_newline = True
                     else:
                         # This must be a regular message.
-                        sys.stdout.write(line)
+                        line = line.strip()
+                        if line:
+                            sys.stdout.write(line + "\n")
 
                 else:
 
