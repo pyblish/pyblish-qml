@@ -656,7 +656,7 @@ def _install_blender(use_threaded_wrapper):
             # does mean having Python execute a command all the time,
             # even as the artist is working normally and is nowhere
             # near publishing anything.
-            self._timer = wm.event_timer_add(0.01, context.window)
+            self._timer = wm.event_timer_add(0.01, window=context.window)
 
             wm.modal_handler_add(self)
             return {'RUNNING_MODAL'}
