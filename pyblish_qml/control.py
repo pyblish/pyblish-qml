@@ -1034,6 +1034,7 @@ class Controller(QtCore.QObject):
             item.isToggled = data.get("publish", True)
             item.optional = data.get("optional", True)
             item.category = data.get("category", data["family"])
+            item.label = data.get("label", None)
 
             families = [data["family"]]
             families.extend(data.get("families", []))
