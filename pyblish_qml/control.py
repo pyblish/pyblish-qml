@@ -922,6 +922,14 @@ class Controller(QtCore.QObject):
         def on_finished():
             self.host.emit("published", context=None)
 
+            # If there are instance that has error, prompt failed message
+            # to footer.
+            model = self.data["models"]["item"]
+            for instance in models.ItemIterator(model.instances):
+                if instance.hasError:
+                    self.info.emit("Publish failed..")
+                    break
+
         util.defer(get_data, callback=on_data_received)
 
     @QtCore.pyqtSlot()
