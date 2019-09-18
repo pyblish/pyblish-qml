@@ -75,7 +75,8 @@ class Controller(QtCore.QObject):
                 "result": models.ResultModel(),
             },
             "comment": "",
-            "firstRun": True
+            "firstRun": True,
+            "onPublished": False,
         }
 
         self.data.update({
@@ -702,6 +703,9 @@ class Controller(QtCore.QObject):
         if state == "ready":
             self.ready.emit()
 
+        if state == "integrating":
+            self.data["onPublished"] = True
+
         self.data["state"]["current"] = state
         self.data["state"]["all"] = list(
             s.name for s in self.machine.configuration()
@@ -763,6 +767,8 @@ class Controller(QtCore.QObject):
         # Clear models
         self.data["models"]["item"].reset()
         self.data["models"]["result"].reset()
+
+        self.data["onPublished"] = False
 
         def on_finished(plugins, context):
             # Compute compatibility
@@ -921,6 +927,11 @@ class Controller(QtCore.QObject):
 
         def on_finished():
             self.host.emit("published", context=None)
+
+            if not self.data["onPublished"]:
+                # Possible stopped on validation fail or the extraction has
+                # been interrupted.
+                return
 
             # If there are instance that has error, prompt failed message
             # to footer.
