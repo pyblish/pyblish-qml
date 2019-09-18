@@ -76,7 +76,7 @@ class Controller(QtCore.QObject):
             },
             "comment": "",
             "firstRun": True,
-            "onPublished": False,
+            "testPassed": False,
         }
 
         self.data.update({
@@ -353,7 +353,9 @@ class Controller(QtCore.QObject):
                 raise StopIteration("Stopped")
 
             if test(**state):
+                self.data["testPassed"] = False
                 raise StopIteration("Stopped due to %s" % test(**state))
+            self.data["testPassed"] = True
 
             try:
                 # Notify GUI before commencing remote processing
@@ -703,9 +705,6 @@ class Controller(QtCore.QObject):
         if state == "ready":
             self.ready.emit()
 
-        if state == "integrating":
-            self.data["onPublished"] = True
-
         self.data["state"]["current"] = state
         self.data["state"]["all"] = list(
             s.name for s in self.machine.configuration()
@@ -767,8 +766,6 @@ class Controller(QtCore.QObject):
         # Clear models
         self.data["models"]["item"].reset()
         self.data["models"]["result"].reset()
-
-        self.data["onPublished"] = False
 
         def on_finished(plugins, context):
             # Compute compatibility
@@ -928,13 +925,13 @@ class Controller(QtCore.QObject):
         def on_finished():
             self.host.emit("published", context=None)
 
-            if not self.data["onPublished"]:
+            if not self.data["testPassed"]:
                 # Possible stopped on validation fail or the extraction has
-                # been interrupted.
+                # been interrupted. Depend on the continual processing test.
                 return
 
-            # If there are instance that has error, prompt failed message
-            # to footer.
+            # If there are instance that has error after the test passed,
+            # prompt publish failed message to footer.
             model = self.data["models"]["item"]
             for instance in models.ItemIterator(model.instances):
                 if instance.hasError:
