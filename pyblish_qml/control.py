@@ -76,7 +76,6 @@ class Controller(QtCore.QObject):
             },
             "comment": "",
             "firstRun": True,
-            "testPassed": False,
         }
 
         self.data.update({
@@ -109,7 +108,9 @@ class Controller(QtCore.QObject):
             "state": {
                 "is_running": False,
                 "current": None,
-                "all": list()
+                "all": list(),
+
+                "testPassed": False,
             }
         })
 
@@ -353,9 +354,9 @@ class Controller(QtCore.QObject):
                 raise StopIteration("Stopped")
 
             if test(**state):
-                self.data["testPassed"] = False
+                self.data["state"]["testPassed"] = False
                 raise StopIteration("Stopped due to %s" % test(**state))
-            self.data["testPassed"] = True
+            self.data["state"]["testPassed"] = True
 
             try:
                 # Notify GUI before commencing remote processing
@@ -925,7 +926,7 @@ class Controller(QtCore.QObject):
         def on_finished():
             self.host.emit("published", context=None)
 
-            if not self.data["testPassed"]:
+            if not self.data["state"]["testPassed"]:
                 # Possible stopped on validation fail or the extraction has
                 # been interrupted. Depend on the continual processing test.
                 return
