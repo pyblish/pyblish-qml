@@ -936,7 +936,7 @@ class Controller(QtCore.QObject):
             model = self.data["models"]["item"]
             for instance in models.ItemIterator(model.instances):
                 if instance.hasError:
-                    self.info.emit("Publish failed..")
+                    self.info.emit("Published, with errors..")
                     break
 
         util.defer(get_data, callback=on_data_received)
