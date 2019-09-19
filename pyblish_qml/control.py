@@ -75,7 +75,7 @@ class Controller(QtCore.QObject):
                 "result": models.ResultModel(),
             },
             "comment": "",
-            "firstRun": True
+            "firstRun": True,
         }
 
         self.data.update({
@@ -108,7 +108,9 @@ class Controller(QtCore.QObject):
             "state": {
                 "is_running": False,
                 "current": None,
-                "all": list()
+                "all": list(),
+
+                "testPassed": False,
             }
         })
 
@@ -352,7 +354,9 @@ class Controller(QtCore.QObject):
                 raise StopIteration("Stopped")
 
             if test(**state):
+                self.data["state"]["testPassed"] = False
                 raise StopIteration("Stopped due to %s" % test(**state))
+            self.data["state"]["testPassed"] = True
 
             try:
                 # Notify GUI before commencing remote processing
@@ -921,6 +925,19 @@ class Controller(QtCore.QObject):
 
         def on_finished():
             self.host.emit("published", context=None)
+
+            if not self.data["state"]["testPassed"]:
+                # Possible stopped on validation fail or the extraction has
+                # been interrupted. Depend on the continual processing test.
+                return
+
+            # If there are instance that has error after the test passed,
+            # prompt publish failed message to footer.
+            model = self.data["models"]["item"]
+            for instance in models.ItemIterator(model.instances):
+                if instance.hasError:
+                    self.info.emit("Published, with errors..")
+                    break
 
         util.defer(get_data, callback=on_data_received)
 
