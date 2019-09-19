@@ -369,6 +369,10 @@ class ItemModel(AbstractModel):
         }.get(item["type"], "Other")
 
         for action in item["actions"]:
+            if action["__type__"] != "action":
+                # Consider only Actions, ignore Categories
+                continue
+
             if action["on"] == "all":
                 item["actionsIconVisible"] = True
 
@@ -532,7 +536,8 @@ class ItemModel(AbstractModel):
                     if action["on"] == "processed" and not item.processed:
                         actions.remove(action)
 
-                if actions:
+                if any(action["__type__"] == "action" for action in actions):
+                    # Consider only Actions, ignore Categories
                     item.actionsIconVisible = True
 
             # Update section item
