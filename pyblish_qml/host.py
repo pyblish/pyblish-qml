@@ -110,6 +110,8 @@ def show(parent=None,
         proxy = ipc.server.Proxy(server)
 
         try:
+            # Update target
+            proxy.target(targets)
             proxy.show(show_settings)
             return server
 
