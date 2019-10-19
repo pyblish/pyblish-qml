@@ -148,7 +148,7 @@ def proxy_call(func):
         # get existing GUI
         if _state.get("currentServer"):
             server = _state["currentServer"]
-            proxy = Proxy(server)
+            proxy = ipc.server.Proxy(server)
             try:
                 return func(proxy, *args, **kwargs)
             except IOError:
