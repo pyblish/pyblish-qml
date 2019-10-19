@@ -182,8 +182,10 @@ class Application(QtGui.QGuiApplication):
             util.timer_end("ready", "Awaited statemachine for %.2f ms")
 
         if client_settings:
-            self.controller.data['autoValidate'] = client_settings.get('autoValidate', False)
-            self.controller.data['autoPublish'] = client_settings.get('autoPublish', False)
+            auto_validate = client_settings.get('autoValidate', False)
+            auto_publish = client_settings.get('autoPublish', False)
+            self.controller.data['autoValidate'] = auto_validate
+            self.controller.data['autoPublish'] = auto_publish
 
         self.controller.show.emit()
 

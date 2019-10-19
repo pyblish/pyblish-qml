@@ -76,7 +76,11 @@ def uninstall():
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
-def show(parent=None, targets=[], modal=None, auto_publish=False, auto_validate=False):
+def show(parent=None,
+         targets=[],
+         modal=None,
+         auto_publish=False,
+         auto_validate=False):
     """Attempt to show GUI
 
     Requires install() to have been run first, and
@@ -163,7 +167,7 @@ def validate(proxy):
     proxy.validate()
 
 
-@proxy_call 
+@proxy_call
 def hide(proxy):
     proxy.hide()
 
