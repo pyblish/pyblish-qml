@@ -76,7 +76,11 @@ def uninstall():
     sys.stdout.write("Pyblish QML shutdown successful.\n")
 
 
-def show(parent=None, targets=[], modal=None, auto_publish=False, auto_validate=False):
+def show(parent=None,
+         targets=[],
+         modal=None,
+         auto_publish=False,
+         auto_validate=False):
     """Attempt to show GUI
 
     Requires install() to have been run first, and
@@ -106,6 +110,8 @@ def show(parent=None, targets=[], modal=None, auto_publish=False, auto_validate=
         proxy = ipc.server.Proxy(server)
 
         try:
+            # Update target
+            proxy.target(targets)
             proxy.show(show_settings)
             return server
 
@@ -144,7 +150,7 @@ def proxy_call(func):
         # get existing GUI
         if _state.get("currentServer"):
             server = _state["currentServer"]
-            proxy = Proxy(server)
+            proxy = ipc.server.Proxy(server)
             try:
                 return func(proxy, *args, **kwargs)
             except IOError:
@@ -163,7 +169,7 @@ def validate(proxy):
     proxy.validate()
 
 
-@proxy_call 
+@proxy_call
 def hide(proxy):
     proxy.hide()
 

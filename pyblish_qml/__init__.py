@@ -5,7 +5,12 @@ from .version import (
 )
 
 
-def show(parent=None, targets=None, modal=None, foster=None, auto_publish=False, auto_validate=False):
+def show(parent=None,
+         targets=None,
+         modal=None,
+         foster=None,
+         auto_publish=False,
+         auto_validate=False):
     from . import host
 
     if foster is not None:

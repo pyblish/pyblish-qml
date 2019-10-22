@@ -70,6 +70,8 @@ class Application(QtGui.QGuiApplication):
     published = QtCore.pyqtSignal()
     validated = QtCore.pyqtSignal()
 
+    targeted = QtCore.pyqtSignal(QtCore.QVariant)
+
     risen = QtCore.pyqtSignal()
     inFocused = QtCore.pyqtSignal()
     outFocused = QtCore.pyqtSignal()
@@ -104,6 +106,8 @@ class Application(QtGui.QGuiApplication):
         self.quitted.connect(self.quit)
         self.published.connect(self.publish)
         self.validated.connect(self.validate)
+
+        self.targeted.connect(self.target)
 
         self.risen.connect(self.rise)
         self.inFocused.connect(self.inFocus)
@@ -182,8 +186,10 @@ class Application(QtGui.QGuiApplication):
             util.timer_end("ready", "Awaited statemachine for %.2f ms")
 
         if client_settings:
-            self.controller.data['autoValidate'] = client_settings.get('autoValidate', False)
-            self.controller.data['autoPublish'] = client_settings.get('autoPublish', False)
+            auto_validate = client_settings.get('autoValidate', False)
+            auto_publish = client_settings.get('autoPublish', False)
+            self.controller.data['autoValidate'] = auto_validate
+            self.controller.data['autoPublish'] = auto_publish
 
         self.controller.show.emit()
 
@@ -223,6 +229,9 @@ class Application(QtGui.QGuiApplication):
         """Fire up the validation sequance"""
         self.controller.validate()
 
+    def target(self, targets):
+        self.controller.targets = targets
+
     def listen(self):
         """Listen on incoming messages from host
 
@@ -248,6 +257,8 @@ class Application(QtGui.QGuiApplication):
                     "quit": "quitted",
                     "publish": "published",
                     "validate": "validated",
+
+                    "target": "targeted",
 
                     "rise": "risen",
                     "inFocus": "inFocused",
