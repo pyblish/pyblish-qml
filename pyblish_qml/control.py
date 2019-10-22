@@ -1,6 +1,7 @@
 
 import json
 import time
+import logging
 import collections
 
 # Dependencies
@@ -11,6 +12,7 @@ import pyblish.logic
 from . import util, models, version, settings
 
 qtproperty = util.pyqtConstantProperty
+log = logging.getLogger(__name__)
 
 
 class Controller(QtCore.QObject):
@@ -351,11 +353,11 @@ class Controller(QtCore.QObject):
                     signals.pop(order).emit()
 
             if not self.data["state"]["is_running"]:
-                raise StopIteration("Stopped")
+                return log.info("Stopped")
 
             if test(**state):
                 self.data["state"]["testPassed"] = False
-                raise StopIteration("Stopped due to %s" % test(**state))
+                return log.error("Stopped due to %s" % test(**state))
             self.data["state"]["testPassed"] = True
 
             try:
@@ -365,7 +367,7 @@ class Controller(QtCore.QObject):
                 result = self.host.process(plug, context, instance)
 
             except Exception as e:
-                raise StopIteration("Unknown error: %s" % e)
+                return log.error("Unknown error: %s" % e)
 
             else:
                 # Make note of the order at which the
@@ -1016,7 +1018,7 @@ class Controller(QtCore.QObject):
         # the GUI and commence next task.
         def on_next(result):
             if isinstance(result, StopIteration):
-                return on_finished(str(result))
+                return on_finished()
 
             self.data["models"]["item"].update_with_result(result)
             self.data["models"]["result"].update_with_result(result)
@@ -1195,7 +1197,7 @@ def iterator(plugins, context):
 
         message = test(**state)
         if message:
-            raise StopIteration("Stopped due to %s" % message)
+            return log.error("Stopped due to %s" % message)
 
         instances = pyblish.api.instances_by_plugin(context, plugin)
         if plugin.__instanceEnabled__:
