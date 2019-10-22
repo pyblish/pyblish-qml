@@ -1,7 +1,6 @@
 
 import json
 import time
-import logging
 import collections
 
 # Dependencies
@@ -12,7 +11,6 @@ import pyblish.logic
 from . import util, models, version, settings
 
 qtproperty = util.pyqtConstantProperty
-log = logging.getLogger(__name__)
 
 
 class Controller(QtCore.QObject):
@@ -353,11 +351,11 @@ class Controller(QtCore.QObject):
                     signals.pop(order).emit()
 
             if not self.data["state"]["is_running"]:
-                return stopiter_by_demand("Stopped")
+                return StopIteration("Stopped")
 
             if test(**state):
                 self.data["state"]["testPassed"] = False
-                return stopiter_by_error("Stopped due to %s" % test(**state))
+                return StopIteration("Stopped due to %s" % test(**state))
 
             self.data["state"]["testPassed"] = True
 
@@ -368,7 +366,7 @@ class Controller(QtCore.QObject):
                 result = self.host.process(plug, context, instance)
 
             except Exception as e:
-                return stopiter_by_error("Unknown error: %s" % e)
+                return StopIteration("Unknown error: %s" % e)
 
             else:
                 # Make note of the order at which the
@@ -1198,7 +1196,7 @@ def iterator(plugins, context):
 
         message = test(**state)
         if message:
-            return stopiter_by_error("Stopped due to %s" % message)
+            return StopIteration("Stopped due to %s" % message)
 
         instances = pyblish.api.instances_by_plugin(context, plugin)
         if plugin.__instanceEnabled__:
@@ -1207,13 +1205,3 @@ def iterator(plugins, context):
 
         else:
             yield plugin, None
-
-
-def stopiter_by_error(message):
-    log.error(message)
-    return StopIteration(message)
-
-
-def stopiter_by_demand(message):
-    log.info(message)
-    return StopIteration(message)
