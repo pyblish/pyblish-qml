@@ -70,8 +70,6 @@ class Application(QtGui.QGuiApplication):
     published = QtCore.pyqtSignal()
     validated = QtCore.pyqtSignal()
 
-    targeted = QtCore.pyqtSignal(QtCore.QVariant)
-
     risen = QtCore.pyqtSignal()
     inFocused = QtCore.pyqtSignal()
     outFocused = QtCore.pyqtSignal()
@@ -106,8 +104,6 @@ class Application(QtGui.QGuiApplication):
         self.quitted.connect(self.quit)
         self.published.connect(self.publish)
         self.validated.connect(self.validate)
-
-        self.targeted.connect(self.target)
 
         self.risen.connect(self.rise)
         self.inFocused.connect(self.inFocus)
@@ -229,9 +225,6 @@ class Application(QtGui.QGuiApplication):
         """Fire up the validation sequance"""
         self.controller.validate()
 
-    def target(self, targets):
-        self.controller.targets = targets
-
     def listen(self):
         """Listen on incoming messages from host
 
@@ -257,8 +250,6 @@ class Application(QtGui.QGuiApplication):
                     "quit": "quitted",
                     "publish": "published",
                     "validate": "validated",
-
-                    "target": "targeted",
 
                     "rise": "risen",
                     "inFocus": "inFocused",

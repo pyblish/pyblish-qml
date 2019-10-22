@@ -77,9 +77,6 @@ class Proxy(object):
     def validate(self):
         self._dispatch("validate")
 
-    def target(self, targets):
-        self._dispatch("target", args=[targets])
-
     def _dispatch(self, func, args=None):
         data = json.dumps(
             {
