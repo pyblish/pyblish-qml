@@ -353,11 +353,12 @@ class Controller(QtCore.QObject):
                     signals.pop(order).emit()
 
             if not self.data["state"]["is_running"]:
-                return log.info("Stopped")
+                return stopiter_by_demand("Stopped")
 
             if test(**state):
                 self.data["state"]["testPassed"] = False
-                return log.error("Stopped due to %s" % test(**state))
+                return stopiter_by_error("Stopped due to %s" % test(**state))
+
             self.data["state"]["testPassed"] = True
 
             try:
@@ -367,7 +368,7 @@ class Controller(QtCore.QObject):
                 result = self.host.process(plug, context, instance)
 
             except Exception as e:
-                return log.error("Unknown error: %s" % e)
+                return stopiter_by_error("Unknown error: %s" % e)
 
             else:
                 # Make note of the order at which the
@@ -1018,7 +1019,7 @@ class Controller(QtCore.QObject):
         # the GUI and commence next task.
         def on_next(result):
             if isinstance(result, StopIteration):
-                return on_finished()
+                return on_finished(str(result))
 
             self.data["models"]["item"].update_with_result(result)
             self.data["models"]["result"].update_with_result(result)
@@ -1197,7 +1198,7 @@ def iterator(plugins, context):
 
         message = test(**state)
         if message:
-            return log.error("Stopped due to %s" % message)
+            return stopiter_by_error("Stopped due to %s" % message)
 
         instances = pyblish.api.instances_by_plugin(context, plugin)
         if plugin.__instanceEnabled__:
@@ -1206,3 +1207,13 @@ def iterator(plugins, context):
 
         else:
             yield plugin, None
+
+
+def stopiter_by_error(message):
+    log.error(message)
+    return StopIteration(message)
+
+
+def stopiter_by_demand(message):
+    log.info(message)
+    return StopIteration(message)
