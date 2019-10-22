@@ -108,10 +108,10 @@ def show(parent=None,
     if _state.get("currentServer"):
         server = _state["currentServer"]
         proxy = ipc.server.Proxy(server)
+        # Update target
+        server.service.set_targets(targets)
 
         try:
-            # Update target
-            proxy.target(targets)
             proxy.show(show_settings)
             return server
 

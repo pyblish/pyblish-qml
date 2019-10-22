@@ -76,7 +76,7 @@ class Application(QtGui.QGuiApplication):
     inFocused = QtCore.pyqtSignal()
     outFocused = QtCore.pyqtSignal()
 
-    def __init__(self, source, targets=[]):
+    def __init__(self, source):
         super(Application, self).__init__(sys.argv)
 
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
@@ -88,7 +88,7 @@ class Application(QtGui.QGuiApplication):
         engine.addImportPath(QML_IMPORT_DIR)
 
         host = ipc.client.Proxy()
-        controller = control.Controller(host, targets=targets)
+        controller = control.Controller(host)
         controller.finished.connect(lambda: window.alert(0))
 
         context = engine.rootContext()
@@ -292,7 +292,7 @@ def main(demo=False, aschild=False, targets=[]):
     if aschild:
         print("Starting pyblish-qml")
         compat.main()
-        app = Application(APP_PATH, targets)
+        app = Application(APP_PATH)
         app.listen()
 
         print("Done, don't forget to call `show()`")

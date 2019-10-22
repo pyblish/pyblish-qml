@@ -209,8 +209,8 @@ class Server(object):
             targets = ["default"] + pyblish.api.registered_targets()
         print("Targets: {0}".format(", ".join(targets)))
 
-        kwargs["args"].append("--targets")
-        kwargs["args"].extend(targets)
+        self.service.set_targets(targets)
+        self.service.reset()
 
         self.popen = subprocess.Popen(**kwargs)
 

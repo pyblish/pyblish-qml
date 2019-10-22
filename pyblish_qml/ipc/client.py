@@ -85,6 +85,9 @@ class Proxy(object):
 
         return self.cached_discover
 
+    def targets(self):
+        return self._dispatch("targets")
+
     def emit(self, signal, **kwargs):
         self._dispatch("emit", args=[signal, kwargs])
 
