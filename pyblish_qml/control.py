@@ -351,11 +351,12 @@ class Controller(QtCore.QObject):
                     signals.pop(order).emit()
 
             if not self.data["state"]["is_running"]:
-                raise StopIteration("Stopped")
+                return StopIteration("Stopped")
 
             if test(**state):
                 self.data["state"]["testPassed"] = False
-                raise StopIteration("Stopped due to %s" % test(**state))
+                return StopIteration("Stopped due to %s" % test(**state))
+
             self.data["state"]["testPassed"] = True
 
             try:
@@ -365,7 +366,7 @@ class Controller(QtCore.QObject):
                 result = self.host.process(plug, context, instance)
 
             except Exception as e:
-                raise StopIteration("Unknown error: %s" % e)
+                return StopIteration("Unknown error: %s" % e)
 
             else:
                 # Make note of the order at which the
@@ -1195,7 +1196,7 @@ def iterator(plugins, context):
 
         message = test(**state)
         if message:
-            raise StopIteration("Stopped due to %s" % message)
+            return StopIteration("Stopped due to %s" % message)
 
         instances = pyblish.api.instances_by_plugin(context, plugin)
         if plugin.__instanceEnabled__:
