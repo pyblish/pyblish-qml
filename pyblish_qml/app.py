@@ -9,7 +9,7 @@ import traceback
 import threading
 
 # Dependencies
-from PyQt5 import QtCore, QtGui, QtQuick, QtTest
+from Qt5 import QtCore, QtGui, QtQuick
 
 # Local libraries
 from . import util, compat, control, settings, ipc
@@ -64,17 +64,17 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    shown = QtCore.pyqtSignal(QtCore.QVariant)
-    hidden = QtCore.pyqtSignal()
-    quitted = QtCore.pyqtSignal()
-    published = QtCore.pyqtSignal()
-    validated = QtCore.pyqtSignal()
+    shown = QtCore.Signal(QtCore.QVariant)
+    hidden = QtCore.Signal()
+    quitted = QtCore.Signal()
+    published = QtCore.Signal()
+    validated = QtCore.Signal()
 
-    targeted = QtCore.pyqtSignal(QtCore.QVariant)
+    targeted = QtCore.Signal(QtCore.QVariant)
 
-    risen = QtCore.pyqtSignal()
-    inFocused = QtCore.pyqtSignal()
-    outFocused = QtCore.pyqtSignal()
+    risen = QtCore.Signal()
+    inFocused = QtCore.Signal()
+    outFocused = QtCore.Signal()
 
     def __init__(self, source, targets=[]):
         super(Application, self).__init__(sys.argv)

@@ -4,7 +4,7 @@ import types
 import traceback
 
 from functools import wraps
-from PyQt5 import QtCore
+from Qt5 import QtCore
 
 from .vendor import six
 
@@ -146,7 +146,7 @@ def defer(target, args=None, kwargs=None, callback=None):
 
 class _defer(QtCore.QThread):
 
-    done = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
+    done = QtCore.Signal(QtCore.QVariant, arguments=["result"])
 
     def __init__(self, target, args=None, kwargs=None, callback=None):
         super(_defer, self).__init__()
@@ -232,10 +232,10 @@ def format_text(text):
     return result
 
 
-def pyqtConstantProperty(fget):
-    return QtCore.pyqtProperty(QtCore.QVariant,
-                               fget=fget,
-                               constant=True)
+def qtConstantProperty(fget):
+    return QtCore.Property(QtCore.QVariant,
+                           fget=fget,
+                           constant=True)
 
 
 def SlotSentinel(*args):
@@ -248,7 +248,7 @@ def SlotSentinel(*args):
     if len(args) == 0 or isinstance(args[0], types.FunctionType):
         args = []
 
-    @QtCore.pyqtSlot(*args)
+    @QtCore.Slot(*args)
     def slotdecorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
