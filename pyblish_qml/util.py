@@ -146,7 +146,18 @@ def defer(target, args=None, kwargs=None, callback=None):
 
 class _defer(QtCore.QThread):
 
-    done = QtCore.Signal(QtCore.QVariant, arguments=["result"])
+    done = QtCore.Signal(object, arguments=["result"])
+    # (NOTE) The type `object` is a workaround for `QVaraint`
+    #
+    # When using PySide as Qt binding, QVaraint was not able to handle
+    # custom type properly.
+    #
+    # For example, like `pyblish.api.Context` which is a subclass of
+    # `list`, the signal receiver will get an instance of `list` instead
+    # of `pyblish.api.Context` when using PySide. But if register it with
+    # type `object` instead of `QVaraint`, the variable type will stay as
+    # what it was in both PyQt and PySide.
+    #
 
     def __init__(self, target, args=None, kwargs=None, callback=None):
         super(_defer, self).__init__()
