@@ -176,11 +176,7 @@ class Application(QtGui.QGuiApplication):
                    for state in ["ready", "finished"]):
             util.timer("ready")
 
-            ready = QtTest.QSignalSpy(self.controller.ready)
-
-            count = len(ready)
-            ready.wait(1000)
-            if len(ready) != count + 1:
+            if not self.controller.is_ready():
                 print("Warning: Could not enter ready state")
 
             util.timer_end("ready", "Awaited statemachine for %.2f ms")

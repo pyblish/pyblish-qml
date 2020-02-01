@@ -196,6 +196,30 @@ def schedule(func, time, channel="default"):
     _jobs[channel] = timer
 
 
+def wait(signal, timeout=5000):
+    """Wait until signal received
+
+    Starts an event loop that runs until the given signal is received.
+    Optionally the event loop can return earlier on a timeout (milliseconds).
+
+    Returns `True` if the signal was emitted at least once in timeout,
+    otherwise returns `False`.
+
+    """
+    loop = QtCore.QEventLoop()
+
+    def on_signal():
+        loop.exit(True)
+
+    def on_timeout():
+        loop.exit(False)
+
+    signal.connect(on_signal)
+    QtCore.QTimer.singleShot(timeout, on_timeout)
+
+    return loop.exec_()
+
+
 class Timer(object):
     """Time operations using this context manager
 

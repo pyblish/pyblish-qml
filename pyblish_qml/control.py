@@ -107,6 +107,7 @@ class Controller(QtCore.QObject):
             },
             "state": {
                 "is_running": False,
+                "readyCount": 0,
                 "current": None,
                 "all": list(),
 
@@ -125,6 +126,7 @@ class Controller(QtCore.QObject):
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
         self.finished.connect(self.on_finished)
+        self.ready.connect(self.on_ready)
         self.show.connect(self.on_show)
 
         # NOTE: Listeners to this signal are run in the main thread
@@ -664,6 +666,11 @@ class Controller(QtCore.QObject):
         self.host.update(key="comment", value=comment)
         self.host.emit("commented", comment=comment)
 
+    def is_ready(self):
+        count = self.data["state"]["readyCount"]
+        util.wait(self.ready, 1000)
+        return self.data["state"]["readyCount"] == count + 1
+
     # Event handlers
 
     def on_commenting(self, comment):
@@ -711,6 +718,9 @@ class Controller(QtCore.QObject):
         self.data["state"]["all"] = list(
             s.name for s in self.machine.configuration()
         )
+
+    def on_ready(self):
+        self.data["state"]["readyCount"] += 1
 
     def on_finished(self):
         self.data["models"]["item"].reset_status()
