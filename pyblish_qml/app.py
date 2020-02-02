@@ -208,12 +208,14 @@ class Application(QtGui.QGuiApplication):
         previous_flags = self.window.flags()
         self.window.setFlags(previous_flags |
                              QtCore.Qt.WindowStaysOnTopHint)
+        self.window.setFlags(previous_flags)
 
     def outFocus(self):
         """Remove GUI on-top flag"""
         previous_flags = self.window.flags()
         self.window.setFlags(previous_flags ^
                              QtCore.Qt.WindowStaysOnTopHint)
+        self.window.setFlags(previous_flags)
 
     def publish(self):
         """Fire up the publish sequence"""
