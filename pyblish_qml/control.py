@@ -379,7 +379,7 @@ class Controller(QtCore.QObject):
 
             yield result
 
-    @QtCore.Slot(int, result=QtCore.QVariant)
+    @QtCore.Slot(int, result="QVariant")
     def getPluginActions(self, index):
         """Return actions from plug-in at `index`
 
@@ -551,7 +551,7 @@ class Controller(QtCore.QObject):
             if item.itemType == "section" and item.name == sectionLabel:
                 self.__hide_item(model, model.items.index(item), hideState)
 
-    @QtCore.Slot(int, result=QtCore.QVariant)
+    @QtCore.Slot(int, result="QVariant")
     def pluginData(self, index):
         models = self.data["models"]
         proxies = self.data["proxies"]
@@ -561,7 +561,7 @@ class Controller(QtCore.QObject):
         source_index = source_qindex.row()
         return self.__item_data(models["item"], source_index)
 
-    @QtCore.Slot(int, result=QtCore.QVariant)
+    @QtCore.Slot(int, result="QVariant")
     def instanceData(self, index):
         models = self.data["models"]
         proxies = self.data["proxies"]

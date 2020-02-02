@@ -128,7 +128,7 @@ class PropertyType(type(QtCore.QObject)):
 
             attrs[key + "Changed"] = notify
             attrs[key] = QtCore.Property(
-                type(value) if value is not None else QtCore.QVariant,
+                type(value) if value is not None else "QVariant",
                 fget=lambda self, k=key: getattr(self, cls.prefix + k, None),
                 fset=set_data(key, value),
                 notify=notify)
@@ -247,7 +247,7 @@ class AbstractModel(QtCore.QAbstractListModel):
             except Exception:
                 pass
 
-        return QtCore.QVariant()
+        return Item()
 
     def roleNames(self):
         return {
@@ -309,7 +309,7 @@ class ItemModel(AbstractModel):
 
         self.endResetModel()
 
-    @QtCore.Slot(QtCore.QVariant)
+    @QtCore.Slot("QVariant")
     def add_plugin(self, plugin):
         """Append `plugin` to model
 
@@ -381,7 +381,7 @@ class ItemModel(AbstractModel):
         item = self.add_item(item)
         self.plugins.append(item)
 
-    @QtCore.Slot(QtCore.QVariant)
+    @QtCore.Slot("QVariant")
     def add_instance(self, instance):
         """Append `instance` to model
 
@@ -445,7 +445,7 @@ class ItemModel(AbstractModel):
 
         return item
 
-    @QtCore.Slot(QtCore.QVariant)
+    @QtCore.Slot("QVariant")
     def add_context(self, context, label=None):
         """Append `context` to model
 

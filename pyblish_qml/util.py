@@ -268,7 +268,7 @@ def format_text(text):
 
 
 def qtConstantProperty(fget):
-    return QtCore.Property(QtCore.QVariant,
+    return QtCore.Property("QVariant",
                            fget=fget,
                            constant=True)
 

@@ -64,13 +64,13 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    shown = QtCore.Signal(QtCore.QVariant)
+    shown = QtCore.Signal("QVariant")
     hidden = QtCore.Signal()
     quitted = QtCore.Signal()
     published = QtCore.Signal()
     validated = QtCore.Signal()
 
-    targeted = QtCore.Signal(QtCore.QVariant)
+    targeted = QtCore.Signal("QVariant")
 
     risen = QtCore.Signal()
     inFocused = QtCore.Signal()
