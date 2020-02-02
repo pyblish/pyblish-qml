@@ -8,11 +8,9 @@ import json
 import traceback
 import threading
 
-# Dependencies
-from Qt5 import QtCore, QtGui, QtQuick
-
 # Local libraries
 from . import util, compat, control, settings, ipc
+from .vendor.Qt5 import QtCore, QtGui, QtQuick
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")

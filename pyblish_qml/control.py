@@ -4,11 +4,11 @@ import time
 import collections
 
 # Dependencies
-from Qt5 import QtCore
 import pyblish.logic
 
 # Local libraries
 from . import util, models, version, settings
+from .vendor.Qt5 import QtCore
 
 qtproperty = util.qtConstantProperty
 

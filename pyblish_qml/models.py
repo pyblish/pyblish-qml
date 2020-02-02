@@ -2,10 +2,9 @@ import re
 import time
 import logging
 
-from Qt5 import QtCore
-
 from . import util, settings
 from .vendor import six
+from .vendor.Qt5 import QtCore
 
 
 defaults = {
