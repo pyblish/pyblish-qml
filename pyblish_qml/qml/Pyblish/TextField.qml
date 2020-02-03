@@ -78,7 +78,7 @@ TextEdit {
     property var fontInfo: fontStyles[style]
 
     font.pixelSize: fontInfo.size * sizeMult
-    font.family: "Open Sans"
+    font.family: mainFont.name
     font.weight: {
         var weight = fontInfo.font
 

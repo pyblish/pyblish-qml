@@ -63,7 +63,7 @@ Rectangle {
                 visible: parent.length == 0
             }
 
-            font.family: "Open Sans"
+            font.family: mainFont.name
             font.weight: Font.Normal
 
             KeyNavigation.priority: KeyNavigation.BeforeItem
