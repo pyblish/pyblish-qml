@@ -246,7 +246,7 @@ class AbstractModel(QtCore.QAbstractListModel):
             except Exception:
                 pass
 
-        return Item()
+        return "QVariant"
 
     def roleNames(self):
         return {
