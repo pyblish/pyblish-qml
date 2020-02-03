@@ -112,6 +112,7 @@ class Application(QtGui.QGuiApplication):
         self.outFocused.connect(self.outFocus)
 
         window.setSource(QtCore.QUrl.fromLocalFile(source))
+        window.setTextRenderType(QtQuick.QQuickWindow.NativeTextRendering)
 
     def on_status_changed(self, status):
         if status == QtQuick.QQuickView.Error:
