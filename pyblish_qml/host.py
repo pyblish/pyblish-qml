@@ -77,7 +77,7 @@ def uninstall():
 
 
 def show(parent=None,
-         targets=[],
+         targets=None,
          modal=None,
          auto_publish=False,
          auto_validate=False):
@@ -110,8 +110,9 @@ def show(parent=None,
         proxy = ipc.server.Proxy(server)
 
         try:
-            # Update target
-            proxy.target(targets)
+            if targets:
+                # Update targets
+                proxy.target(targets)
             proxy.show(show_settings)
             return server
 

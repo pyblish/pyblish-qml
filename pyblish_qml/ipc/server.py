@@ -116,7 +116,7 @@ class Server(object):
                  service,
                  python=None,
                  pyqt5=None,
-                 targets=[],
+                 targets=None,
                  modal=False,
                  environ=None):
 
