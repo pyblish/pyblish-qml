@@ -86,7 +86,7 @@ class Application(QtGui.QGuiApplication):
         engine.addImportPath(QML_IMPORT_DIR)
 
         host = ipc.client.Proxy()
-        controller = control.Controller(host, targets=targets)
+        controller = control.Controller(host, targets=targets, parent=window)
         controller.finished.connect(lambda: window.alert(0))
 
         context = engine.rootContext()
