@@ -97,6 +97,12 @@ def show(parent=None,
     if modal is None:
         modal = bool(os.environ.get("PYBLISH_QML_MODAL", False))
 
+    if not targets:
+        # If no targets are passed to pyblish-qml, we assume that we want the
+        # default target and the registered targets. This is to facilitate
+        # getting all plugins on pyblish_qml.show().
+        targets = ["default"] + pyblish.api.registered_targets()
+
     # Automatically install if not already installed.
     install(modal)
 
@@ -110,9 +116,8 @@ def show(parent=None,
         proxy = ipc.server.Proxy(server)
 
         try:
-            if targets:
-                # Update targets
-                proxy.target(targets)
+            # Update targets
+            proxy.target(targets)
             proxy.show(show_settings)
             return server
 
