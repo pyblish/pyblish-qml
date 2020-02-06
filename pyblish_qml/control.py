@@ -843,6 +843,7 @@ class Controller(QtCore.QObject):
 
         def on_discover(plugins, context):
             collectors = list()
+            model = self.data["models"]["item"]
 
             # For backwards compatibility check for existance of
             # "plugins_by_targets" method.
@@ -850,7 +851,7 @@ class Controller(QtCore.QObject):
                 plugins = pyblish.api.plugins_by_targets(plugins, self.targets)
 
             for plugin in plugins:
-                self.data["models"]["item"].add_plugin(plugin.to_json())
+                model.add_plugin(plugin.to_json())
 
                 # Sort out which of these are Collectors
                 if not pyblish.lib.inrange(
@@ -859,6 +860,8 @@ class Controller(QtCore.QObject):
                     continue
 
                 if plugin.order >= context.data["postCollectOrder"]:
+                    model.plugins[-1].verb = "Additional"
+                    model.add_section("Additional")
                     continue
 
                 if not plugin.active:
