@@ -56,10 +56,12 @@ class Service(object):
         # Append additional metadata to context
         port = os.environ.get("PYBLISH_CLIENT_PORT", -1)
         hosts = ", ".join(reversed(pyblish.api.registered_hosts()))
+        post_collect = float(os.environ.get("PYBLISH_QML_POST_COLLECT", "NaN"))
 
         for key, value in {"host": hosts,
                            "port": int(port),
                            "user": getpass.getuser(),
+                           "postCollectOrder": post_collect,
                            "connectTime": pyblish.lib.time(),
                            "pyblishVersion": pyblish.version,
                            "pythonVersion": sys.version}.items():

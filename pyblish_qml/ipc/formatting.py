@@ -142,6 +142,7 @@ def format_data(data):
         "port",
         "user",
         "connectTime",
+        "postCollectOrder",
         "pyblishVersion",
         "pyblishRPCVersion",
         "pythonVersion")
