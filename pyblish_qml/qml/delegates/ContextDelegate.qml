@@ -48,6 +48,10 @@ BaseDelegate {
                     "value": object.targets
                 },
                 {
+                    "key": "Post Collect",
+                    "value": object.postCollectOrder
+                },
+                {
                     "key": "Connected",
                     "value": Date(Date.parse(object.connectTime))
                 }]
