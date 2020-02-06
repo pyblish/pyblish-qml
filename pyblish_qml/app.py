@@ -76,7 +76,7 @@ class Application(QtGui.QGuiApplication):
     inFocused = QtCore.pyqtSignal()
     outFocused = QtCore.pyqtSignal()
 
-    def __init__(self, source, targets=[]):
+    def __init__(self, source, targets=None):
         super(Application, self).__init__(sys.argv)
 
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
@@ -281,7 +281,7 @@ class Application(QtGui.QGuiApplication):
         thread.start()
 
 
-def main(demo=False, aschild=False, targets=[]):
+def main(demo=False, aschild=False, targets=None):
     """Start the Qt-runtime and show the window
 
     Arguments:
