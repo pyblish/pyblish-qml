@@ -28,6 +28,7 @@ class Service(object):
         self._context = None
         self._plugins = None
         self._provider = None
+        self._post_collect = None
 
         self.reset()
 
@@ -51,17 +52,18 @@ class Service(object):
         self._context = pyblish.api.Context()
         self._plugins = pyblish.api.discover()
         self._provider = pyblish.plugin.Provider()
+        self._post_collect = formatting.format_post_collect_order(
+            os.environ.get("PYBLISH_QML_POST_COLLECT"))
 
     def context(self):
         # Append additional metadata to context
         port = os.environ.get("PYBLISH_CLIENT_PORT", -1)
         hosts = ", ".join(reversed(pyblish.api.registered_hosts()))
-        post_collect = float(os.environ.get("PYBLISH_QML_POST_COLLECT", "NaN"))
 
         for key, value in {"host": hosts,
                            "port": int(port),
                            "user": getpass.getuser(),
-                           "postCollectOrder": post_collect,
+                           "postCollectOrder": self._post_collect,
                            "connectTime": pyblish.lib.time(),
                            "pyblishVersion": pyblish.version,
                            "pythonVersion": sys.version}.items():

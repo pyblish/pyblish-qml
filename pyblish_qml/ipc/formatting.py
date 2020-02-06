@@ -195,6 +195,13 @@ def format_context(context):
     }
 
 
+def format_post_collect_order(order):
+    try:
+        return float(order)
+    except (TypeError, ValueError):
+        return float("NaN")
+
+
 def format_plugins(plugins):
     """Serialise multiple plug-in
 
