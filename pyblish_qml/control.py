@@ -61,13 +61,13 @@ class Controller(QtCore.QObject):
     resultModel = qtproperty(lambda self: self.data["models"]["result"])
     resultProxy = qtproperty(lambda self: self.data["proxies"]["result"])
 
-    def __init__(self, host, parent=None, targets=[]):
+    def __init__(self, host, parent=None, targets=None):
         super(Controller, self).__init__(parent)
 
         # Connection to host
         self.host = host
 
-        self.targets = targets
+        self.targets = targets or []
 
         self.data = {
             "models": {
@@ -994,7 +994,7 @@ class Controller(QtCore.QObject):
 
         util.defer(get_data, callback=on_data_received)
 
-    def run(self, plugins, context, callback=None, callback_args=[]):
+    def run(self, plugins, context, callback=None, callback_args=None):
         """Commence asynchronous tasks
 
         This method runs through the provided `plugins` in
@@ -1011,6 +1011,7 @@ class Controller(QtCore.QObject):
             callback_args (list, optional): Arguments passed to callback
 
         """
+        callback_args = callback_args or []
 
         # if "ready" not in self.states:
         #     return self.error.emit("Not ready")
