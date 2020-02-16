@@ -108,7 +108,7 @@ class PropertyType(type(QtCore.QObject)):
     def __new__(cls, name, bases, attrs):
         """Convert class properties into pyqtProperties
 
-        For use in conjuction with the :func:Item factory function.
+        For use in conjunction with the :func:Item factory function.
 
         """
 
