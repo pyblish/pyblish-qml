@@ -113,7 +113,7 @@ class Server(object):
                  service,
                  python=None,
                  pyqt5=None,
-                 targets=[],
+                 targets=None,
                  modal=False,
                  environ=None):
 
@@ -198,12 +198,6 @@ class Server(object):
             # from opening an external terminal window.
             kwargs["creationflags"] = CREATE_NO_WINDOW
 
-        # If no targets are passed to pyblish-qml, we assume that we want the
-        # default target and the registered targets. This is to facilitate
-        # getting all plugins on pyblish_qml.show().
-        import pyblish.api
-        if not targets:
-            targets = ["default"] + pyblish.api.registered_targets()
         print("Targets: {0}".format(", ".join(targets)))
 
         self.service.set_targets(targets)

@@ -8,11 +8,9 @@ import json
 import traceback
 import threading
 
-# Dependencies
-from PyQt5 import QtCore, QtGui, QtQuick, QtTest
-
 # Local libraries
 from . import util, compat, control, settings, ipc
+from .vendor.Qt5 import QtCore, QtGui, QtQuick
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
@@ -64,15 +62,15 @@ class Application(QtGui.QGuiApplication):
 
     """
 
-    shown = QtCore.pyqtSignal(QtCore.QVariant)
-    hidden = QtCore.pyqtSignal()
-    quitted = QtCore.pyqtSignal()
-    published = QtCore.pyqtSignal()
-    validated = QtCore.pyqtSignal()
+    shown = QtCore.Signal("QVariant")
+    hidden = QtCore.Signal()
+    quitted = QtCore.Signal()
+    published = QtCore.Signal()
+    validated = QtCore.Signal()
 
-    risen = QtCore.pyqtSignal()
-    inFocused = QtCore.pyqtSignal()
-    outFocused = QtCore.pyqtSignal()
+    risen = QtCore.Signal()
+    inFocused = QtCore.Signal()
+    outFocused = QtCore.Signal()
 
     def __init__(self, source):
         super(Application, self).__init__(sys.argv)
@@ -86,6 +84,7 @@ class Application(QtGui.QGuiApplication):
         engine.addImportPath(QML_IMPORT_DIR)
 
         host = ipc.client.Proxy()
+
         controller = control.Controller(host)
         controller.finished.connect(lambda: window.alert(0))
 
@@ -172,11 +171,7 @@ class Application(QtGui.QGuiApplication):
                    for state in ["ready", "finished"]):
             util.timer("ready")
 
-            ready = QtTest.QSignalSpy(self.controller.ready)
-
-            count = len(ready)
-            ready.wait(1000)
-            if len(ready) != count + 1:
+            if not self.controller.is_ready():
                 print("Warning: Could not enter ready state")
 
             util.timer_end("ready", "Awaited statemachine for %.2f ms")
@@ -210,12 +205,14 @@ class Application(QtGui.QGuiApplication):
         previous_flags = self.window.flags()
         self.window.setFlags(previous_flags |
                              QtCore.Qt.WindowStaysOnTopHint)
+        self.window.setFlags(previous_flags)
 
     def outFocus(self):
         """Remove GUI on-top flag"""
         previous_flags = self.window.flags()
         self.window.setFlags(previous_flags ^
                              QtCore.Qt.WindowStaysOnTopHint)
+        self.window.setFlags(previous_flags)
 
     def publish(self):
         """Fire up the publish sequence"""
@@ -272,7 +269,7 @@ class Application(QtGui.QGuiApplication):
         thread.start()
 
 
-def main(demo=False, aschild=False, targets=[]):
+def main(demo=False, aschild=False, targets=None):
     """Start the Qt-runtime and show the window
 
     Arguments:

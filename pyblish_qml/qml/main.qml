@@ -17,6 +17,11 @@ import QtQuick 2.3
 Rectangle {
     color: Qt.rgba(0.3, 0.3, 0.3)
 
+    FontLoader {
+    	id: mainFont
+    	name: "Open Sans"
+    }
+
     Loader {
         id: loader
         anchors.fill: parent

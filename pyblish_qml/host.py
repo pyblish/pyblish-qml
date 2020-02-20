@@ -89,7 +89,7 @@ def uninstall():
 
 
 def show(parent=None,
-         targets=[],
+         targets=None,
          modal=None,
          auto_publish=False,
          auto_validate=False):
@@ -108,6 +108,12 @@ def show(parent=None,
     # Get modal mode from environment
     if modal is None:
         modal = bool(os.environ.get("PYBLISH_QML_MODAL", False))
+
+    if not targets:
+        # If no targets are passed to pyblish-qml, we assume that we want the
+        # default target and the registered targets. This is to facilitate
+        # getting all plugins on pyblish_qml.show().
+        targets = ["default"] + pyblish.api.registered_targets()
 
     # Automatically install if not already installed.
     install(modal)

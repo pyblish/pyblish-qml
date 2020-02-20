@@ -4,9 +4,9 @@ import types
 import traceback
 
 from functools import wraps
-from PyQt5 import QtCore
 
 from .vendor import six
+from .vendor.Qt5 import QtCore
 
 _timers = {}
 _defer_threads = []
@@ -146,7 +146,18 @@ def defer(target, args=None, kwargs=None, callback=None):
 
 class _defer(QtCore.QThread):
 
-    done = QtCore.pyqtSignal(QtCore.QVariant, arguments=["result"])
+    done = QtCore.Signal(object, arguments=["result"])
+    # (NOTE) The type `object` is a workaround for `QVaraint`
+    #
+    # When using PySide as Qt binding, QVaraint was not able to handle
+    # custom type properly.
+    #
+    # For example, like `pyblish.api.Context` which is a subclass of
+    # `list`, the signal receiver will get an instance of `list` instead
+    # of `pyblish.api.Context` when using PySide. But if register it with
+    # type `object` instead of `QVaraint`, the variable type will stay as
+    # what it was in both PyQt and PySide.
+    #
 
     def __init__(self, target, args=None, kwargs=None, callback=None):
         super(_defer, self).__init__()
@@ -196,6 +207,30 @@ def schedule(func, time, channel="default"):
     _jobs[channel] = timer
 
 
+def wait(signal, timeout=5000):
+    """Wait until signal received
+
+    Starts an event loop that runs until the given signal is received.
+    Optionally the event loop can return earlier on a timeout (milliseconds).
+
+    Returns `True` if the signal was emitted at least once in timeout,
+    otherwise returns `False`.
+
+    """
+    loop = QtCore.QEventLoop()
+
+    def on_signal():
+        loop.exit(True)
+
+    def on_timeout():
+        loop.exit(False)
+
+    signal.connect(on_signal)
+    QtCore.QTimer.singleShot(timeout, on_timeout)
+
+    return loop.exec_()
+
+
 class Timer(object):
     """Time operations using this context manager
 
@@ -232,10 +267,10 @@ def format_text(text):
     return result
 
 
-def pyqtConstantProperty(fget):
-    return QtCore.pyqtProperty(QtCore.QVariant,
-                               fget=fget,
-                               constant=True)
+def qtConstantProperty(fget):
+    return QtCore.Property("QVariant",
+                           fget=fget,
+                           constant=True)
 
 
 def SlotSentinel(*args):
@@ -248,7 +283,7 @@ def SlotSentinel(*args):
     if len(args) == 0 or isinstance(args[0], types.FunctionType):
         args = []
 
-    @QtCore.pyqtSlot(*args)
+    @QtCore.Slot(*args)
     def slotdecorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):

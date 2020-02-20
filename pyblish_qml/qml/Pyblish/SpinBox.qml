@@ -7,7 +7,7 @@ Control.SpinBox {
     style: SpinBoxStyle {
         background: Item {}
 
-        font.family: "Open Sans"
+        font.family: mainFont.name
 
         textColor: Theme.dark.textColor
         selectionColor: Theme.accentColor
