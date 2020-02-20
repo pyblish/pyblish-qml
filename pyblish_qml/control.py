@@ -5,52 +5,52 @@ import math
 import collections
 
 # Dependencies
-from PyQt5 import QtCore
 import pyblish.logic
 
 # Local libraries
 from . import util, models, version, settings
+from .vendor.Qt5 import QtCore
 
-qtproperty = util.pyqtConstantProperty
+qtproperty = util.qtConstantProperty
 
 
 class Controller(QtCore.QObject):
     """Communicate with QML"""
 
-    # PyQt Signals
-    info = QtCore.pyqtSignal(str, arguments=["message"])
-    error = QtCore.pyqtSignal(str, arguments=["message"])
+    # Signals
+    info = QtCore.Signal(str, arguments=["message"])
+    error = QtCore.Signal(str, arguments=["message"])
 
-    show = QtCore.pyqtSignal()
-    hide = QtCore.pyqtSignal()
+    show = QtCore.Signal()
+    hide = QtCore.Signal()
 
-    firstRun = QtCore.pyqtSignal()
+    firstRun = QtCore.Signal()
 
-    collecting = QtCore.pyqtSignal()
-    validating = QtCore.pyqtSignal()
-    extracting = QtCore.pyqtSignal()
-    integrating = QtCore.pyqtSignal()
+    collecting = QtCore.Signal()
+    validating = QtCore.Signal()
+    extracting = QtCore.Signal()
+    integrating = QtCore.Signal()
 
-    repairing = QtCore.pyqtSignal()
-    stopping = QtCore.pyqtSignal()
-    saving = QtCore.pyqtSignal()
-    initialising = QtCore.pyqtSignal()
-    acting = QtCore.pyqtSignal()
-    acted = QtCore.pyqtSignal()
+    repairing = QtCore.Signal()
+    stopping = QtCore.Signal()
+    saving = QtCore.Signal()
+    initialising = QtCore.Signal()
+    acting = QtCore.Signal()
+    acted = QtCore.Signal()
 
     # A plug-in/instance pair is about to be processed
-    about_to_process = QtCore.pyqtSignal(object, object)
+    about_to_process = QtCore.Signal(object, object)
 
-    changed = QtCore.pyqtSignal()
+    changed = QtCore.Signal()
 
-    ready = QtCore.pyqtSignal()
-    saved = QtCore.pyqtSignal()
-    finished = QtCore.pyqtSignal()
-    initialised = QtCore.pyqtSignal()
-    commented = QtCore.pyqtSignal()
-    commenting = QtCore.pyqtSignal(str, arguments=["comment"])
+    ready = QtCore.Signal()
+    saved = QtCore.Signal()
+    finished = QtCore.Signal()
+    initialised = QtCore.Signal()
+    commented = QtCore.Signal()
+    commenting = QtCore.Signal(str, arguments=["comment"])
 
-    state_changed = QtCore.pyqtSignal(str, arguments=["state"])
+    state_changed = QtCore.Signal(str, arguments=["state"])
 
     # Statically expose these members to the QML run-time.
     itemModel = qtproperty(lambda self: self.data["models"]["item"])
@@ -62,13 +62,13 @@ class Controller(QtCore.QObject):
     resultModel = qtproperty(lambda self: self.data["models"]["result"])
     resultProxy = qtproperty(lambda self: self.data["proxies"]["result"])
 
-    def __init__(self, host, parent=None, targets=[]):
+    def __init__(self, host, parent=None, targets=None):
         super(Controller, self).__init__(parent)
 
         # Connection to host
         self.host = host
 
-        self.targets = targets
+        self.targets = targets or []
 
         self.data = {
             "models": {
@@ -108,6 +108,7 @@ class Controller(QtCore.QObject):
             },
             "state": {
                 "is_running": False,
+                "readyCount": 0,
                 "current": None,
                 "all": list(),
 
@@ -126,6 +127,7 @@ class Controller(QtCore.QObject):
         self.info.connect(self.on_info)
         self.error.connect(self.on_error)
         self.finished.connect(self.on_finished)
+        self.ready.connect(self.on_ready)
         self.show.connect(self.on_show)
 
         # NOTE: Listeners to this signal are run in the main thread
@@ -292,20 +294,20 @@ class Controller(QtCore.QObject):
         machine.start()
         return machine
 
-    @QtCore.pyqtSlot(result=str)
+    @QtCore.Slot(result=str)
     def comment(self):
         """Return first line of comment"""
         return self.data["comment"]
 
-    @QtCore.pyqtProperty(str, notify=state_changed)
+    @QtCore.Property(str, notify=state_changed)
     def state(self):
         return self.data["state"]["current"]
 
-    @QtCore.pyqtProperty(bool, notify=commented)
+    @QtCore.Property(bool, notify=commented)
     def hasComment(self):
         return True if self.data["comment"] else False
 
-    @QtCore.pyqtProperty(bool, constant=True)
+    @QtCore.Property(bool, constant=True)
     def commentEnabled(self):
         return "comment" in self.host.cached_context.data
 
@@ -313,7 +315,7 @@ class Controller(QtCore.QObject):
     def states(self):
         return self.data["state"]["all"]
 
-    @QtCore.pyqtSlot(result=float)
+    @QtCore.Slot(result=float)
     def time(self):
         return time.time()
 
@@ -378,7 +380,7 @@ class Controller(QtCore.QObject):
 
             yield result
 
-    @QtCore.pyqtSlot(int, result=QtCore.QVariant)
+    @QtCore.Slot(int, result="QVariant")
     def getPluginActions(self, index):
         """Return actions from plug-in at `index`
 
@@ -440,7 +442,7 @@ class Controller(QtCore.QObject):
 
         return remaining_actions
 
-    @QtCore.pyqtSlot(str)
+    @QtCore.Slot(str)
     def runPluginAction(self, action):
         if "acting" in self.states:
             return self.error.emit("Busy")
@@ -492,7 +494,7 @@ class Controller(QtCore.QObject):
 
         util.defer(run, callback=on_finished)
 
-    @QtCore.pyqtSlot(int)
+    @QtCore.Slot(int)
     def toggleInstance(self, index):
         models = self.data["models"]
         proxies = self.data["proxies"]
@@ -507,7 +509,7 @@ class Controller(QtCore.QObject):
         else:
             self.error.emit("Cannot toggle")
 
-    @QtCore.pyqtSlot(bool, str)
+    @QtCore.Slot(bool, str)
     def toggleSection(self, checkState, sectionLabel):
         model = self.data["models"]["item"]
 
@@ -536,7 +538,7 @@ class Controller(QtCore.QObject):
                 if item.isToggled != checkState and item.optional:
                     self.__toggle_item(model, model.items.index(item))
 
-    @QtCore.pyqtSlot(bool, str)
+    @QtCore.Slot(bool, str)
     def hideSection(self, hideState, sectionLabel):
         model = self.data["models"]["item"]
 
@@ -550,7 +552,7 @@ class Controller(QtCore.QObject):
             if item.itemType == "section" and item.name == sectionLabel:
                 self.__hide_item(model, model.items.index(item), hideState)
 
-    @QtCore.pyqtSlot(int, result=QtCore.QVariant)
+    @QtCore.Slot(int, result="QVariant")
     def pluginData(self, index):
         models = self.data["models"]
         proxies = self.data["proxies"]
@@ -560,7 +562,7 @@ class Controller(QtCore.QObject):
         source_index = source_qindex.row()
         return self.__item_data(models["item"], source_index)
 
-    @QtCore.pyqtSlot(int, result=QtCore.QVariant)
+    @QtCore.Slot(int, result="QVariant")
     def instanceData(self, index):
         models = self.data["models"]
         proxies = self.data["proxies"]
@@ -570,7 +572,7 @@ class Controller(QtCore.QObject):
         source_index = source_qindex.row()
         return self.__item_data(models["item"], source_index)
 
-    @QtCore.pyqtSlot(int)
+    @QtCore.Slot(int)
     def togglePlugin(self, index):
         models = self.data["models"]
         proxies = self.data["proxies"]
@@ -585,7 +587,7 @@ class Controller(QtCore.QObject):
         else:
             self.error.emit("Cannot toggle")
 
-    @QtCore.pyqtSlot(str, str, str, str)
+    @QtCore.Slot(str, str, str, str)
     def exclude(self, target, operation, role, value):
         """Exclude a `role` of `value` at `target`
 
@@ -610,7 +612,7 @@ class Controller(QtCore.QObject):
         else:
             raise TypeError("operation must be either `add` or `remove`")
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def save(self):
         # Deprecated
         return
@@ -665,6 +667,11 @@ class Controller(QtCore.QObject):
         self.host.update(key="comment", value=comment)
         self.host.emit("commented", comment=comment)
 
+    def is_ready(self):
+        count = self.data["state"]["readyCount"]
+        util.wait(self.ready, 1000)
+        return self.data["state"]["readyCount"] == count + 1
+
     # Event handlers
 
     def on_commenting(self, comment):
@@ -713,6 +720,9 @@ class Controller(QtCore.QObject):
             s.name for s in self.machine.configuration()
         )
 
+    def on_ready(self):
+        self.data["state"]["readyCount"] += 1
+
     def on_finished(self):
         self.data["models"]["item"].reset_status()
 
@@ -734,12 +744,12 @@ class Controller(QtCore.QObject):
 
     # Slots
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def stop(self):
         self.data["state"]["is_running"] = False
         self.stopping.emit()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def reset(self):
         """Request that host re-discovers plug-ins and re-processes selectors
 
@@ -955,7 +965,7 @@ class Controller(QtCore.QObject):
         context = self.host.cached_context
         return not math.isnan(context.data["postCollectOrder"])
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def publish(self):
         """Start asynchonous publishing
 
@@ -1018,7 +1028,7 @@ class Controller(QtCore.QObject):
         else:
             util.defer(get_data, callback=on_data_received)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def validate(self):
         """Start asynchonous validation
 
@@ -1066,7 +1076,7 @@ class Controller(QtCore.QObject):
         else:
             util.defer(get_data, callback=on_data_received)
 
-    def run(self, plugins, context, callback=None, callback_args=[]):
+    def run(self, plugins, context, callback=None, callback_args=None):
         """Commence asynchronous tasks
 
         This method runs through the provided `plugins` in
@@ -1083,6 +1093,7 @@ class Controller(QtCore.QObject):
             callback_args (list, optional): Arguments passed to callback
 
         """
+        callback_args = callback_args or []
 
         # if "ready" not in self.states:
         #     return self.error.emit("Not ready")
@@ -1184,7 +1195,7 @@ class Controller(QtCore.QObject):
         iterator = self.iterator(plugins, context)
         util.defer(lambda: next(iterator), callback=on_next)
 
-    @QtCore.pyqtSlot(int)
+    @QtCore.Slot(int)
     def repairPlugin(self, index):
         """
 
