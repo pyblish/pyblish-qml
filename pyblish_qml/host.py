@@ -676,6 +676,8 @@ def _install_blender(use_threaded_wrapper):
         def cancel(self, context):
             wm = context.window_manager
             wm.event_timer_remove(self._timer)
+            # Quit the Pyblish QML GUI, else it will be unresponsive
+            quit()
 
     log.info("Registering Blender + Pyblish operator")
     bpy.utils.register_class(PyblishQMLOperator)
