@@ -353,24 +353,32 @@ class Controller(QtCore.QObject):
                     signals.pop(order).emit()
 
             if not self.data["state"]["is_running"]:
+                yield StopIteration("Stopped")
                 return
 
             if test(**state):
                 self.data["state"]["testPassed"] = False
-                raise RuntimeError("Stopped due to %s" % test(**state))
+                yield StopIteration("Stopped due to %s" % test(**state))
+                return
 
             self.data["state"]["testPassed"] = True
 
-            # Notify GUI before commencing remote processing
-            self.about_to_process.emit(plug, instance)
+            try:
+                # Notify GUI before commencing remote processing
+                self.about_to_process.emit(plug, instance)
 
-            result = self.host.process(plug, context, instance)
+                result = self.host.process(plug, context, instance)
 
-            # Make note of the order at which the
-            # potential error error occured.
-            has_error = result["error"] is not None
-            if has_error:
-                state["ordersWithError"].add(plug.order)
+            except Exception as e:
+                yield StopIteration("Unknown error: %s" % e)
+                return
+
+            else:
+                # Make note of the order at which the
+                # potential error error occured.
+                has_error = result["error"] is not None
+                if has_error:
+                    state["ordersWithError"].add(plug.order)
 
             yield result
 
@@ -1022,7 +1030,7 @@ class Controller(QtCore.QObject):
         # For each completed task, update
         # the GUI and commence next task.
         def on_next(result):
-            if isinstance(result, Exception):
+            if isinstance(result, StopIteration):
                 return on_finished(str(result))
 
             self.data["models"]["item"].update_with_result(result)
@@ -1157,7 +1165,7 @@ class Controller(QtCore.QObject):
             if not self.data["state"]["is_running"]:
                 return on_finished()
 
-            if isinstance(result, Exception):
+            if isinstance(result, StopIteration):
                 return on_finished()
 
             if isinstance(result, pyblish.logic.TestFailed):
@@ -1202,7 +1210,8 @@ def iterator(plugins, context):
 
         message = test(**state)
         if message:
-            raise RuntimeError("Stopped due to %s" % message)
+            yield StopIteration("Stopped due to %s" % message)
+            return
 
         instances = pyblish.api.instances_by_plugin(context, plugin)
         if plugin.__instanceEnabled__:
