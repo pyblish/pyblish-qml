@@ -353,29 +353,24 @@ class Controller(QtCore.QObject):
                     signals.pop(order).emit()
 
             if not self.data["state"]["is_running"]:
-                return StopIteration("Stopped")
+                return
 
             if test(**state):
                 self.data["state"]["testPassed"] = False
-                return StopIteration("Stopped due to %s" % test(**state))
+                raise RuntimeError("Stopped due to %s" % test(**state))
 
             self.data["state"]["testPassed"] = True
 
-            try:
-                # Notify GUI before commencing remote processing
-                self.about_to_process.emit(plug, instance)
+            # Notify GUI before commencing remote processing
+            self.about_to_process.emit(plug, instance)
 
-                result = self.host.process(plug, context, instance)
+            result = self.host.process(plug, context, instance)
 
-            except Exception as e:
-                return StopIteration("Unknown error: %s" % e)
-
-            else:
-                # Make note of the order at which the
-                # potential error error occured.
-                has_error = result["error"] is not None
-                if has_error:
-                    state["ordersWithError"].add(plug.order)
+            # Make note of the order at which the
+            # potential error error occured.
+            has_error = result["error"] is not None
+            if has_error:
+                state["ordersWithError"].add(plug.order)
 
             yield result
 
@@ -1207,7 +1202,7 @@ def iterator(plugins, context):
 
         message = test(**state)
         if message:
-            return StopIteration("Stopped due to %s" % message)
+            raise RuntimeError("Stopped due to %s" % message)
 
         instances = pyblish.api.instances_by_plugin(context, plugin)
         if plugin.__instanceEnabled__:
