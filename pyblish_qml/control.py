@@ -1022,7 +1022,7 @@ class Controller(QtCore.QObject):
         # For each completed task, update
         # the GUI and commence next task.
         def on_next(result):
-            if isinstance(result, StopIteration):
+            if isinstance(result, Exception):
                 return on_finished(str(result))
 
             self.data["models"]["item"].update_with_result(result)
@@ -1157,7 +1157,7 @@ class Controller(QtCore.QObject):
             if not self.data["state"]["is_running"]:
                 return on_finished()
 
-            if isinstance(result, StopIteration):
+            if isinstance(result, Exception):
                 return on_finished()
 
             if isinstance(result, pyblish.logic.TestFailed):
