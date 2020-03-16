@@ -904,6 +904,8 @@ class Controller(QtCore.QObject):
 
     def post_collect(self, on_post_collected):
 
+        post_collect_order = self.host.cached_context.data["postCollectOrder"]
+
         def on_finished(context):
             model = self.data["models"]["item"]
 
@@ -931,10 +933,11 @@ class Controller(QtCore.QObject):
             util.defer(self.host.context,
                        callback=lambda context: on_finished(context))
 
-        def on_post_collectors(args):
+        def on_data_received(args):
             self.run(*args, callback=on_run)
 
-        def post_collectors():
+        def get_data():
+            """Get post collector plugins and instances"""
             model = self.data["models"]["item"]
 
             host_plugins = dict((p.id, p) for p in self.host.cached_discover)
@@ -960,8 +963,7 @@ class Controller(QtCore.QObject):
 
             return collectors, instances
 
-        post_collect_order = self.host.cached_context.data["postCollectOrder"]
-        util.defer(post_collectors, callback=on_post_collectors)
+        util.defer(get_data, callback=on_data_received)
 
     def _use_post_collect(self):
         context = self.host.cached_context
