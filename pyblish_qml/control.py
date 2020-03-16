@@ -940,27 +940,32 @@ class Controller(QtCore.QObject):
                      callback_args=[plugins])
 
         def post_collectors():
-            plugins = self.host.cached_discover
-            context = self.host.cached_context
-            collectors = list()
+            model = self.data["models"]["item"]
 
-            for plugin in plugins:
+            host_plugins = dict((p.id, p) for p in self.host.cached_discover)
+            host_context = dict((i.id, i) for i in self.host.cached_context)
+
+            collectors = list()
+            instances = list()
+
+            for plugin in models.ItemIterator(model.plugins):
                 # Sort out which of these are Post Collectors
                 if not pyblish.lib.inrange(
                         number=plugin.order,
                         base=pyblish.api.Collector.order):
                     continue
 
-                if plugin.order < context.data["postCollectOrder"]:
+                if plugin.order < post_collect_order:
                     continue
 
-                if not plugin.active:
-                    continue
+                collectors.append(host_plugins[plugin.id])
 
-                collectors.append(plugin)
+            for instance in models.ItemIterator(model.instances):
+                instances.append(host_context[instance.id])
 
-            return collectors
+            return collectors, instances
 
+        post_collect_order = self.host.cached_context.data["postCollectOrder"]
         util.defer(post_collectors, callback=on_post_collectors)
 
     def _use_post_collect(self):
