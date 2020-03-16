@@ -904,7 +904,7 @@ class Controller(QtCore.QObject):
 
     def post_collect(self, on_post_collected):
 
-        def on_finished(plugins, context):
+        def on_finished(context):
             model = self.data["models"]["item"]
 
             # Compute compatibility
@@ -926,18 +926,13 @@ class Controller(QtCore.QObject):
 
             on_post_collected()
 
-        def on_run(plugins):
+        def on_run():
             """Fetch instances in their current state, right after reset"""
             util.defer(self.host.context,
-                       callback=lambda context: on_finished(plugins, context))
+                       callback=lambda context: on_finished(context))
 
-        def on_post_collectors(collectors):
-            plugins = self.host.cached_discover
-            context = self.host.cached_context
-
-            self.run(collectors, context,
-                     callback=on_run,
-                     callback_args=[plugins])
+        def on_post_collectors(args):
+            self.run(*args, callback=on_run)
 
         def post_collectors():
             model = self.data["models"]["item"]
