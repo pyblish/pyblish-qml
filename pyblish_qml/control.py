@@ -905,8 +905,10 @@ class Controller(QtCore.QObject):
     def post_collect(self, on_post_collected):
 
         def on_finished(plugins, context):
+            model = self.data["models"]["item"]
+
             # Compute compatibility
-            for plugin in self.data["models"]["item"].plugins:
+            for plugin in model.plugins:
                 if plugin.instanceEnabled:
                     instances = pyblish.logic.instances_by_plugin(context,
                                                                   plugin)
@@ -914,11 +916,11 @@ class Controller(QtCore.QObject):
                 else:
                     plugin.compatibleInstances = [context.id]
 
-            self.data["models"]["item"].reorder(context)
-            self.data["models"]["item"].update_compatibility()
+            model.reorder(context)
+            model.update_compatibility()
 
             # Hidden sections
-            for section in self.data["models"]["item"].sections:
+            for section in model.sections:
                 if section.name in settings.HiddenSections:
                     self.hideSection(True, section.name)
 
