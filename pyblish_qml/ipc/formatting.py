@@ -194,6 +194,10 @@ def format_context(context):
     }
 
 
+def format_targets(targets):
+    return ", ".join(targets)
+
+
 def format_plugins(plugins):
     """Serialise multiple plug-in
 

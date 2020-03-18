@@ -77,9 +77,6 @@ class Proxy(object):
     def validate(self):
         self._dispatch("validate")
 
-    def target(self, targets):
-        self._dispatch("target", args=[targets])
-
     def _dispatch(self, func, args=None):
         data = json.dumps(
             {
@@ -202,8 +199,9 @@ class Server(object):
             kwargs["creationflags"] = CREATE_NO_WINDOW
 
         print("Targets: {0}".format(", ".join(targets)))
-        kwargs["args"].append("--targets")
-        kwargs["args"].extend(targets)
+
+        self.service.set_targets(targets)
+        self.service.reset()
 
         self.popen = subprocess.Popen(**kwargs)
 

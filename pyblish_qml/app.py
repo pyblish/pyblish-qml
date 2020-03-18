@@ -68,13 +68,11 @@ class Application(QtGui.QGuiApplication):
     published = QtCore.Signal()
     validated = QtCore.Signal()
 
-    targeted = QtCore.Signal("QVariant")
-
     risen = QtCore.Signal()
     inFocused = QtCore.Signal()
     outFocused = QtCore.Signal()
 
-    def __init__(self, source, targets=None):
+    def __init__(self, source):
         super(Application, self).__init__(sys.argv)
 
         self.setWindowIcon(QtGui.QIcon(ICON_PATH))
@@ -86,7 +84,8 @@ class Application(QtGui.QGuiApplication):
         engine.addImportPath(QML_IMPORT_DIR)
 
         host = ipc.client.Proxy()
-        controller = control.Controller(host, targets=targets, parent=window)
+
+        controller = control.Controller(host)
         controller.finished.connect(lambda: window.alert(0))
 
         context = engine.rootContext()
@@ -104,8 +103,6 @@ class Application(QtGui.QGuiApplication):
         self.quitted.connect(self.quit)
         self.published.connect(self.publish)
         self.validated.connect(self.validate)
-
-        self.targeted.connect(self.target)
 
         self.risen.connect(self.rise)
         self.inFocused.connect(self.inFocus)
@@ -225,9 +222,6 @@ class Application(QtGui.QGuiApplication):
         """Fire up the validation sequance"""
         self.controller.validate()
 
-    def target(self, targets):
-        self.controller.targets = targets
-
     def listen(self):
         """Listen on incoming messages from host
 
@@ -253,8 +247,6 @@ class Application(QtGui.QGuiApplication):
                     "quit": "quitted",
                     "publish": "published",
                     "validate": "validated",
-
-                    "target": "targeted",
 
                     "rise": "risen",
                     "inFocus": "inFocused",
@@ -288,7 +280,7 @@ def main(demo=False, aschild=False, targets=None):
     if aschild:
         print("Starting pyblish-qml")
         compat.main()
-        app = Application(APP_PATH, targets)
+        app = Application(APP_PATH)
         app.listen()
 
         print("Done, don't forget to call `show()`")

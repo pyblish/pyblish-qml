@@ -55,6 +55,18 @@ def current_server():
     return _state.get("currentServer")
 
 
+def current_context():
+    server = current_server()
+    if server:
+        return server.service._context
+
+
+def current_targets():
+    server = current_server()
+    if server:
+        return list(server.service._targets)
+
+
 def install(modal):
     """Perform first time install"""
 
@@ -114,10 +126,10 @@ def show(parent=None,
     if _state.get("currentServer"):
         server = _state["currentServer"]
         proxy = ipc.server.Proxy(server)
+        # Update target
+        server.service.set_targets(targets)
 
         try:
-            # Update targets
-            proxy.target(targets)
             proxy.show(show_settings)
             return server
 

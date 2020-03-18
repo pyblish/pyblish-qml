@@ -26,10 +26,9 @@ class Service(object):
 
     def __init__(self):
         self._context = None
+        self._targets = None
         self._plugins = None
         self._provider = None
-
-        self.reset()
 
     def test(self, vars):
         test = pyblish.logic.registered_test()
@@ -52,6 +51,11 @@ class Service(object):
         self._plugins = pyblish.api.discover()
         self._provider = pyblish.plugin.Provider()
 
+        # Plugins by Target, pyblish-base>=1.5.0
+        if hasattr(pyblish.api, "plugins_by_targets"):
+            self._plugins = pyblish.api.plugins_by_targets(self._plugins,
+                                                           self._targets)
+
     def context(self):
         # Append additional metadata to context
         port = os.environ.get("PYBLISH_CLIENT_PORT", -1)
@@ -70,6 +74,13 @@ class Service(object):
 
     def discover(self):
         return formatting.format_plugins(self._plugins)
+
+    def targets(self):
+        # Only called on reset
+        return formatting.format_targets(self._targets)
+
+    def set_targets(self, targets):
+        self._targets = targets
 
     def process(self, plugin, instance=None, action=None):
         """Given JSON objects from client, perform actual processing
