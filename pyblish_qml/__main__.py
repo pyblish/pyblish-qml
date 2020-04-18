@@ -4,6 +4,7 @@ import sys
 import argparse
 
 from . import app
+from pyblish import api
 
 
 def cli():
@@ -18,8 +19,9 @@ def cli():
     )
 
     kwargs = parser.parse_args()
+
     if kwargs.targets is None:
-        kwargs.targets = []
+        kwargs.targets = ["default"] + api.registered_targets()
 
     return app.main(**kwargs.__dict__)
 
