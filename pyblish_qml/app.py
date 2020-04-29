@@ -241,7 +241,7 @@ class Application(QtGui.QGuiApplication):
         def _listen():
             while True:
                 line = self.host.channels["parent"].get()
-                payload = json.loads(line)["payload"]
+                payload = json.loads(line, cls=util.SetJSONDecoder)["payload"]
 
                 # We can't call methods directly, as we are running
                 # in a thread. Instead, we emit signals that do the

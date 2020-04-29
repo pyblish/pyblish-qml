@@ -329,7 +329,6 @@ class Controller(QtCore.QObject):
 
         """
 
-        test = pyblish.logic.registered_test()
         state = {
             "nextOrder": None,
             "ordersWithError": set()
@@ -355,9 +354,10 @@ class Controller(QtCore.QObject):
             if not self.data["state"]["is_running"]:
                 return StopIteration("Stopped")
 
-            if test(**state):
+            test_result = self.host.test(**state)
+            if test_result:
                 self.data["state"]["testPassed"] = False
-                return StopIteration("Stopped due to %s" % test(**state))
+                return StopIteration("Stopped due to %s" % test_result)
 
             self.data["state"]["testPassed"] = True
 

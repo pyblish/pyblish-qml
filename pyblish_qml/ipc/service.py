@@ -31,7 +31,7 @@ class Service(object):
 
         self.reset()
 
-    def test(self, vars):
+    def test(self, **vars):
         test = pyblish.logic.registered_test()
         return test(**vars)
 

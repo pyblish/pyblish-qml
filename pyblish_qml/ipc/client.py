@@ -21,6 +21,7 @@ import threading
 import pyblish.api
 import pyblish.plugin
 
+from ..util import SetJSONEncoder, SetJSONDecoder
 from ..vendor import six
 from ..vendor.six.moves import queue
 
@@ -142,7 +143,7 @@ class Proxy(object):
         thread.daemon = True
         thread.start()
 
-    def _dispatch(self, func, args=None):
+    def _dispatch(self, func, args=None, kwargs=None):
         """Send message to parent process
 
         Arguments:
@@ -157,8 +158,10 @@ class Proxy(object):
                 "payload": {
                     "name": func,
                     "args": args or list(),
+                    "kwargs": kwargs or dict(),
                 }
-            }
+            },
+            cls=SetJSONEncoder,
         )
 
         # This should never happen. Each request is immediately
@@ -178,9 +181,9 @@ class Proxy(object):
             message = self.channels["response"].get()
 
             if six.PY3:
-                response = json.loads(message)
+                response = json.loads(message, cls=SetJSONDecoder)
             else:
-                response = _byteify(json.loads(message, object_hook=_byteify))
+                response = _byteify(json.loads(message, object_hook=_byteify, cls=SetJSONDecoder))
 
         except TypeError as e:
             raise e
