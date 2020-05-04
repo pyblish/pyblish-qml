@@ -295,35 +295,3 @@ def SlotSentinel(*args):
         return wrapper
 
     return slotdecorator
-
-
-class SetJSONEncoder(json.JSONEncoder):
-    """JSON encoder that supports encoding Python sets"""
-    def default(self, obj):
-        if isinstance(obj, set):
-            return {"_python_set": list(obj)}
-        return json.JSONEncoder.default(self, obj)
-
-
-class SetJSONDecoder(json.JSONDecoder):
-    """JSON decoder that supports decoding Python sets"""
-    def decode(self, s, **kwargs):
-        decoded = super(SetJSONDecoder, self).decode(s, **kwargs)
-        return self._convert_python_sets(decoded)
-
-    @classmethod
-    def _convert_python_sets(cls, obj):
-        if isinstance(obj, dict):
-            if "_python_set" in obj:
-                return set(cls._convert_python_sets(obj["_python_set"]))
-            else:
-                new_obj = dict()
-                for key, value in obj.items():
-                    new_obj[key] = cls._convert_python_sets(value)
-                return new_obj
-        elif isinstance(obj, list):
-            new_obj = list()
-            for value in obj:
-                new_obj.append(cls._convert_python_sets(value))
-            return new_obj
-        return obj

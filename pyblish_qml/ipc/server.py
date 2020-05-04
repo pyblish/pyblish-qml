@@ -22,7 +22,6 @@ import subprocess
 import time
 
 from .. import _state
-from ..util import SetJSONEncoder, SetJSONDecoder
 from ..vendor import six
 
 CREATE_NO_WINDOW = 0x08000000
@@ -91,7 +90,6 @@ class Proxy(object):
                     "kwargs": kwargs or dict(),
                 }
             },
-            cls=SetJSONEncoder,
         )
 
         if six.PY3:
@@ -245,7 +243,7 @@ class Server(object):
                     line = line.decode("utf8")
 
                 try:
-                    response = json.loads(line, cls=SetJSONDecoder)
+                    response = json.loads(line)
                 except Exception:
                     if last_msg_newline:
                         # last newline message was a real newline
@@ -292,7 +290,6 @@ class Server(object):
                                 "header": "pyblish-qml:popen.response",
                                 "payload": result
                             },
-                            cls=SetJSONEncoder,
                         )
 
                         if six.PY3:

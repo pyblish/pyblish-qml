@@ -21,7 +21,6 @@ import threading
 import pyblish.api
 import pyblish.plugin
 
-from ..util import SetJSONEncoder, SetJSONDecoder
 from ..vendor import six
 from ..vendor.six.moves import queue
 
@@ -49,6 +48,10 @@ class Proxy(object):
 
     def test(self, **vars):
         """Vars can only be passed as a non-keyword argument"""
+
+        # -> Support JSON, see #364
+        vars["ordersWithError"] = list(vars["ordersWithError"])
+
         return self._dispatch("test", kwargs=vars)
 
     def ping(self):
@@ -160,8 +163,7 @@ class Proxy(object):
                     "args": args or list(),
                     "kwargs": kwargs or dict(),
                 }
-            },
-            cls=SetJSONEncoder,
+            }
         )
 
         # This should never happen. Each request is immediately
@@ -181,9 +183,9 @@ class Proxy(object):
             message = self.channels["response"].get()
 
             if six.PY3:
-                response = json.loads(message, cls=SetJSONDecoder)
+                response = json.loads(message)
             else:
-                response = _byteify(json.loads(message, object_hook=_byteify, cls=SetJSONDecoder))
+                response = _byteify(json.loads(message, object_hook=_byteify))
 
         except TypeError as e:
             raise e
