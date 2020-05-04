@@ -31,8 +31,12 @@ class Service(object):
 
         self.reset()
 
-    def test(self, vars):
+    def test(self, **vars):
         test = pyblish.logic.registered_test()
+
+        # -> Support test, see #364
+        vars["ordersWithError"] = set(vars["ordersWithError"])
+
         return test(**vars)
 
     def ping(self):

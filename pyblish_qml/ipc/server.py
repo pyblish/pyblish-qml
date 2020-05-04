@@ -80,15 +80,16 @@ class Proxy(object):
     def target(self, targets):
         self._dispatch("target", args=[targets])
 
-    def _dispatch(self, func, args=None):
+    def _dispatch(self, func, args=None, kwargs=None):
         data = json.dumps(
             {
                 "header": "pyblish-qml:popen.parent",
                 "payload": {
                     "name": func,
                     "args": args or list(),
+                    "kwargs": kwargs or dict(),
                 }
-            }
+            },
         )
 
         if six.PY3:
@@ -266,6 +267,7 @@ class Server(object):
 
                         payload = response["payload"]
                         args = payload["args"]
+                        kwargs = payload["kwargs"]
 
                         func_name = payload["name"]
 
@@ -273,7 +275,7 @@ class Server(object):
                                              default_wrapper)
 
                         func = getattr(self.service, func_name)
-                        result = wrapper(func, *args)  # block..
+                        result = wrapper(func, *args, **kwargs)  # block..
 
                         # Note(marcus): This is where we wait for the host to
                         # finish. Technically, we could kill the GUI at this
@@ -283,10 +285,12 @@ class Server(object):
                         # until finished, which means we are guaranteed to
                         # always respond.
 
-                        data = json.dumps({
-                            "header": "pyblish-qml:popen.response",
-                            "payload": result
-                        })
+                        data = json.dumps(
+                            {
+                                "header": "pyblish-qml:popen.response",
+                                "payload": result
+                            },
+                        )
 
                         if six.PY3:
                             data = data.encode("ascii")

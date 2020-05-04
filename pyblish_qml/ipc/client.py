@@ -48,6 +48,10 @@ class Proxy(object):
 
     def test(self, **vars):
         """Vars can only be passed as a non-keyword argument"""
+
+        # -> Support JSON, see #364
+        vars["ordersWithError"] = list(vars["ordersWithError"])
+
         return self._dispatch("test", kwargs=vars)
 
     def ping(self):
@@ -142,7 +146,7 @@ class Proxy(object):
         thread.daemon = True
         thread.start()
 
-    def _dispatch(self, func, args=None):
+    def _dispatch(self, func, args=None, kwargs=None):
         """Send message to parent process
 
         Arguments:
@@ -157,6 +161,7 @@ class Proxy(object):
                 "payload": {
                     "name": func,
                     "args": args or list(),
+                    "kwargs": kwargs or dict(),
                 }
             }
         )
