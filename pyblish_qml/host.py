@@ -191,8 +191,14 @@ def install_callbacks():
 
 
 def uninstall_callbacks():
-    pyblish.api.deregister_callback("instanceToggled", _toggle_instance)
-    pyblish.api.deregister_callback("pluginToggled", _toggle_plugin)
+    try:
+        pyblish.api.deregister_callback("instanceToggled", _toggle_instance)
+    except (KeyError, ValueError):
+        pass
+    try:
+        pyblish.api.deregister_callback("pluginToggled", _toggle_plugin)
+    except (KeyError, ValueError):
+        pass
 
 
 def _toggle_instance(instance, new_value, old_value):
