@@ -78,7 +78,7 @@ setup(
         ]
     },
     install_requires=[
-        "pyblish-base==1.5.3"
+        "pyblish-base>=1.5.3"
     ],
     entry_points={},
 )
