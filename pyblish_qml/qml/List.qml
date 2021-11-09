@@ -71,7 +71,7 @@ ListView {
 
             Action {
                 name: "comment"
-                iconName: "comment-o"
+                iconName: object.hasComment ? "comment" : "comment-o"
                 iconSize: 12
                 enabled: object.itemType == "instance" ? true : false
                 onTriggered: actionTriggered(this, index)

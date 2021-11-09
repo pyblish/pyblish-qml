@@ -53,6 +53,7 @@ defaults = {
         "category": None,
         "niceName": "default",
         "compatiblePlugins": list(),
+        "hasComment": False,
     },
     "result": {
         "type": "default",

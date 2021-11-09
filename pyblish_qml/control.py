@@ -665,8 +665,12 @@ class Controller(QtCore.QObject):
         """Append `data` to result model"""
         self.data["models"]["result"].add_item(data)
 
-    def comment_sync(self, comment, name):
+    def comment_sync(self, comment, item):
         """Update comments to host and notify subscribers"""
+        name = item.name
+        model_item = self.data["models"]["item"].instances[item.id]
+        model_item.hasComment = bool(comment)
+
         self.host.update(key="comment", value=comment, name=name)
         if name == "Context":
             self.host.emit("commented", comment=comment)
@@ -689,14 +693,16 @@ class Controller(QtCore.QObject):
             if name == "Context":
                 context.data["comment"] = comment
                 self.data["comment"] = comment
+                item = context
 
             else:
                 instance = next(it for it in context if name == it.name)
                 instance.data["comment"] = comment
                 self.data["instancesComment"][name] = comment
+                item = instance
 
             # Notify subscribers of the comment
-            self.comment_sync(comment, name)
+            self.comment_sync(comment, item)
             self.commented.emit(name)
 
         # Update local cache a little later
@@ -841,10 +847,10 @@ class Controller(QtCore.QObject):
                     instances_com[ch_it.name] = ch_it.data.get("comment", "")
 
             # Notify subscribers of the comment
-            self.comment_sync(comment, name="Context")
+            self.comment_sync(comment, ch_context)
             for ch_it in ch_context:
                 ch_it_com = instances_com.get(ch_it.name, "")
-                self.comment_sync(ch_it_com, name=ch_it.name)
+                self.comment_sync(ch_it_com, ch_it)
 
             first_run = self.data["firstRun"]
             if first_run:
