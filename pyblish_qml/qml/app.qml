@@ -40,6 +40,7 @@ StackView {
     }
 
     initialItem: Overview {
+        id: overview
         width: stack.width
         height: stack.height
 

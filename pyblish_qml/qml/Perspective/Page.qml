@@ -8,6 +8,12 @@ Item {
     id: root
 
     property QtObject item
+    property QtObject overview
+
+    function setComment(text, name) {
+        app.commenting(text, name)
+        footer.hasComment = text ? true : false
+    }
 
     ActionBar {
         id: actionBar
@@ -35,7 +41,7 @@ Item {
             left: parent.left
             top: actionBar.bottom
             right: parent.right
-            bottom: parent.bottom
+            bottom: item.itemType == "instance" ? commentBox.top : parent.bottom
             topMargin: -1
         }
 
@@ -124,6 +130,42 @@ Item {
                 }
             }
         }
+    }
+
+    CommentBox {
+        id: commentBox
+
+        visible: item.itemType == "instance"
+
+        //Enable editing only when the GUI is not busy with something else
+        readOnly: overview.state != ""
+        text: item.itemType == "instance" ? app.comment(item.name) : ""
+
+        isUp: true
+
+        anchors {
+            bottom: footer.top
+            left: parent.left
+            right: parent.right
+            top: (isMaximised && height == parent.height - xfooter.height) ? tabBar.top : undefined
+        }
+
+        height: isMaximised ? parent.height - xfooter.height : isUp ? 150 : 0
+
+        onCommentChanged: setComment(text, item.name)
+    }
+
+    Footer {
+        id: footer
+
+        visible: item.itemType == "instance" ? overview.state != "initialising": false
+
+        mode:  overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
+
+        width: parent.width
+        anchors.bottom: parent.bottom
+
+        onComment: commentBox.height > 75 ? commentBox.down() : commentBox.up()
     }
 
     Binding {

@@ -45,6 +45,11 @@ Item {
         footer.message.animation.start()
     }
 
+    function setComment(text) {
+        app.commenting(text, "Context")
+        footer.hasComment = text ? true : false
+    }
+
     TabBar {
         id: tabBar
 
@@ -201,6 +206,8 @@ Item {
         }
 
         height: isMaximised ? parent.height - footer.height : isUp ? 150 : 0
+
+        onCommentChanged: setComment(text)
     }
 
     Footer {
@@ -229,7 +236,13 @@ Item {
 
         onFirstRun: {
             app.commentEnabled ? commentBox.up() : null
-            commentBox.text = app.comment()
+            commentBox.text = app.comment("Context")
+        }
+
+        onCommented: {
+            if (name == "Context") {
+                commentBox.text = app.comment(name)
+            }
         }
 
         onStateChanged: {
