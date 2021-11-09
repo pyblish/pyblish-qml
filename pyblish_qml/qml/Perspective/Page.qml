@@ -9,6 +9,7 @@ Item {
 
     property QtObject item
     property QtObject overview
+    property bool commenting: false
 
     function setComment(text, name) {
         app.commenting(text, name)
@@ -141,7 +142,7 @@ Item {
         readOnly: overview.state != ""
         text: item.itemType == "instance" ? app.comment(item.name) : ""
 
-        isUp: true
+        isUp: root.commenting
 
         anchors {
             bottom: footer.top

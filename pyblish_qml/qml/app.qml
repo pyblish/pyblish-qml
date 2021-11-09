@@ -20,7 +20,7 @@ StackView {
      * Format relevant proxy-models to display information
      * relevant to the currently entered item.
     */
-    function setup(item) {
+    function setup(item, commenting) {
         app.recordProxy.clear_inclusion()
         app.recordProxy.add_inclusion("type", "record")
         app.recordProxy.add_inclusion(item.itemType, item.name)
@@ -35,7 +35,11 @@ StackView {
 
         stack.push({
             item: perspective,
-            properties: {"item": item}
+            properties: {
+                "item": item,
+                "overview": overview,
+                "commenting": commenting,
+            }
         })
     }
 
@@ -44,8 +48,9 @@ StackView {
         width: stack.width
         height: stack.height
 
-        onInstanceEntered: setup(app.instanceProxy.item(index))
-        onPluginEntered: setup(app.pluginProxy.item(index))
+        onCommentEntered: setup(app.instanceProxy.item(index), true)
+        onInstanceEntered: setup(app.instanceProxy.item(index), false)
+        onPluginEntered: setup(app.pluginProxy.item(index), false)
     }
 
     Component {

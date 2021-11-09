@@ -18,6 +18,7 @@ Item {
 
     property bool validated: false
 
+    signal commentEntered(int index)
     signal instanceEntered(int index)
     signal pluginEntered(int index)
 
@@ -111,6 +112,8 @@ Item {
                         app.repairInstance(index)
                     else if (action.name == "enter")
                         overview.instanceEntered(index)
+                    else if (action.name == "comment")
+                        overview.commentEntered(index)
                 }
 
                 onItemToggled: app.toggleInstance(index)
