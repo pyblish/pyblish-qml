@@ -11,9 +11,29 @@ Item {
     property QtObject overview
     property bool commenting: false
 
-    function setComment(text, name) {
-        app.commenting(text, name)
-        footer.hasComment = text ? true : false
+    function setComment(text) {
+        if (overview.state == "") {
+            app.commenting(text, item.name)
+            footer.hasComment = text ? true : false
+        }
+    }
+
+    function getComment() {
+        // GUI may freeze if querying comment while publishing
+        // - note, this triggers commentChanged signal
+        if (overview.state == "publishing") {
+            return "publishing, could not edit/read comment at this moment.."
+        }
+        else {
+            return app.comment(item.name)
+        }
+    }
+
+    function restoreComment() {
+        // Ensure comment restored from the above placeholder text
+        if (overview.state == "finished") {
+            commentBox.text = app.comment(item.name)
+        }
     }
 
     ActionBar {
@@ -140,7 +160,7 @@ Item {
 
         //Enable editing only when the GUI is not busy with something else
         readOnly: overview.state != ""
-        text: item.itemType == "instance" ? app.comment(item.name) : ""
+        text: item.itemType == "instance" ? getComment() : ""
 
         isUp: root.commenting
 
@@ -153,7 +173,12 @@ Item {
 
         height: isMaximised ? parent.height - xfooter.height : isUp ? 150 : 0
 
-        onCommentChanged: setComment(text, item.name)
+        onCommentChanged: setComment(text)
+
+        Connections {
+            target: app
+            onStateChanged: restoreComment()
+        }
     }
 
     Footer {
