@@ -10,7 +10,6 @@ Rectangle {
     color: Theme.backgroundColor
 
     property bool isUp
-    property bool isMaximised
 
     property alias text: textBox.text
 
@@ -32,7 +31,6 @@ Rectangle {
 
     function down() {
         isUp = false
-        isMaximised = false
     }
 
     function toggle() {

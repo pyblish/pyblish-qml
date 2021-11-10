@@ -168,10 +168,10 @@ Item {
             bottom: footer.top
             left: parent.left
             right: parent.right
-            top: (isMaximised && height == parent.height - xfooter.height) ? tabBar.top : undefined
+            top: undefined
         }
 
-        height: isMaximised ? parent.height - xfooter.height : isUp ? 150 : 0
+        height: isUp ? 150 : 0
 
         onCommentChanged: setComment(text)
 
