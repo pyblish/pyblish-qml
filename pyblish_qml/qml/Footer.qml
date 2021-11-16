@@ -10,6 +10,7 @@ View {
     // 0 = Default; 1 = Publishing; 2 = Finished
     property int mode: 0
     property bool paused: false
+    property bool hasComment: false
 
     signal publish
     signal validate
@@ -47,7 +48,7 @@ View {
 
             tooltip: visible ? "Comment.." : ""
 
-            name: app.hasComment ? "comment" : "comment-o"
+            name: hasComment ? "comment" : "comment-o"
             onClicked: footer.comment()
             visible: mode == 0 ? true : false
         }

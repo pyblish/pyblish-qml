@@ -1,7 +1,6 @@
 import QtQuick 2.6
 import QtQuick.Layouts 1.1
 
-import Pyblish 0.1
 
 Rectangle {
     id: root
@@ -11,11 +10,12 @@ Rectangle {
     color: Theme.backgroundColor
 
     property bool isUp
-    property bool isMaximised
 
     property alias text: textBox.text
 
     property var readOnly: false
+
+    signal commentChanged
 
     Behavior on height {
         NumberAnimation {
@@ -31,7 +31,6 @@ Rectangle {
 
     function down() {
         isUp = false
-        isMaximised = false
     }
 
     function toggle() {
@@ -68,7 +67,7 @@ Rectangle {
 
             KeyNavigation.priority: KeyNavigation.BeforeItem
 
-            onTextChanged: app.commenting(text)
+            onTextChanged: root.commentChanged()
         }
     }
 }

@@ -8,6 +8,33 @@ Item {
     id: root
 
     property QtObject item
+    property QtObject overview
+    property bool commenting: false
+
+    function setComment(text) {
+        if (overview.state == "") {
+            app.commenting(text, item.name)
+            footer.hasComment = text ? true : false
+        }
+    }
+
+    function getComment() {
+        // GUI may freeze if querying comment while publishing
+        // - note, this triggers commentChanged signal
+        if (overview.state == "publishing") {
+            return "publishing, could not edit/read comment at this moment.."
+        }
+        else {
+            return app.comment(item.name)
+        }
+    }
+
+    function restoreComment() {
+        // Ensure comment restored from the above placeholder text
+        if (overview.state == "finished") {
+            commentBox.text = app.comment(item.name)
+        }
+    }
 
     ActionBar {
         id: actionBar
@@ -35,7 +62,7 @@ Item {
             left: parent.left
             top: actionBar.bottom
             right: parent.right
-            bottom: parent.bottom
+            bottom: item.itemType == "instance" ? commentBox.top : parent.bottom
             topMargin: -1
         }
 
@@ -124,6 +151,47 @@ Item {
                 }
             }
         }
+    }
+
+    CommentBox {
+        id: commentBox
+
+        visible: item.itemType == "instance"
+
+        //Enable editing only when the GUI is not busy with something else
+        readOnly: overview.state != ""
+        text: item.itemType == "instance" ? getComment() : ""
+
+        isUp: root.commenting
+
+        anchors {
+            bottom: footer.top
+            left: parent.left
+            right: parent.right
+            top: undefined
+        }
+
+        height: isUp ? 150 : 0
+
+        onCommentChanged: setComment(text)
+
+        Connections {
+            target: app
+            onStateChanged: restoreComment()
+        }
+    }
+
+    Footer {
+        id: footer
+
+        visible: item.itemType == "instance" ? overview.state != "initialising": false
+
+        mode:  overview.state == "publishing" ? 1 : overview.state == "finished" ? 2 : 0
+
+        width: parent.width
+        anchors.bottom: parent.bottom
+
+        onComment: commentBox.height > 75 ? commentBox.down() : commentBox.up()
     }
 
     Binding {

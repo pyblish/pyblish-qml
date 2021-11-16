@@ -70,6 +70,14 @@ ListView {
             },
 
             Action {
+                name: "comment"
+                iconName: object.hasComment ? "comment" : "comment-o"
+                iconSize: 12
+                enabled: object.itemType == "instance" ? true : false
+                onTriggered: actionTriggered(this, index)
+            },
+
+            Action {
                 name: "enter"
                 iconName: "angle-right"
                 onTriggered: actionTriggered(this, index)
