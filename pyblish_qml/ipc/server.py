@@ -157,6 +157,12 @@ class Server(object):
             path for path in [os.getenv("PYTHONPATH"), pyqt5]
             if path is not None
         )
+        
+        # Append sys.path to PYTHONPATH
+        if environ["PYTHONPATH"] is not None:
+            environ["PYTHONPATH"] += os.pathsep + os.pathsep.join(sys.path)
+        else:
+            environ["PYTHONPATH"] = os.pathsep.join(sys.path)
 
         # Protect against an erroneous parent environment
         # The environment passed to subprocess is inherited from
