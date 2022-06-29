@@ -25,7 +25,7 @@ ListView {
         checked: object.isToggled
         hidden: object.isHidden
 
-        width: parent.width
+        width: parent ? parent.width : 0
 
         status: {
             if (object.isProcessing)
