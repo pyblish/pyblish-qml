@@ -135,7 +135,7 @@ class Server(object):
         python = python or find_python()
         print("Using Python @ '%s'" % python)
 
-        pyqt5 = pyqt5 or find_pyqt5(python)
+        pyqt5 = pyqt5 or find_qt(python)
         print("Using PyQt5 @ '%s'" % pyqt5)
 
         # Maintain the absolute minimum of environment variables,
@@ -380,10 +380,11 @@ def find_python():
     return python
 
 
-def find_pyqt5(python):
+def find_qt(python):
     """Search for PyQt5 automatically"""
     pyqt5 = (
         _state.get("pyqt5") or
+        os.getenv("PYBLISH_QML_PYSIDE2") or
         os.getenv("PYBLISH_QML_PYQT5")
     )
 
