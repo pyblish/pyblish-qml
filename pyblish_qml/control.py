@@ -306,7 +306,7 @@ class Controller(QtCore.QObject):
     def state(self):
         return self.data["state"]["current"]
 
-    @QtCore.Property(bool, constant=True)
+    @QtCore.Property(bool)
     def commentEnabled(self):
         return "comment" in self.host.cached_context.data
 
