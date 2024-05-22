@@ -92,8 +92,8 @@ class Proxy(object):
     def emit(self, signal, **kwargs):
         self._dispatch("emit", args=[signal, kwargs])
 
-    def update(self, key, value):
-        self._dispatch("update", args=[key, value])
+    def update(self, key, value, name):
+        self._dispatch("update", args=[key, value, name])
 
     def _self_destruct(self):
         """Auto quit exec if parent process failed

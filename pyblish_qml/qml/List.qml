@@ -25,7 +25,7 @@ ListView {
         checked: object.isToggled
         hidden: object.isHidden
 
-        width: parent.width
+        width: parent ? parent.width : 0
 
         status: {
             if (object.isProcessing)
@@ -67,6 +67,14 @@ ListView {
                 color: object.actionPending ? "white"
                      : object.actionHasError ? Theme.dark.errorColor
                      : Theme.dark.successColor
+            },
+
+            Action {
+                name: "comment"
+                iconName: object.hasComment ? "comment" : "comment-o"
+                iconSize: 12
+                enabled: object.itemType == "instance" ? true : false
+                onTriggered: actionTriggered(this, index)
             },
 
             Action {

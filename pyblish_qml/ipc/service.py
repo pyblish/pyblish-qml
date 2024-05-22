@@ -141,9 +141,14 @@ class Service(object):
 
         pyblish.api.emit(signal, **kwargs)
 
-    def update(self, key, value):
+    def update(self, key, value, name):
         """Write data to context from GUI"""
-        self._context.data[key] = value
+        context = self._context
+        if name == "Context":
+            context.data[key] = value
+        else:
+            instance = next(it for it in context if name == it.name)
+            instance.data[key] = value
 
 
 class MockService(Service):

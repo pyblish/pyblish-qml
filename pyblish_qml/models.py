@@ -53,6 +53,7 @@ defaults = {
         "category": None,
         "niceName": "default",
         "compatiblePlugins": list(),
+        "hasComment": False,
     },
     "result": {
         "type": "default",
@@ -529,6 +530,10 @@ class ItemModel(AbstractModel):
                 # Context specific actions
                 for action in list(actions):
                     if action["on"] == "failed" and not item.hasError:
+                        actions.remove(action)
+                    if action["on"] == "warning" and not item.hasWarning:
+                        actions.remove(action)
+                    if action["on"] == "failedOrWarning" and not (item.hasError or item.hasWarning):
                         actions.remove(action)
                     if action["on"] == "succeeded" and not item.succeeded:
                         actions.remove(action)

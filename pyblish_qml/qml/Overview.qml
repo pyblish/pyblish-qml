@@ -18,6 +18,7 @@ Item {
 
     property bool validated: false
 
+    signal commentEntered(int index)
     signal instanceEntered(int index)
     signal pluginEntered(int index)
 
@@ -43,6 +44,11 @@ Item {
         footer.message.text = message
         footer.message.animation.restart()
         footer.message.animation.start()
+    }
+
+    function setComment(text) {
+        app.commenting(text, "Context")
+        footer.hasComment = text ? true : false
     }
 
     TabBar {
@@ -106,6 +112,8 @@ Item {
                         app.repairInstance(index)
                     else if (action.name == "enter")
                         overview.instanceEntered(index)
+                    else if (action.name == "comment")
+                        overview.commentEntered(index)
                 }
 
                 onItemToggled: app.toggleInstance(index)
@@ -197,10 +205,12 @@ Item {
             bottom: footer.top
             left: parent.left
             right: parent.right
-            top: (isMaximised && height == parent.height - footer.height) ? tabBar.top : undefined
+            top: undefined
         }
 
-        height: isMaximised ? parent.height - footer.height : isUp ? 150 : 0
+        height: isUp ? 150 : 0
+
+        onCommentChanged: setComment(text)
     }
 
     Footer {
@@ -229,7 +239,13 @@ Item {
 
         onFirstRun: {
             app.commentEnabled ? commentBox.up() : null
-            commentBox.text = app.comment()
+            commentBox.text = app.comment("Context")
+        }
+
+        onCommented: {
+            if (name == "Context") {
+                commentBox.text = app.comment(name)
+            }
         }
 
         onStateChanged: {

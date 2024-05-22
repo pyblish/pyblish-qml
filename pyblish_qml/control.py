@@ -46,8 +46,8 @@ class Controller(QtCore.QObject):
     saved = QtCore.Signal()
     finished = QtCore.Signal()
     initialised = QtCore.Signal()
-    commented = QtCore.Signal()
-    commenting = QtCore.Signal(str, arguments=["comment"])
+    commented = QtCore.Signal(str, arguments=["name"])
+    commenting = QtCore.Signal(str, str, arguments=["comment", "name"])
 
     state_changed = QtCore.Signal(str, arguments=["state"])
 
@@ -75,6 +75,7 @@ class Controller(QtCore.QObject):
                 "result": models.ResultModel(),
             },
             "comment": "",
+            "instancesComment": dict(),
             "firstRun": True,
         }
 
@@ -293,20 +294,19 @@ class Controller(QtCore.QObject):
         machine.start()
         return machine
 
-    @QtCore.Slot(result=str)
-    def comment(self):
+    @QtCore.Slot(str, result=str)
+    def comment(self, name):
         """Return first line of comment"""
-        return self.data["comment"]
+        if name == "Context":
+            return self.data["comment"]
+        else:
+            return self.data["instancesComment"].get(name, "")
 
     @QtCore.Property(str, notify=state_changed)
     def state(self):
         return self.data["state"]["current"]
 
-    @QtCore.Property(bool, notify=commented)
-    def hasComment(self):
-        return True if self.data["comment"] else False
-
-    @QtCore.Property(bool, constant=True)
+    @QtCore.Property(bool)
     def commentEnabled(self):
         return "comment" in self.host.cached_context.data
 
@@ -402,6 +402,10 @@ class Controller(QtCore.QObject):
         # Context specific actions
         for action in list(actions):
             if action["on"] == "failed" and not item.hasError:
+                actions.remove(action)
+            if action["on"] == "warning" and not item.hasWarning:
+                actions.remove(action)
+            if action["on"] == "failedOrWarning" and not (item.hasError or item.hasWarning):
                 actions.remove(action)
             if action["on"] == "succeeded" and not item.succeeded:
                 actions.remove(action)
@@ -661,10 +665,17 @@ class Controller(QtCore.QObject):
         """Append `data` to result model"""
         self.data["models"]["result"].add_item(data)
 
-    def comment_sync(self, comment):
+    def comment_sync(self, comment, item):
         """Update comments to host and notify subscribers"""
-        self.host.update(key="comment", value=comment)
-        self.host.emit("commented", comment=comment)
+        name = item.name
+        model_item = self.data["models"]["item"].instances[item.id]
+        model_item.hasComment = bool(comment)
+
+        self.host.update(key="comment", value=comment, name=name)
+        if name == "Context":
+            self.host.emit("commented", comment=comment)
+        else:
+            self.host.emit("instanceCommented", comment=comment, name=name)
 
     def is_ready(self):
         count = self.data["state"]["readyCount"]
@@ -673,18 +684,26 @@ class Controller(QtCore.QObject):
 
     # Event handlers
 
-    def on_commenting(self, comment):
+    def on_commenting(self, comment, name):
         """The user is entering a comment"""
 
         def update():
             context = self.host.cached_context
-            context.data["comment"] = comment
-            self.data["comment"] = comment
+
+            if name == "Context":
+                context.data["comment"] = comment
+                self.data["comment"] = comment
+                item = context
+
+            else:
+                instance = next(it for it in context if name == it.name)
+                instance.data["comment"] = comment
+                self.data["instancesComment"][name] = comment
+                item = instance
 
             # Notify subscribers of the comment
-            self.comment_sync(comment)
-
-            self.commented.emit()
+            self.comment_sync(comment, item)
+            self.commented.emit(name)
 
         # Update local cache a little later
         util.schedule(update, 100, channel="commenting")
@@ -811,17 +830,27 @@ class Controller(QtCore.QObject):
             self.data["models"]["item"].update_compatibility()
 
             # Remember comment across resets
+            #
             comment = self.data["comment"]
-            if comment:
+            instances_com = self.data["instancesComment"]
+            ch_context = self.host.cached_context
+
+            if comment or instances_com:
                 print("Installing local comment..")
-                self.host.cached_context.data["comment"] = comment
+                ch_context.data["comment"] = comment
+                for ch_it in ch_context:
+                    ch_it.data["comment"] = instances_com.get(ch_it.name, "")
             else:
                 print("No local comment, reading from context..")
-                comment = self.host.cached_context.data.get("comment", "")
-                self.data["comment"] = comment
+                self.data["comment"] = ch_context.data.get("comment", "")
+                for ch_it in ch_context:
+                    instances_com[ch_it.name] = ch_it.data.get("comment", "")
 
             # Notify subscribers of the comment
-            self.comment_sync(comment)
+            self.comment_sync(comment, ch_context)
+            for ch_it in ch_context:
+                ch_it_com = instances_com.get(ch_it.name, "")
+                self.comment_sync(ch_it_com, ch_it)
 
             first_run = self.data["firstRun"]
             if first_run:

@@ -11,29 +11,29 @@ BaseDelegate {
     expandable: true
 
     property var levels: {
-        "DEBUG":  {
+        "debug":  {
             "color": Qt.lighter("steelblue", 1.3),
             "icon": "log-debug-16x16"
         },
-        "INFO": {
+        "info": {
             "color": Qt.lighter("steelblue", 1.5),
             "icon": "log-info-16x16"
         },
-        "WARNING": {
+        "warning": {
             "color": Qt.lighter("red", 1.6),
             "icon": "log-warning-16x16"
         },
-        "ERROR": {
+        "error": {
             "color": Qt.lighter("red", 1.4),
             "icon": "log-error-16x16"
         },
-        "CRITICAL": {
+        "critical": {
             "color": Qt.lighter("red", 1.2),
             "icon": "log-critical-16x16"
         }
     }
 
-    color: levels[object.levelname].color
+    color: levels[object.levelname.toLowerCase()].color
 
     body: Row {
         property alias icon: mask.name
@@ -42,7 +42,7 @@ BaseDelegate {
 
         Icon {
             id: mask
-            name: levels[object.levelname].icon
+            name: levels[object.levelname.toLowerCase()].icon
         }
 
         Column {
