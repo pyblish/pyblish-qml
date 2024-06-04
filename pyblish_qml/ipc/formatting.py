@@ -5,11 +5,17 @@ import inspect
 import traceback
 
 from . import schema
+from ..vendor import six
 
 import pyblish.lib
 import pyblish.plugin
 
 log = logging.getLogger("pyblish")
+
+if six.PY2:
+    get_arg_spec = inspect.getargspec
+else:
+    get_arg_spec = inspect.getfullargspec
 
 
 def extract_traceback(exception):
@@ -253,7 +259,7 @@ def format_plugin(plugin):
 
     has_repair = False
 
-    args = inspect.getargspec(plugin.repair).args
+    args = get_arg_spec(plugin.repair).args
     if "context" in args or "instance" in args:
         has_repair = True
 
@@ -293,10 +299,10 @@ def format_plugin(plugin):
         "module": module,
         "hasRepair": has_repair,
         "process": {
-            "args": inspect.getargspec(plugin.process).args,
+            "args":  get_arg_spec(plugin.process).args,
         },
         "repair": {
-            "args": inspect.getargspec(plugin.repair).args,
+            "args":  get_arg_spec(plugin.repair).args,
         },
 
         "actions": [format_action(a) for a in plugin.actions],

@@ -43,6 +43,12 @@ except ImportError:
     # may not have inspect
     inspect = None
 
+from . import six
+if six.PY2:
+    get_arg_spec = inspect.getargspec
+else:
+    get_arg_spec = inspect.getfullargspec
+
 try:
     from functools import wraps as original_wraps
 except ImportError:
@@ -174,7 +180,7 @@ def _getsignature(func, skipfirst, instance=False):
         regargs, varargs, varkw, defaults, kwonly, kwonlydef, ann = argspec
     else:
         try:
-            regargs, varargs, varkwargs, defaults = inspect.getargspec(func)
+            regargs, varargs, varkwargs, defaults = get_arg_spec(func)
         except TypeError:
             # C function / method, possibly inherited object().__init__
             return
