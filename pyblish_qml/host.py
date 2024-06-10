@@ -9,6 +9,12 @@ import pyblish.api
 
 from . import ipc, settings, _state
 from .vendor.six.moves import queue
+from .vendor import six
+
+if six.PY2:
+    get_arg_spec = inspect.getargspec
+else:
+    get_arg_spec = inspect.getfullargspec
 
 MODULE_DIR = os.path.dirname(__file__)
 SPLASH_PATH = os.path.join(MODULE_DIR, "splash.png")
@@ -24,7 +30,7 @@ def register_dispatch_wrapper(wrapper):
 
     """
 
-    signature = inspect.getargspec(wrapper)
+    signature = get_arg_spec(wrapper)
     if any([len(signature.args) != 1,
             signature.varargs is None,
             signature.keywords is None]):
