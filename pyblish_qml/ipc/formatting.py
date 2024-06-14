@@ -148,6 +148,7 @@ def format_data(data):
         "port",
         "user",
         "connectTime",
+        "postCollectOrder",
         "pyblishVersion",
         "pyblishRPCVersion",
         "pythonVersion")
@@ -198,6 +199,13 @@ def format_context(context):
         "data": format_data(context.data),
         "children": list(format_instance(i) for i in context)
     }
+
+
+def format_post_collect_order(order):
+    try:
+        return float(order)
+    except (TypeError, ValueError):
+        return float("NaN")
 
 
 def format_plugins(plugins):

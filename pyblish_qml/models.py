@@ -83,6 +83,7 @@ defaults = {
         "port": 0,
         "host": "default",
         "user": "default",
+        "postCollectOrder": float("NaN"),
         "connectTime": "default",
         "pythonVersion": "default",
         "pyblishVersion": "default",
