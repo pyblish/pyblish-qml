@@ -13,6 +13,7 @@ from .vendor import six
 
 if six.PY2:
     get_arg_spec = inspect.getargspec
+    get_arg_spec.varkw = get_arg_spec.keywords
 else:
     get_arg_spec = inspect.getfullargspec
 
@@ -33,7 +34,7 @@ def register_dispatch_wrapper(wrapper):
     signature = get_arg_spec(wrapper)
     if any([len(signature.args) != 1,
             signature.varargs is None,
-            signature.keywords is None]):
+            signature.varkw is None]):
         raise TypeError("Wrapper signature mismatch")
 
     def _wrapper(func, *args, **kwargs):
