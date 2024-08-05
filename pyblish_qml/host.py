@@ -249,7 +249,8 @@ def install_host(use_threaded_wrapper):
 
     """
 
-    for install in (_install_maya,
+    for install in (_install_unreal,
+                    _install_maya,
                     _install_houdini,
                     _install_nuke,
                     _install_nukeassist,
@@ -531,6 +532,15 @@ def _common_setup(host_name, threaded_wrapper, use_threaded_wrapper):
     _set_host_label(host_name)
 
 
+def _install_unreal(use_threaded_wrapper):
+    import unreal
+    def threaded_wrapper(func, *args, **kwargs):
+        """must load pyblish-unreal plugin.because this plugin create executeInMainThreadWithResult func for unreal module"""
+        return unreal.executeInMainThreadWithResult(func, *args, **kwargs)
+    sys.stdout.write("Setting up Pyblish QML in Unreal\n")
+    _common_setup("Unreal", threaded_wrapper, use_threaded_wrapper)
+    
+    
 def _install_maya(use_threaded_wrapper):
     """Helper function to Autodesk Maya support"""
     from maya import utils, cmds
