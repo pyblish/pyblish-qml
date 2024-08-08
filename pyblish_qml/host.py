@@ -71,7 +71,6 @@ def install(modal):
 
     use_threaded_wrapper = not modal
 
-    install_callbacks()
     install_host(use_threaded_wrapper)
 
     _state["installed"] = True
@@ -110,8 +109,12 @@ def show(parent=None,
         # getting all plugins on pyblish_qml.show().
         targets = ["default"] + pyblish.api.registered_targets()
 
+    # Install event handlers.
+    install_callbacks()
+
     # Automatically install if not already installed.
-    install(modal)
+    if not _state.get("installed"):
+        install(modal)
 
     show_settings = settings.to_dict()
     show_settings['autoPublish'] = auto_publish
@@ -193,13 +196,22 @@ def quit(proxy):
 
 
 def install_callbacks():
+    uninstall_callbacks()
+
     pyblish.api.register_callback("instanceToggled", _toggle_instance)
     pyblish.api.register_callback("pluginToggled", _toggle_plugin)
 
 
 def uninstall_callbacks():
-    pyblish.api.deregister_callback("instanceToggled", _toggle_instance)
-    pyblish.api.deregister_callback("pluginToggled", _toggle_plugin)
+    registered_callbacks = pyblish.api.registered_callbacks()
+    instance_toggled_callbacks = registered_callbacks.get("instanceToggled", [])
+    plugin_toggled_callbacks = registered_callbacks.get("pluginToggled", [])
+
+    if _toggle_instance in instance_toggled_callbacks:
+        pyblish.api.deregister_callback("instanceToggled", _toggle_instance)
+
+    if _toggle_plugin in plugin_toggled_callbacks:
+        pyblish.api.deregister_callback("pluginToggled", _toggle_plugin)
 
 
 def _toggle_instance(instance, new_value, old_value):
