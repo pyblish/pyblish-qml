@@ -12,8 +12,17 @@ from .vendor.six.moves import queue
 from .vendor import six
 
 if six.PY2:
-    get_arg_spec = inspect.getargspec
-    get_arg_spec.varkw = get_arg_spec.keywords
+    class __FullArgSpec(object):
+        def __init__(self, func):
+            spec = inspect.getargspec(func)
+            self.args = spec.args
+            self.varargs = spec.varargs
+            self.varkw = spec.keywords
+            self.defaults = spec.defaults
+            self.kwonlyargs = []
+            self.kwonlydefaults = None
+            self.annotations = {}
+    get_arg_spec = __FullArgSpec
 else:
     get_arg_spec = inspect.getfullargspec
 
