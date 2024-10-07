@@ -1,6 +1,7 @@
 
 import json
 import time
+import math
 import collections
 
 # Dependencies
@@ -881,6 +882,7 @@ class Controller(QtCore.QObject):
 
         def on_discover(plugins, context):
             collectors = list()
+            model = self.data["models"]["item"]
 
             # For backwards compatibility check for existance of
             # "plugins_by_targets" method.
@@ -888,12 +890,17 @@ class Controller(QtCore.QObject):
                 plugins = pyblish.api.plugins_by_targets(plugins, self.targets)
 
             for plugin in plugins:
-                self.data["models"]["item"].add_plugin(plugin.to_json())
+                model.add_plugin(plugin.to_json())
 
                 # Sort out which of these are Collectors
                 if not pyblish.lib.inrange(
                         number=plugin.order,
                         base=pyblish.api.Collector.order):
+                    continue
+
+                if plugin.order >= context.data["postCollectOrder"]:
+                    model.plugins[-1].verb = "Additional"
+                    model.add_section("Additional")
                     continue
 
                 if not plugin.active:
@@ -923,6 +930,73 @@ class Controller(QtCore.QObject):
             util.defer(self.host.context, callback=on_context)
 
         util.defer(self.host.reset, callback=on_reset)
+
+    def post_collect(self, on_post_collected):
+
+        post_collect_order = self.host.cached_context.data["postCollectOrder"]
+
+        def on_finished(context):
+            model = self.data["models"]["item"]
+
+            # Compute compatibility
+            for plugin in model.plugins:
+                if plugin.instanceEnabled:
+                    instances = pyblish.logic.instances_by_plugin(context,
+                                                                  plugin)
+                    plugin.compatibleInstances = list(i.id for i in instances)
+                else:
+                    plugin.compatibleInstances = [context.id]
+
+            model.reorder(context)
+            model.update_compatibility()
+
+            # Hidden sections
+            for section in model.sections:
+                if section.name in settings.HiddenSections:
+                    self.hideSection(True, section.name)
+
+            on_post_collected()
+
+        def on_run():
+            """Fetch instances in their current state, right after reset"""
+            util.defer(self.host.context,
+                       callback=lambda context: on_finished(context))
+
+        def on_data_received(args):
+            self.run(*args, callback=on_run)
+
+        def get_data():
+            """Get post collector plugins and instances"""
+            model = self.data["models"]["item"]
+
+            host_plugins = dict((p.id, p) for p in self.host.cached_discover)
+            host_context = dict((i.id, i) for i in self.host.cached_context)
+
+            collectors = list()
+            instances = list()
+
+            for plugin in models.ItemIterator(model.plugins):
+                # Sort out which of these are Post Collectors
+                if not pyblish.lib.inrange(
+                        number=plugin.order,
+                        base=pyblish.api.Collector.order):
+                    continue
+
+                if plugin.order < post_collect_order:
+                    continue
+
+                collectors.append(host_plugins[plugin.id])
+
+            for instance in models.ItemIterator(model.instances):
+                instances.append(host_context[instance.id])
+
+            return collectors, instances
+
+        util.defer(get_data, callback=on_data_received)
+
+    def _use_post_collect(self):
+        context = self.host.cached_context
+        return not math.isnan(context.data["postCollectOrder"])
 
     @QtCore.Slot()
     def publish(self):
@@ -960,6 +1034,9 @@ class Controller(QtCore.QObject):
 
             return plugins, instances
 
+        def on_post_collected():
+            util.defer(get_data, callback=on_data_received)
+
         def on_data_received(args):
             self.run(*args, callback=on_finished)
 
@@ -979,7 +1056,10 @@ class Controller(QtCore.QObject):
                     self.info.emit("Published, with errors..")
                     break
 
-        util.defer(get_data, callback=on_data_received)
+        if self._use_post_collect():
+            self.post_collect(on_post_collected)
+        else:
+            util.defer(get_data, callback=on_data_received)
 
     @QtCore.Slot()
     def validate(self):
@@ -1015,13 +1095,19 @@ class Controller(QtCore.QObject):
 
             return plugins, instances
 
+        def on_post_collected():
+            util.defer(get_data, callback=on_data_received)
+
         def on_data_received(args):
             self.run(*args, callback=on_finished)
 
         def on_finished():
             self.host.emit("validated", context=None)
 
-        util.defer(get_data, callback=on_data_received)
+        if self._use_post_collect():
+            self.post_collect(on_post_collected)
+        else:
+            util.defer(get_data, callback=on_data_received)
 
     def run(self, plugins, context, callback=None, callback_args=None):
         """Commence asynchronous tasks
