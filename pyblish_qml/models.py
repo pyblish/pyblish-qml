@@ -4,7 +4,7 @@ import logging
 
 from . import util, settings
 from .vendor import six
-from .vendor.Qt5 import QtCore
+from .vendor.Qt import QtCore
 
 
 defaults = {
@@ -871,10 +871,14 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
 
         key = getattr(item, "filter", None)
         if key is not None:
-            regex = self.filterRegExp()
-            if regex.pattern():
-                match = regex.indexIn(key)
-                return False if match == -1 else True
+            if hasattr(self, "filterRegularExpression"):
+                regex = self.filterRegularExpression()
+                if regex.pattern():
+                    return regex.match(key).hasMatch()
+            else:
+                regex = self.filterRegExp()
+                if regex.pattern():
+                    return regex.indexIn(key) != -1
 
         for role, values in self.includes.items():
             data = getattr(item, role, None)

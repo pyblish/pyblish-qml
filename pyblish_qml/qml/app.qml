@@ -6,7 +6,7 @@
 */
 
 import QtQuick 2.3
-import QtQuick.Controls 1.3
+import QtQuick.Controls 2.3
 
 import Pyblish 0.1
 import Perspective 0.1 as Perspective
@@ -33,13 +33,10 @@ StackView {
         app.itemProxy.clear_inclusion()
         app.itemProxy.add_inclusion("itemType", otherItem)
 
-        stack.push({
-            item: perspective,
-            properties: {
-                "item": item,
-                "overview": overview,
-                "commenting": commenting,
-            }
+        stack.push(perspective, {
+            "item": item,
+            "overview": overview,
+            "commenting": commenting
         })
     }
 

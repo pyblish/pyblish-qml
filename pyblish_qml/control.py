@@ -8,7 +8,7 @@ import pyblish.logic
 
 # Local libraries
 from . import util, models, version, settings
-from .vendor.Qt5 import QtCore
+from .vendor.Qt import QtCore
 
 qtproperty = util.qtConstantProperty
 
@@ -146,7 +146,7 @@ class Controller(QtCore.QObject):
     def setup_statemachine(self):
         """Setup and start state machine"""
 
-        machine = QtCore.QStateMachine()
+        machine = util.QStateMachine()
 
         #  _______________
         # |               |
@@ -154,7 +154,7 @@ class Controller(QtCore.QObject):
         # |               |
         # |_______________|
         #
-        group = util.QState("group", QtCore.QState.ParallelStates, machine)
+        group = util.QState("group", util.QState.ParallelStates, machine)
 
         #  _______________
         # | ____     ____ |
@@ -211,7 +211,9 @@ class Controller(QtCore.QObject):
 
         alive = util.QState("alive", suspended)
         acting = util.QState("acting", suspended)
-        acted = QtCore.QHistoryState(operation)
+        acted = util.QHistoryState(operation)
+        acted.name = "acted"
+        acted.setObjectName("acted")
         acted.setDefaultState(ready)
 
         #  _______________

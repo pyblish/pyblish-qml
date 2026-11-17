@@ -1,3 +1,4 @@
+import importlib
 import json
 import re
 import time
@@ -6,8 +7,15 @@ import traceback
 
 from functools import wraps
 
-from .vendor import six
-from .vendor.Qt5 import QtCore
+from .vendor import six, Qt
+from .vendor.Qt import QtCore
+
+# Qt6 将状态机类型移出 QtCore；从实际绑定导入，避免修改 Qt.py 的公共命名空间。
+_state_module = importlib.import_module(
+    Qt.__binding__ + (".QtStateMachine" if Qt.__binding__ in ("PySide6", "PyQt6")
+                      else ".QtCore"))
+QStateMachine = _state_module.QStateMachine
+QHistoryState = _state_module.QHistoryState
 
 _timers = {}
 _defer_threads = []
@@ -17,7 +25,7 @@ _data = {
 _jobs = dict()
 
 
-class QState(QtCore.QState):
+class QState(_state_module.QState):
     def __str__(self):
         return self.name
 

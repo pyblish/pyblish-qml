@@ -10,7 +10,7 @@ import threading
 
 # Local libraries
 from . import util, compat, control, settings, ipc
-from .vendor.Qt5 import QtCore, QtGui, QtQuick
+from .vendor.Qt import QtCore, QtGui, QtQuick
 
 MODULE_DIR = os.path.dirname(__file__)
 QML_IMPORT_DIR = os.path.join(MODULE_DIR, "qml")
@@ -26,7 +26,7 @@ class Window(QtQuick.QQuickView):
         self.app = parent
 
         self.setTitle(settings.WindowTitle)
-        self.setResizeMode(self.SizeRootObjectToView)
+        self.setResizeMode(QtQuick.QQuickView.SizeRootObjectToView)
 
         self.resize(*settings.WindowSize)
         self.setMinimumSize(QtCore.QSize(430, 300))

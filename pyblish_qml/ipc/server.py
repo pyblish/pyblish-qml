@@ -135,28 +135,31 @@ class Server(object):
         python = python or find_python()
         print("Using Python @ '%s'" % python)
 
-        pyqt5 = pyqt5 or find_qt(python)
-        print("Using PyQt5 @ '%s'" % pyqt5)
+        qt_path = pyqt5 or find_qt(python)
+        binding = ("PyQt5" if pyqt5 else
+                   _state.get("qtBinding") or os.getenv("PYBLISH_QML_QT_BINDING"))
+        if binding is None:
+            if _state.get("pyqt5") or os.getenv("PYBLISH_QML_PYQT5"):
+                binding = "PyQt5"
+            elif os.getenv("PYBLISH_QML_PYSIDE2"):
+                binding = "PySide2"
+        print("Using Qt @ '%s' (%s)" % (qt_path, binding or "auto"))
 
-        # Maintain the absolute minimum of environment variables,
-        # to avoid issues on invalid types.
+        # 只向子进程传递 Qt/QML 和运行所需的环境变量。
+        parent_environ = os.environ if environ is None else environ
         environ = {
-            key: os.getenv(key)
-            for key in ("USERNAME",
-                        "SYSTEMROOT",
-                        "PYTHONPATH",
-                        "PATH",
-
-                        # Linux
-                        "DISPLAY")
-            if os.getenv(key)
+            key: value for key, value in parent_environ.items()
+            if key in ("USERNAME", "USER", "SYSTEMROOT", "WINDIR", "PATH",
+                       "PYTHONPATH", "HOME", "TEMP", "TMP", "DISPLAY",
+                       "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR", "PYBLISH_DELAY")
+            or key.startswith(("QT_", "QML_", "QSG_", "PYBLISH_"))
         }
-
-        # Append PyQt5 to existing PYTHONPATH, if available
         environ["PYTHONPATH"] = os.pathsep.join(
-            path for path in [os.getenv("PYTHONPATH"), pyqt5]
-            if path is not None
+            path for path in (qt_path, environ.get("PYTHONPATH")) if path
         )
+        environ["PYTHONIOENCODING"] = "utf-8"
+        if binding:
+            environ["QT_PREFERRED_BINDING"] = binding
 
         # Protect against an erroneous parent environment
         # The environment passed to subprocess is inherited from
@@ -381,14 +384,12 @@ def find_python():
 
 
 def find_qt(python):
-    """Search for PyQt5 automatically"""
-    pyqt5 = (
-        _state.get("pyqt5") or
-        os.getenv("PYBLISH_QML_PYSIDE2") or
-        os.getenv("PYBLISH_QML_PYQT5")
-    )
-
-    return pyqt5
+    """Find a registered Qt binding path, or use the child's site-packages."""
+    return (_state.get("qtBindingPath") or
+            os.getenv("PYBLISH_QML_QT_PATH") or
+            _state.get("pyqt5") or
+            os.getenv("PYBLISH_QML_PYSIDE2") or
+            os.getenv("PYBLISH_QML_PYQT5"))
 
 
 def which(program):

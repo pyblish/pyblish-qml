@@ -225,7 +225,7 @@ def register_python_executable(path):
     """Expose Python executable to server
 
     The Python executable must be compatible with the
-    version of PyQt5 installed or provided on the system.
+    selected Qt binding installed or provided on the system.
 
     """
 
@@ -238,17 +238,25 @@ def registered_python_executable():
     return _state.get("pythonExecutable")
 
 
-def register_pyqt5(path):
-    """Expose PyQt5 to Python
+def register_qt(path, binding="PySide6"):
+    """Expose the Qt binding's parent directory to the child Python.
 
-    The exposed PyQt5 must be compatible with the exposed Python.
-
-    Arguments:
-        path (str): Absolute path to directory containing PyQt5
-
+    The binding must match the selected Python version and architecture.
     """
+    if binding not in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
+        raise ValueError("Unsupported Qt binding: %s" % binding)
+    path = os.path.abspath(path)
+    if not os.path.isdir(path):
+        raise ValueError("Qt parent directory does not exist: %s" % path)
+    _state["qtBindingPath"] = path
+    _state["qtBinding"] = binding
 
+
+def register_pyqt5(path):
+    """Expose PyQt5 to Python (legacy API)."""
     _state["pyqt5"] = path
+    _state["qtBindingPath"] = path
+    _state["qtBinding"] = "PyQt5"
 
 
 def install_host(use_threaded_wrapper):

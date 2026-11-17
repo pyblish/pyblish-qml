@@ -1,6 +1,5 @@
 import QtQuick 2.3
-import QtQuick.Controls 1.3 as Controls
-import QtQuick.Controls.Styles 1.3 as ControlStyle
+import QtQuick.Controls 2.3 as Controls
 import Pyblish 0.1
 import "Delegates.js" as Delegates
 
@@ -63,11 +62,9 @@ Column {
 
                 placeholderText: "Filter.."
 
-                style: ControlStyle.TextFieldStyle {
-                    background: Rectangle { color: "transparent" }
-                    textColor: "white"
-                    placeholderTextColor: Qt.darker(textColor, 1.5)
-                }
+                background: Rectangle { color: "transparent" }
+                color: "white"
+                placeholderTextColor: Qt.darker(color, 1.5)
 
                 onTextChanged: app.resultProxy.setFilterFixedString(text)
             }

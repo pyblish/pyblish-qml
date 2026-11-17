@@ -24,8 +24,6 @@ def validate():
     for test in (test_architecture,
                  test_pyqt_availability,
                  test_pyblish_availability,
-                 test_qtconf_availability,
-                 test_qtconf_correctness,
                  test_qt_availability):
         try:
             test()
@@ -47,7 +45,7 @@ def validate():
     print()
     print(" - Failed")
     print()
-    for test, error in errors.iteritems():
+    for test, error in errors.items():
         print(test.__name__)
         print("    %s" % error)
     print()
@@ -65,11 +63,11 @@ def test_architecture():
 
 
 def test_pyqt_availability():
-    """Is PyQt5 available?"""
-    try:
-        __import__("PyQt5")
-    except Exception:
-        raise Exception("PyQt5 not found")
+    """Is a Qt5 or Qt6 binding available to the GUI?"""
+    from .vendor import Qt
+
+    if Qt.__binding__ not in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
+        raise RuntimeError("Pyblish QML requires a Qt5 or Qt6 binding")
 
 
 def test_pyblish_availability():
@@ -113,8 +111,24 @@ def test_qtconf_correctness():
 
 
 def test_qt_availability():
-    """If Qt is installed, is it the right version?"""
-    if os.name == "nt" and os.path.exists(r"c:\Qt"):
+    """Check that the selected Qt runtime exposes the QML and state APIs."""
+    from . import util
+    from .vendor import Qt
+    from .vendor.Qt import QtGui, QtQml, QtQuick
+
+    for module, names in (
+        (util, ("QState", "QHistoryState", "QStateMachine")),
+        (QtGui, ("QGuiApplication",)),
+        (QtQml, ("QQmlEngine",)),
+        (QtQuick, ("QQuickView",)),
+    ):
+        for name in names:
+            if not hasattr(module, name):
+                raise RuntimeError("Qt runtime lacks %s.%s" %
+                                   (module.__name__, name))
+
+    # 旧版独立 Qt 安装的版本检查仅适用于 PyQt5。
+    if Qt.__binding__ == "PyQt5" and os.name == "nt" and os.path.exists(r"c:\Qt"):
         print("Qt detected..")
 
         path = r"c:\Qt\components.xml"
